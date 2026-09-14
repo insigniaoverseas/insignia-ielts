@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; background:#E9EAEE; color:#111827; font-family:Inter, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#1D4ED8; text-decoration:none; }
+  a:hover { color:#1E40AF; }
+</style>
+</helmet>
+
+<div style="padding:48px; display:flex; flex-direction:column; gap:48px">
+
+  <header style="display:flex; flex-direction:column; gap:8px">
+    <span style="font-size:14px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#4B5563">Screen 09</span>
+    <h1 style="margin:0; font-size:32px; line-height:40px; font-weight:700; letter-spacing:-.02em">Result</h1>
+    <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563; max-width:68ch">The band number is the hero and the only thing a nervous student needs to find. This screen reads the real attempt you just submitted in the test player; opened on its own it shows a sample attempt.</p>
+  </header>
+
+  <div style="display:flex; gap:48px; align-items:flex-start; flex-wrap:wrap">
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">desktop · 1280 — your attempt</span>
+      <div data-screen-label="Result desktop" style="width:1280px; background:#F7F8FA; border:1px solid #D8DBE2; border-radius:12px; overflow:hidden">
+        <div style="background:#fff; border-bottom:1px solid #E5E7EB; padding:0 32px; display:flex; align-items:center; gap:12px; min-height:72px">
+          <div style="width:32px; height:32px; border-radius:8px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:16px">B</div>
+          <span style="font-size:17px; font-weight:600; letter-spacing:-.01em">Bright IELTS</span>
+        </div>
+
+        <div style="padding:48px 32px 64px; max-width:960px; margin:0 auto; display:flex; flex-direction:column; gap:32px">
+
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+              <span style="padding:5px 14px; border-radius:999px; background:#EFF4FF; color:#1D4ED8; font-size:14px; font-weight:600">Listening</span>
+              <span style="padding:5px 14px; border-radius:999px; background:#fff; border:1px solid #E5E7EB; color:#4B5563; font-size:14px; font-weight:600">Mock test</span>
+              <span style="display:inline-flex; align-items:center; gap:8px; padding:5px 14px; border-radius:999px; background:#FFFBEB; border:1px solid #F1DCA7; color:#B45309; font-size:14px; font-weight:600"><span style="display:inline-flex; align-items:flex-end; gap:2px" aria-hidden="true"><span style="width:3px; height:7px; border-radius:1px; background:#B45309"></span><span style="width:3px; height:10px; border-radius:1px; background:#B45309"></span><span style="width:3px; height:13px; border-radius:1px; background:#EBD5AE"></span></span>Medium</span>
+            </div>
+            <h2 style="margin:0; font-size:24px; line-height:32px; font-weight:700; letter-spacing:-.01em">Listening Mock Test 2</h2>
+          </div>
+
+          <div style="position:relative; background:#0E1A34; border-radius:12px; padding:48px; display:flex; align-items:center; justify-content:space-between; gap:32px; flex-wrap:wrap; overflow:hidden">
+            <div style="position:absolute; inset:0; background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.14) 1px, transparent 0); background-size:22px 22px; opacity:.45"></div>
+            <div style="position:relative; display:flex; flex-direction:column; gap:8px">
+              <span style="font-family:'IBM Plex Mono', monospace; font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:#A9B7D6">Your band score</span>
+              <div style="display:flex; align-items:baseline; gap:12px">
+                <span style="font-family:'IBM Plex Mono', monospace; font-size:96px; line-height:1; font-weight:500; color:#fff; font-variant-numeric:tabular-nums; letter-spacing:-.03em">{{ band }}</span>
+                <span style="font-size:24px; line-height:32px; font-weight:600; color:#A9B7D6">out of 9</span>
+              </div>
+              <span style="font-size:20px; line-height:28px; font-weight:600; color:#fff">{{ descriptor }}</span>
+            </div>
+            <div style="position:relative; display:flex; gap:32px; flex-wrap:wrap">
+              <div style="display:flex; flex-direction:column; gap:2px"><span style="font-family:'IBM Plex Mono', monospace; font-size:24px; font-weight:500; color:#fff; font-variant-numeric:tabular-nums">{{ rawLabel }}</span><span style="font-size:14px; color:#A9B7D6">correct answers</span></div>
+              <div style="display:flex; flex-direction:column; gap:2px"><span style="font-family:'IBM Plex Mono', monospace; font-size:24px; font-weight:500; color:#fff; font-variant-numeric:tabular-nums">{{ timeLabel }}</span><span style="font-size:14px; color:#A9B7D6">time taken</span></div>
+            </div>
+          </div>
+
+          <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:32px; display:flex; flex-direction:column; gap:24px">
+            <h3 style="margin:0; font-size:20px; line-height:28px; font-weight:600">Section by section</h3>
+            <sc-for list="{{ sectionRows }}" as="row" hint-placeholder-count="4">
+              <div style="display:flex; flex-direction:column; gap:8px">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; gap:16px">
+                  <span style="font-size:16px; line-height:26px; font-weight:600">Section {{ row.n }} — {{ row.title }}</span>
+                  <span style="font-family:'IBM Plex Mono', monospace; font-size:16px; font-variant-numeric:tabular-nums; color:#4B5563">{{ row.label }}</span>
+                </div>
+                <div style="height:12px; border-radius:999px; background:#F7F8FA"><div style="width:{{ row.pct }}%; height:100%; border-radius:999px; background:{{ row.color }}"></div></div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex; gap:16px; flex-wrap:wrap">
+            <a href="10%20Review%20My%20Mistakes.dc.html" style="flex:1; min-width:260px; height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none" style-hover="background:#1E40AF">See my mistakes<span aria-hidden="true">→</span></a>
+            <a href="03%20Student%20Home.dc.html" style="min-width:200px; height:56px; padding:0 24px; border:1px solid #E5E7EB; border-radius:8px; background:#fff; color:#111827; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; text-decoration:none">Back to home</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">mobile · 390</span>
+      <div data-screen-label="Result mobile" style="width:390px; background:#F7F8FA; border:1px solid #D8DBE2; border-radius:12px; overflow:hidden">
+        <div style="background:#fff; border-bottom:1px solid #E5E7EB; padding:14px 16px; display:flex; align-items:center; gap:10px">
+          <div style="width:28px; height:28px; border-radius:8px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:15px">B</div>
+          <span style="font-size:16px; font-weight:600">Your result</span>
+        </div>
+        <div style="padding:24px 16px 32px; display:flex; flex-direction:column; gap:20px">
+          <div style="position:relative; background:#0E1A34; border-radius:12px; padding:32px 24px; display:flex; flex-direction:column; gap:20px; overflow:hidden">
+            <div style="position:absolute; inset:0; background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.14) 1px, transparent 0); background-size:22px 22px; opacity:.45"></div>
+            <div style="position:relative; display:flex; flex-direction:column; gap:6px">
+              <span style="font-family:'IBM Plex Mono', monospace; font-size:14px; letter-spacing:.1em; text-transform:uppercase; color:#A9B7D6">Your band score</span>
+              <div style="display:flex; align-items:baseline; gap:10px">
+                <span style="font-family:'IBM Plex Mono', monospace; font-size:72px; line-height:1; font-weight:500; color:#fff; font-variant-numeric:tabular-nums; letter-spacing:-.03em">{{ band }}</span>
+                <span style="font-size:20px; font-weight:600; color:#A9B7D6">out of 9</span>
+              </div>
+              <span style="font-size:18px; line-height:26px; font-weight:600; color:#fff">{{ descriptor }}</span>
+            </div>
+            <div style="position:relative; display:flex; gap:24px; flex-wrap:wrap; padding-top:20px; border-top:1px solid rgba(255,255,255,.16)">
+              <div style="display:flex; flex-direction:column; gap:2px"><span style="font-family:'IBM Plex Mono', monospace; font-size:20px; font-weight:500; color:#fff; font-variant-numeric:tabular-nums">{{ rawLabel }}</span><span style="font-size:14px; color:#A9B7D6">correct</span></div>
+              <div style="display:flex; flex-direction:column; gap:2px"><span style="font-family:'IBM Plex Mono', monospace; font-size:20px; font-weight:500; color:#fff; font-variant-numeric:tabular-nums">{{ timeLabel }}</span><span style="font-size:14px; color:#A9B7D6">time taken</span></div>
+            </div>
+          </div>
+
+          <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:16px">
+            <h3 style="margin:0; font-size:17px; line-height:24px; font-weight:600">Section by section</h3>
+            <sc-for list="{{ sectionRows }}" as="row" hint-placeholder-count="4">
+              <div style="display:flex; flex-direction:column; gap:6px">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px">
+                  <span style="font-size:16px; font-weight:600">Section {{ row.n }}</span>
+                  <span style="font-family:'IBM Plex Mono', monospace; font-size:16px; font-variant-numeric:tabular-nums; color:#4B5563">{{ row.label }}</span>
+                </div>
+                <div style="height:12px; border-radius:999px; background:#F7F8FA"><div style="width:{{ row.pct }}%; height:100%; border-radius:999px; background:{{ row.color }}"></div></div>
+              </div>
+            </sc-for>
+          </div>
+
+          <a href="10%20Review%20My%20Mistakes.dc.html" style="height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none">See my mistakes<span aria-hidden="true">→</span></a>
+          <a href="03%20Student%20Home.dc.html" style="height:56px; border:1px solid #E5E7EB; border-radius:8px; background:#fff; color:#111827; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; text-decoration:none">Back to home</a>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">mobile · result held by teacher</span>
+      <div data-screen-label="Result held" style="width:390px; background:#F7F8FA; border:1px solid #D8DBE2; border-radius:12px; overflow:hidden">
+        <div style="background:#fff; border-bottom:1px solid #E5E7EB; padding:14px 16px; display:flex; align-items:center; gap:10px">
+          <div style="width:28px; height:28px; border-radius:8px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:15px">B</div>
+          <span style="font-size:16px; font-weight:600">Your result</span>
+        </div>
+        <div style="padding:24px 16px 32px; display:flex; flex-direction:column; gap:20px">
+          <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:32px 24px; display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center">
+            <span style="width:56px; height:56px; border-radius:999px; background:#EFF4FF; display:grid; place-items:center; font-size:24px" aria-hidden="true">⏳</span>
+            <h3 style="margin:0; font-size:20px; line-height:28px; font-weight:600">Your test is finished</h3>
+            <p style="margin:0; font-size:16px; line-height:26px; color:#4B5563">Your teacher will release the score. You'll see it here — usually the same day.</p>
+          </div>
+          <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:8px">
+            <span style="font-size:16px; line-height:26px; color:#4B5563">Finished at 11:42 AM</span>
+            <span style="font-size:16px; line-height:26px; color:#4B5563">Answered 40 of 40 questions</span>
+          </div>
+          <a href="03%20Student%20Home.dc.html" style="height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; text-decoration:none">Back to home</a>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">mobile · practice result</span>
+      <div data-screen-label="Result practice" style="width:390px; background:#F7F8FA; border:1px solid #D8DBE2; border-radius:12px; overflow:hidden">
+        <div style="background:#fff; border-bottom:1px solid #E5E7EB; padding:14px 16px; display:flex; align-items:center; gap:10px">
+          <div style="width:28px; height:28px; border-radius:8px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:15px">B</div>
+          <span style="font-size:16px; font-weight:600">Practice result</span>
+        </div>
+        <div style="padding:24px 16px 32px; display:flex; flex-direction:column; gap:20px">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+            <span style="padding:4px 12px; border-radius:999px; background:#EFF4FF; color:#1D4ED8; font-size:14px; font-weight:600">Reading</span>
+            <span style="padding:4px 12px; border-radius:999px; background:#fff; border:1px solid #E5E7EB; color:#4B5563; font-size:14px; font-weight:600">Practice</span>
+            <span style="display:inline-flex; align-items:center; gap:8px; padding:4px 12px; border-radius:999px; background:#ECFDF3; color:#15803D; font-size:14px; font-weight:600"><span style="display:inline-flex; align-items:flex-end; gap:2px" aria-hidden="true"><span style="width:3px; height:7px; border-radius:1px; background:#15803D"></span><span style="width:3px; height:10px; border-radius:1px; background:#BFE3CB"></span><span style="width:3px; height:13px; border-radius:1px; background:#BFE3CB"></span></span>Easy</span>
+          </div>
+          <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:24px; display:flex; flex-direction:column; gap:12px">
+            <span style="font-size:16px; line-height:26px; color:#4B5563">Practice tests don't change your band. This is just to show you where you are.</span>
+            <div style="display:flex; align-items:baseline; gap:10px">
+              <span style="font-family:'IBM Plex Mono', monospace; font-size:48px; line-height:1; font-weight:500; font-variant-numeric:tabular-nums">7.0</span>
+              <span style="font-size:18px; font-weight:600; color:#4B5563">would be Band 7.0</span>
+            </div>
+            <span style="font-size:16px; line-height:26px; color:#4B5563">31 out of 40 correct · 18:20 taken</span>
+          </div>
+          <a href="10%20Review%20My%20Mistakes.dc.html" style="height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none">See my mistakes<span aria-hidden="true">→</span></a>
+          <button type="button" style="height:56px; border:1px solid #E5E7EB; border-radius:8px; background:#fff; color:#111827; font-family:inherit; font-size:17px; font-weight:600; cursor:pointer">Try again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { scored: null, attempt: null };
+
+  componentDidMount() {
+    import("./ielts-data.js").then((mod) => {
+      const attempt = mod.loadAttempt();
+      this.setState({ attempt: attempt, scored: mod.scoreAttempt(attempt) });
+    });
+  }
+
+  fmt(total) {
+    const t = Math.max(0, Math.round(total || 0));
+    const m = String(Math.floor(t / 60)).padStart(2, "0");
+    const s = String(t % 60).padStart(2, "0");
+    return m + ":" + s;
+  }
+
+  renderVals() {
+    const scored = this.state.scored;
+    const attempt = this.state.attempt;
+    if (!scored) return {};
+    return {
+      band: scored.band.toFixed(1),
+      descriptor: scored.descriptor,
+      rawLabel: scored.raw + " / 40",
+      timeLabel: this.fmt(attempt && attempt.timeTakenSec),
+      sectionRows: scored.bySection.map((row) => {
+        const pct = Math.round((row.correct / row.total) * 100);
+        return {
+          n: row.section.n,
+          title: row.section.title,
+          label: row.correct + " of " + row.total + " correct",
+          pct: pct,
+          color: pct >= 75 ? "#15803D" : pct >= 50 ? "#B45309" : "#B42318"
+        };
+      })
+    };
+  }
+}
+
+</script>
+</body>
+</html>

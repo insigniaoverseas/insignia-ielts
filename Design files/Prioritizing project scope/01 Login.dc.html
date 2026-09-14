@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; background:#E9EAEE; color:#111827; font-family:Inter, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#1D4ED8; text-decoration:none; }
+  a:hover { color:#1E40AF; }
+  @keyframes caret { 0%,100% { opacity:1 } 50% { opacity:0 } }
+</style>
+</helmet>
+
+<div style="padding:48px; display:flex; flex-direction:column; gap:48px">
+
+  <header style="display:flex; flex-direction:column; gap:8px">
+    <span style="font-size:14px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#4B5563">Screen 01</span>
+    <h1 style="margin:0; font-size:32px; line-height:40px; font-weight:700; letter-spacing:-.02em">Login</h1>
+    <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563; max-width:68ch">Two steps, one field each, nothing else on the page. No signup link — accounts are made by the institute. Every error says how many tries are left and what to do next.</p>
+  </header>
+
+  <div style="display:flex; gap:32px; align-items:flex-start; flex-wrap:wrap">
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">step 1 · phone — mobile 390</span>
+      <div data-screen-label="Login phone" style="width:390px; min-height:720px; background:#fff; border:1px solid #D8DBE2; border-radius:12px; padding:48px 24px; display:flex; flex-direction:column; gap:32px">
+        <div style="display:flex; flex-direction:column; gap:20px">
+          <div style="width:56px; height:56px; border-radius:12px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:24px">B</div>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <h2 style="margin:0; font-size:28px; line-height:36px; font-weight:700; letter-spacing:-.02em">Welcome back</h2>
+            <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563">Enter the phone number your institute has for you.</p>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px">
+          <label style="font-size:16px; line-height:26px; font-weight:600">Your phone number</label>
+          <div style="display:flex; gap:8px">
+            <span style="height:56px; padding:0 16px; display:grid; place-items:center; border:1px solid #E5E7EB; border-radius:8px; background:#F7F8FA; font-family:'IBM Plex Mono', monospace; font-size:17px; font-weight:500">+91</span>
+            <input type="text" value="98200 11234" style="flex:1; min-width:0; height:56px; padding:0 16px; border:1px solid #1D4ED8; border-radius:8px; background:#fff; font-family:'IBM Plex Mono', monospace; font-size:17px; font-variant-numeric:tabular-nums" />
+          </div>
+        </div>
+        <a href="01%20Login.dc.html#pin" style="height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; text-decoration:none">Continue</a>
+        <p style="margin:auto 0 0; font-size:16px; line-height:26px; color:#4B5563">Your institute created your account. If your number has changed, ask your teacher.</p>
+      </div>
+    </div>
+
+    <div id="pin" style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">step 2 · PIN</span>
+      <div data-screen-label="Login PIN" style="width:390px; min-height:720px; background:#fff; border:1px solid #D8DBE2; border-radius:12px; padding:48px 24px; display:flex; flex-direction:column; gap:32px">
+        <div style="display:flex; flex-direction:column; gap:20px">
+          <div style="width:56px; height:56px; border-radius:12px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:24px">B</div>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <h2 style="margin:0; font-size:28px; line-height:36px; font-weight:700; letter-spacing:-.02em">Enter your PIN</h2>
+            <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563">For <span style="font-family:'IBM Plex Mono', monospace; font-variant-numeric:tabular-nums">+91 98200 11234</span></p>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:16px">
+          <div style="display:flex; gap:12px">
+            <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+            <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+            <div style="flex:1; height:72px; border:1px solid #1D4ED8; border-radius:8px; display:grid; place-items:center; outline:2px solid #1D4ED8; outline-offset:2px"><span style="width:2px; height:32px; background:#1D4ED8; animation:caret 1s steps(1) infinite"></span></div>
+            <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px"></div>
+          </div>
+          <button type="button" style="align-self:flex-start; min-height:48px; padding:0 4px; border:none; background:transparent; color:#1D4ED8; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Show my PIN</button>
+        </div>
+        <a href="03%20Student%20Home.dc.html" style="height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; text-decoration:none">Log in</a>
+        <p style="margin:auto 0 0; font-size:16px; line-height:26px; color:#4B5563">Forgot your PIN? Ask your teacher — they can reset it for you.</p>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">wrong PIN</span>
+      <div data-screen-label="Login wrong PIN" style="width:390px; min-height:720px; background:#fff; border:1px solid #D8DBE2; border-radius:12px; padding:48px 24px; display:flex; flex-direction:column; gap:32px">
+        <div style="display:flex; flex-direction:column; gap:20px">
+          <div style="width:56px; height:56px; border-radius:12px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:24px">B</div>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <h2 style="margin:0; font-size:28px; line-height:36px; font-weight:700; letter-spacing:-.02em">Enter your PIN</h2>
+            <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563">For <span style="font-family:'IBM Plex Mono', monospace; font-variant-numeric:tabular-nums">+91 98200 11234</span></p>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px">
+          <div style="display:flex; gap:12px">
+            <div style="flex:1; height:72px; border:1px solid #B42318; background:#FEF3F2; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+            <div style="flex:1; height:72px; border:1px solid #B42318; background:#FEF3F2; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+            <div style="flex:1; height:72px; border:1px solid #B42318; background:#FEF3F2; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+            <div style="flex:1; height:72px; border:1px solid #B42318; background:#FEF3F2; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+          </div>
+          <span style="display:flex; align-items:center; gap:10px; font-size:16px; line-height:26px; color:#B42318"><span style="width:24px; height:24px; flex:none; border-radius:999px; background:#B42318; color:#fff; display:grid; place-items:center; font-size:14px; font-weight:700" aria-hidden="true">✕</span>That PIN is not right. <strong style="font-weight:600">2 tries left.</strong></span>
+          <button type="button" style="align-self:flex-start; min-height:48px; padding:0 4px; border:none; background:transparent; color:#1D4ED8; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Show my PIN</button>
+        </div>
+        <button type="button" style="height:56px; border:none; border-radius:8px; background:#1D4ED8; color:#fff; font-family:inherit; font-size:17px; font-weight:600; cursor:pointer">Try again</button>
+        <p style="margin:auto 0 0; font-size:16px; line-height:26px; color:#4B5563">Forgot your PIN? Ask your teacher — they can reset it for you.</p>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">locked · expired</span>
+      <div style="display:flex; flex-direction:column; gap:32px">
+        <div data-screen-label="Login locked" style="width:390px; background:#fff; border:1px solid #D8DBE2; border-radius:12px; padding:48px 24px; display:flex; flex-direction:column; gap:24px">
+          <div style="width:56px; height:56px; border-radius:12px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:24px">B</div>
+          <div style="display:flex; gap:12px; padding:16px; border-radius:12px; background:#FEF3F2; border:1px solid #F3B4AE">
+            <span style="width:24px; height:24px; flex:none; border-radius:999px; background:#B42318; color:#fff; display:grid; place-items:center; font-size:14px; font-weight:700" aria-hidden="true">🔒</span>
+            <span style="font-size:16px; line-height:26px">Your account is locked after 3 wrong PINs.</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <h2 style="margin:0; font-size:24px; line-height:32px; font-weight:700; letter-spacing:-.01em">Ask your teacher to unlock it</h2>
+            <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563">They can unlock your account and give you a new PIN in a few seconds. Nothing you have done is lost.</p>
+          </div>
+          <div style="padding:16px; border-radius:8px; background:#F7F8FA; border:1px solid #E5E7EB; display:flex; flex-direction:column; gap:4px">
+            <span style="font-size:14px; color:#4B5563">Your batch teacher</span>
+            <span style="font-size:17px; font-weight:600">Anita Desai — Andheri, Morning</span>
+            <span style="font-family:'IBM Plex Mono', monospace; font-size:17px; font-variant-numeric:tabular-nums">+91 98111 40022</span>
+          </div>
+        </div>
+
+        <div data-screen-label="Login expired" style="width:390px; background:#fff; border:1px solid #D8DBE2; border-radius:12px; padding:48px 24px; display:flex; flex-direction:column; gap:24px">
+          <div style="width:56px; height:56px; border-radius:12px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:24px">B</div>
+          <div style="display:flex; gap:12px; padding:16px; border-radius:12px; background:#FFFBEB; border:1px solid #F1DCA7">
+            <span style="width:24px; height:24px; flex:none; border-radius:999px; background:#B45309; color:#fff; display:grid; place-items:center; font-size:14px; font-weight:700" aria-hidden="true">!</span>
+            <span style="font-size:16px; line-height:26px">Your access ended on 1 September.</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <h2 style="margin:0; font-size:24px; line-height:32px; font-weight:700; letter-spacing:-.01em">Ask your teacher to extend it</h2>
+            <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563">You can still log in and read your old results. New tests will appear once your access is extended.</p>
+          </div>
+          <a href="03%20Student%20Home.dc.html" style="height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; text-decoration:none">See my old results</a>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">desktop · 1280</span>
+      <div data-screen-label="Login desktop" style="width:1280px; min-height:720px; background:#F7F8FA; border:1px solid #D8DBE2; border-radius:12px; display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); overflow:hidden">
+        <div style="position:relative; background:#0E1A34; padding:64px 48px; display:flex; flex-direction:column; justify-content:space-between; gap:48px; overflow:hidden">
+          <div style="position:absolute; inset:0; background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.14) 1px, transparent 0); background-size:22px 22px; opacity:.45"></div>
+          <div style="position:relative; display:flex; align-items:center; gap:12px">
+            <div style="width:32px; height:32px; border-radius:8px; background:#fff; color:#0E1A34; display:grid; place-items:center; font-weight:700; font-size:16px">B</div>
+            <span style="font-size:17px; font-weight:600; color:#fff">Bright IELTS</span>
+          </div>
+          <div style="position:relative; display:flex; flex-direction:column; gap:16px; max-width:26ch">
+            <h2 style="margin:0; font-size:40px; line-height:48px; font-weight:700; color:#fff; letter-spacing:-.025em">Practise the real test, in real conditions.</h2>
+            <p style="margin:0; font-size:17px; line-height:1.7; color:#DCE3F5">Timed mocks, marked the same day, with every mistake explained.</p>
+          </div>
+          <div style="position:relative; display:flex; gap:32px; flex-wrap:wrap">
+            <div style="display:flex; flex-direction:column; gap:2px"><span style="font-family:'IBM Plex Mono', monospace; font-size:24px; font-weight:500; color:#fff; font-variant-numeric:tabular-nums">240+</span><span style="font-size:14px; color:#A9B7D6">practice tests</span></div>
+            <div style="display:flex; flex-direction:column; gap:2px"><span style="font-family:'IBM Plex Mono', monospace; font-size:24px; font-weight:500; color:#fff; font-variant-numeric:tabular-nums">3</span><span style="font-size:14px; color:#A9B7D6">levels: easy, medium, hard</span></div>
+          </div>
+        </div>
+        <div style="padding:64px 48px; display:flex; flex-direction:column; justify-content:center; gap:32px; background:#fff">
+          <div style="display:flex; flex-direction:column; gap:8px; max-width:400px">
+            <h2 style="margin:0; font-size:28px; line-height:36px; font-weight:700; letter-spacing:-.02em">Welcome back</h2>
+            <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563">Enter the phone number your institute has for you.</p>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; max-width:400px">
+            <label style="font-size:16px; line-height:26px; font-weight:600">Your phone number</label>
+            <div style="display:flex; gap:8px">
+              <span style="height:56px; padding:0 16px; display:grid; place-items:center; border:1px solid #E5E7EB; border-radius:8px; background:#F7F8FA; font-family:'IBM Plex Mono', monospace; font-size:17px; font-weight:500">+91</span>
+              <input type="text" placeholder="10 digits" style="flex:1; min-width:0; height:56px; padding:0 16px; border:1px solid #E5E7EB; border-radius:8px; background:#fff; font-family:'IBM Plex Mono', monospace; font-size:17px" />
+            </div>
+          </div>
+          <a href="01%20Login.dc.html#pin" style="max-width:400px; height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; text-decoration:none">Continue</a>
+          <p style="margin:0; max-width:400px; font-size:16px; line-height:26px; color:#4B5563">Your institute created your account. If your number has changed, ask your teacher.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

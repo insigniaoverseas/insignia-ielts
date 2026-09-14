@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; background:#E9EAEE; color:#111827; font-family:Inter, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#1D4ED8; text-decoration:none; }
+  a:hover { color:#1E40AF; }
+  @keyframes caret { 0%,100% { opacity:1 } 50% { opacity:0 } }
+</style>
+</helmet>
+
+<div style="padding:48px; display:flex; flex-direction:column; gap:48px">
+
+  <header style="display:flex; flex-direction:column; gap:8px">
+    <span style="font-size:14px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#4B5563">Screen 02</span>
+    <h1 style="margin:0; font-size:32px; line-height:40px; font-weight:700; letter-spacing:-.02em">Create your PIN</h1>
+    <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563; max-width:68ch">Shown once, on the first login. One sentence explains why, two fields, one button. The reason comes before the fields so nobody wonders what is being asked of them.</p>
+  </header>
+
+  <div style="display:flex; gap:32px; align-items:flex-start; flex-wrap:wrap">
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">mobile 390 · default</span>
+      <div data-screen-label="PIN change" style="width:390px; min-height:720px; background:#fff; border:1px solid #D8DBE2; border-radius:12px; padding:48px 24px; display:flex; flex-direction:column; gap:32px">
+        <div style="display:flex; flex-direction:column; gap:20px">
+          <div style="width:56px; height:56px; border-radius:12px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:24px">B</div>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <h2 style="margin:0; font-size:28px; line-height:36px; font-weight:700; letter-spacing:-.02em">Create your PIN</h2>
+            <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563">Pick 4 numbers you will remember. You will type them every time you log in, so don't use your birth year.</p>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:24px">
+          <div style="display:flex; flex-direction:column; gap:12px">
+            <label style="font-size:16px; line-height:26px; font-weight:600">Your new PIN</label>
+            <div style="display:flex; gap:12px">
+              <div style="flex:1; height:72px; border:1px solid #1D4ED8; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700; background:#EFF4FF">•</div>
+              <div style="flex:1; height:72px; border:1px solid #1D4ED8; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700; background:#EFF4FF">•</div>
+              <div style="flex:1; height:72px; border:1px solid #1D4ED8; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700; background:#EFF4FF">•</div>
+              <div style="flex:1; height:72px; border:1px solid #1D4ED8; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700; background:#EFF4FF">•</div>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:12px">
+            <label style="font-size:16px; line-height:26px; font-weight:600">Type it again</label>
+            <div style="display:flex; gap:12px">
+              <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+              <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+              <div style="flex:1; height:72px; border:1px solid #1D4ED8; border-radius:8px; display:grid; place-items:center; outline:2px solid #1D4ED8; outline-offset:2px"><span style="width:2px; height:32px; background:#1D4ED8; animation:caret 1s steps(1) infinite"></span></div>
+              <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px"></div>
+            </div>
+          </div>
+          <button type="button" style="align-self:flex-start; min-height:48px; padding:0 4px; border:none; background:transparent; color:#1D4ED8; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Show my PIN</button>
+        </div>
+
+        <a href="03%20Student%20Home.dc.html" style="height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; text-decoration:none">Save my PIN</a>
+        <p style="margin:auto 0 0; font-size:16px; line-height:26px; color:#4B5563">If you forget it, your teacher can give you a new one.</p>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">PINs don't match</span>
+      <div data-screen-label="PIN mismatch" style="width:390px; min-height:720px; background:#fff; border:1px solid #D8DBE2; border-radius:12px; padding:48px 24px; display:flex; flex-direction:column; gap:32px">
+        <div style="display:flex; flex-direction:column; gap:20px">
+          <div style="width:56px; height:56px; border-radius:12px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:24px">B</div>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <h2 style="margin:0; font-size:28px; line-height:36px; font-weight:700; letter-spacing:-.02em">Create your PIN</h2>
+            <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563">Pick 4 numbers you will remember.</p>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:24px">
+          <div style="display:flex; flex-direction:column; gap:12px">
+            <label style="font-size:16px; line-height:26px; font-weight:600">Your new PIN</label>
+            <div style="display:flex; gap:12px">
+              <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+              <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+              <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+              <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:12px">
+            <label style="font-size:16px; line-height:26px; font-weight:600">Type it again</label>
+            <div style="display:flex; gap:12px">
+              <div style="flex:1; height:72px; border:1px solid #B42318; background:#FEF3F2; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+              <div style="flex:1; height:72px; border:1px solid #B42318; background:#FEF3F2; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+              <div style="flex:1; height:72px; border:1px solid #B42318; background:#FEF3F2; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+              <div style="flex:1; height:72px; border:1px solid #B42318; background:#FEF3F2; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+            </div>
+            <span style="display:flex; align-items:center; gap:10px; font-size:16px; line-height:26px; color:#B42318"><span style="width:24px; height:24px; flex:none; border-radius:999px; background:#B42318; color:#fff; display:grid; place-items:center; font-size:14px; font-weight:700" aria-hidden="true">✕</span>These two PINs are different. Type the same 4 numbers twice.</span>
+          </div>
+          <button type="button" style="align-self:flex-start; min-height:48px; padding:0 4px; border:none; background:transparent; color:#1D4ED8; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Show my PIN</button>
+        </div>
+        <button type="button" style="height:56px; border:none; border-radius:8px; background:#1D4ED8; color:#fff; font-family:inherit; font-size:17px; font-weight:600; cursor:pointer">Save my PIN</button>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">too easy to guess</span>
+      <div data-screen-label="PIN too weak" style="width:390px; background:#fff; border:1px solid #D8DBE2; border-radius:12px; padding:48px 24px; display:flex; flex-direction:column; gap:24px">
+        <div style="width:56px; height:56px; border-radius:12px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:24px">B</div>
+        <div style="display:flex; flex-direction:column; gap:12px">
+          <label style="font-size:16px; line-height:26px; font-weight:600">Your new PIN</label>
+          <div style="display:flex; gap:12px">
+            <div style="flex:1; height:72px; border:1px solid #B45309; background:#FFFBEB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">1</div>
+            <div style="flex:1; height:72px; border:1px solid #B45309; background:#FFFBEB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">2</div>
+            <div style="flex:1; height:72px; border:1px solid #B45309; background:#FFFBEB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">3</div>
+            <div style="flex:1; height:72px; border:1px solid #B45309; background:#FFFBEB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">4</div>
+          </div>
+          <span style="display:flex; align-items:flex-start; gap:10px; font-size:16px; line-height:26px; color:#B45309"><span style="width:24px; height:24px; flex:none; border-radius:999px; background:#B45309; color:#fff; display:grid; place-items:center; font-size:14px; font-weight:700" aria-hidden="true">!</span>1234 is too easy to guess. Pick 4 numbers that are not in order.</span>
+        </div>
+        <div style="height:56px; border-radius:8px; background:#E5E7EB; color:#9CA3AF; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center">Save my PIN</div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">desktop · 1280</span>
+      <div data-screen-label="PIN change desktop" style="width:1280px; min-height:640px; background:#F7F8FA; border:1px solid #D8DBE2; border-radius:12px; overflow:hidden; display:flex; flex-direction:column">
+        <div style="background:#fff; border-bottom:1px solid #E5E7EB; padding:0 32px; display:flex; align-items:center; gap:12px; min-height:72px">
+          <div style="width:32px; height:32px; border-radius:8px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:16px">B</div>
+          <span style="font-size:17px; font-weight:600; letter-spacing:-.01em">Bright IELTS</span>
+        </div>
+        <div style="flex:1; display:grid; place-items:center; padding:48px 32px">
+          <div style="width:100%; max-width:560px; background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:48px; display:flex; flex-direction:column; gap:32px">
+            <div style="display:flex; flex-direction:column; gap:8px">
+              <h2 style="margin:0; font-size:28px; line-height:36px; font-weight:700; letter-spacing:-.02em">Create your PIN</h2>
+              <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563">Pick 4 numbers you will remember. You will type them every time you log in, so don't use your birth year.</p>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:24px">
+              <div style="display:flex; flex-direction:column; gap:12px">
+                <label style="font-size:16px; line-height:26px; font-weight:600">Your new PIN</label>
+                <div style="display:flex; gap:12px; max-width:360px">
+                  <div style="flex:1; height:72px; border:1px solid #1D4ED8; background:#EFF4FF; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+                  <div style="flex:1; height:72px; border:1px solid #1D4ED8; background:#EFF4FF; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+                  <div style="flex:1; height:72px; border:1px solid #1D4ED8; background:#EFF4FF; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+                  <div style="flex:1; height:72px; border:1px solid #1D4ED8; background:#EFF4FF; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+                </div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:12px">
+                <label style="font-size:16px; line-height:26px; font-weight:600">Type it again</label>
+                <div style="display:flex; gap:12px; max-width:360px">
+                  <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+                  <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px; display:grid; place-items:center; font-size:28px; font-weight:700">•</div>
+                  <div style="flex:1; height:72px; border:1px solid #1D4ED8; border-radius:8px; display:grid; place-items:center; outline:2px solid #1D4ED8; outline-offset:2px"><span style="width:2px; height:32px; background:#1D4ED8; animation:caret 1s steps(1) infinite"></span></div>
+                  <div style="flex:1; height:72px; border:1px solid #E5E7EB; border-radius:8px"></div>
+                </div>
+              </div>
+              <button type="button" style="align-self:flex-start; min-height:48px; padding:0 4px; border:none; background:transparent; color:#1D4ED8; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Show my PIN</button>
+            </div>
+            <a href="03%20Student%20Home.dc.html" style="height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; text-decoration:none">Save my PIN</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

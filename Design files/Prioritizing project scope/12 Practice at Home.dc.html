@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; background:#F7F8FA; color:#111827; font-family:Inter, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#1D4ED8; text-decoration:none; }
+  a:hover { color:#1E40AF; }
+  @media (min-width: 900px) { [data-mobile-tabs] { display: none !important; } }
+  @media (max-width: 899px) { [data-desktop-nav] { display: none !important; } }
+</style>
+</helmet>
+
+<div style="min-height:100vh; display:flex; flex-direction:column">
+
+  <div style="background:#fff; border-bottom:1px solid #E5E7EB">
+    <div style="max-width:1120px; margin:0 auto; padding:0 24px; display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:72px; flex-wrap:wrap">
+      <div style="display:flex; align-items:center; gap:12px">
+        <a href="03%20Student%20Home.dc.html" style="width:44px; height:44px; border-radius:8px; display:grid; place-items:center; color:#4B5563; font-size:18px" aria-label="Back to Home">←</a>
+        <span style="font-size:17px; font-weight:600; letter-spacing:-.01em">Practice at Home</span>
+      </div>
+      <nav data-desktop-nav="true" style="display:flex; gap:4px">
+        <a href="04%20My%20Tests.dc.html" style="min-height:48px; display:flex; align-items:center; padding:0 18px; border-radius:8px; color:#4B5563; font-size:16px; font-weight:600">My Tests</a>
+        <a href="11%20My%20Progress.dc.html" style="min-height:48px; display:flex; align-items:center; padding:0 18px; border-radius:8px; color:#4B5563; font-size:16px; font-weight:600">Progress</a>
+      </nav>
+    </div>
+  </div>
+
+  <div style="max-width:1120px; width:100%; margin:0 auto; padding:32px 24px 64px; display:flex; flex-direction:column; gap:24px">
+
+    <div style="display:flex; flex-direction:column; gap:8px">
+      <h1 style="margin:0; font-size:28px; line-height:36px; font-weight:700; letter-spacing:-.02em">Practice at Home</h1>
+      <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563; max-width:70ch">Practice tests don't change your band and you can do them as many times as you like. You can pause, rewind the audio and check your answers straight away.</p>
+    </div>
+
+    <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:center">
+      <div style="display:flex; gap:4px; background:#fff; border:1px solid #E5E7EB; border-radius:999px; padding:4px">
+        <button type="button" onClick="{{ skillAll }}" style="min-height:48px; padding:0 20px; border:none; border-radius:999px; background:{{ skillAllBg }}; color:{{ skillAllColor }}; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">All</button>
+        <button type="button" onClick="{{ skillListening }}" style="min-height:48px; padding:0 20px; border:none; border-radius:999px; background:{{ skillLisBg }}; color:{{ skillLisColor }}; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Listening</button>
+        <button type="button" onClick="{{ skillReading }}" style="min-height:48px; padding:0 20px; border:none; border-radius:999px; background:{{ skillReadBg }}; color:{{ skillReadColor }}; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Reading</button>
+      </div>
+      <div style="display:flex; gap:4px; background:#fff; border:1px solid #E5E7EB; border-radius:999px; padding:4px">
+        <button type="button" onClick="{{ diffAll }}" style="min-height:48px; padding:0 20px; border:none; border-radius:999px; background:{{ diffAllBg }}; color:{{ diffAllColor }}; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Any level</button>
+        <button type="button" onClick="{{ diffEasy }}" style="min-height:48px; padding:0 20px; border:none; border-radius:999px; background:{{ diffEasyBg }}; color:{{ diffEasyColor }}; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Easy</button>
+        <button type="button" onClick="{{ diffMedium }}" style="min-height:48px; padding:0 20px; border:none; border-radius:999px; background:{{ diffMedBg }}; color:{{ diffMedColor }}; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Medium</button>
+        <button type="button" onClick="{{ diffHard }}" style="min-height:48px; padding:0 20px; border:none; border-radius:999px; background:{{ diffHardBg }}; color:{{ diffHardColor }}; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Hard</button>
+      </div>
+      <span style="font-size:16px; color:#4B5563">{{ countLabel }}</span>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px">
+      <sc-for list="{{ cards }}" as="card" hint-placeholder-count="6">
+        <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:24px; display:flex; flex-direction:column; gap:16px">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+            <span style="padding:4px 12px; border-radius:999px; background:#EFF4FF; color:#1D4ED8; font-size:14px; font-weight:600">{{ card.skill }}</span>
+            <span style="display:inline-flex; align-items:center; gap:8px; padding:4px 12px; border-radius:999px; background:{{ card.diffBg }}; color:{{ card.diffColor }}; font-size:14px; font-weight:600">
+              <span style="display:inline-flex; align-items:flex-end; gap:2px" aria-hidden="true">
+                <span style="width:3px; height:7px; border-radius:1px; background:{{ card.bar1 }}"></span>
+                <span style="width:3px; height:10px; border-radius:1px; background:{{ card.bar2 }}"></span>
+                <span style="width:3px; height:13px; border-radius:1px; background:{{ card.bar3 }}"></span>
+              </span>{{ card.difficulty }}
+            </span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; flex:1">
+            <h2 style="margin:0; font-size:17px; line-height:24px; font-weight:600">{{ card.name }}</h2>
+            <span style="font-size:16px; line-height:26px; color:#4B5563">{{ card.meta }}</span>
+            <span style="font-size:16px; line-height:26px; color:{{ card.doneColor }}">{{ card.doneLabel }}</span>
+          </div>
+          <a href="05%20Pre-test%20Instructions.dc.html" style="height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none">{{ card.action }}<span aria-hidden="true">→</span></a>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:48px 24px; display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center">
+        <span style="width:56px; height:56px; border-radius:999px; background:#EFF4FF; display:grid; place-items:center; font-size:24px" aria-hidden="true">🔍</span>
+        <h2 style="margin:0; font-size:20px; line-height:28px; font-weight:600">Nothing matches those two filters</h2>
+        <p style="margin:0; font-size:16px; line-height:26px; color:#4B5563; max-width:44ch">There is no practice test at that level for that skill yet. Try Any level.</p>
+        <button type="button" onClick="{{ resetFilters }}" style="height:56px; padding:0 32px; border:none; border-radius:8px; background:#1D4ED8; color:#fff; font-family:inherit; font-size:17px; font-weight:600; cursor:pointer">Show everything</button>
+      </div>
+    </sc-if>
+  </div>
+
+  <div data-mobile-tabs="true" style="margin-top:auto; display:flex; background:#fff; border-top:1px solid #E5E7EB">
+    <a href="03%20Student%20Home.dc.html" style="flex:1; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#4B5563; text-decoration:none"><span aria-hidden="true">🏠</span><span style="font-size:14px; font-weight:600">Home</span></a>
+    <a href="04%20My%20Tests.dc.html" style="flex:1; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#1D4ED8; text-decoration:none"><span aria-hidden="true">📄</span><span style="font-size:14px; font-weight:600">My Tests</span></a>
+    <a href="11%20My%20Progress.dc.html" style="flex:1; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#4B5563; text-decoration:none"><span aria-hidden="true">📈</span><span style="font-size:14px; font-weight:600">Progress</span></a>
+    <a href="13%20Profile.dc.html" style="flex:1; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#4B5563; text-decoration:none"><span aria-hidden="true">👤</span><span style="font-size:14px; font-weight:600">Profile</span></a>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1120,&quot;height&quot;:900}}">
+const DIFF = {
+  Easy: { bg: "#ECFDF3", color: "#15803D", bars: ["#15803D", "#BFE3CB", "#BFE3CB"] },
+  Medium: { bg: "#FFFBEB", color: "#B45309", bars: ["#B45309", "#B45309", "#EBD5AE"] },
+  Hard: { bg: "#FEF3F2", color: "#B42318", bars: ["#B42318", "#B42318", "#B42318"] }
+};
+
+const LIBRARY = [
+  { name: "True/False/Not Given drill", skill: "Reading", difficulty: "Medium", meta: "14 questions · about 15 minutes", times: 2 },
+  { name: "Gap-fill drill — Section 1", skill: "Listening", difficulty: "Easy", meta: "10 questions · about 8 minutes", times: 3 },
+  { name: "Matching headings drill", skill: "Reading", difficulty: "Hard", meta: "12 questions · about 18 minutes", times: 0 },
+  { name: "Map and plan labelling", skill: "Listening", difficulty: "Medium", meta: "10 questions · about 10 minutes", times: 1 },
+  { name: "Short-answer practice", skill: "Reading", difficulty: "Easy", meta: "12 questions · about 12 minutes", times: 0 },
+  { name: "Multiple choice — long talks", skill: "Listening", difficulty: "Hard", meta: "10 questions · about 14 minutes", times: 0 },
+  { name: "Sentence completion", skill: "Reading", difficulty: "Medium", meta: "13 questions · about 15 minutes", times: 1 },
+  { name: "Note completion — lectures", skill: "Listening", difficulty: "Medium", meta: "10 questions · about 10 minutes", times: 0 }
+];
+
+class Component extends DCLogic {
+  state = { skill: "All", difficulty: "Any" };
+
+  renderVals() {
+    const s = this.state;
+    const list = LIBRARY.filter((t) =>
+      (s.skill === "All" || t.skill === s.skill) &&
+      (s.difficulty === "Any" || t.difficulty === s.difficulty)
+    );
+    const pick = (on) => ({ bg: on ? "#EFF4FF" : "transparent", color: on ? "#1D4ED8" : "#4B5563" });
+    const sk = (v) => pick(s.skill === v);
+    const df = (v) => pick(s.difficulty === v);
+
+    return {
+      countLabel: list.length + (list.length === 1 ? " test" : " tests"),
+      isEmpty: list.length === 0,
+      resetFilters: () => this.setState({ skill: "All", difficulty: "Any" }),
+      skillAll: () => this.setState({ skill: "All" }),
+      skillListening: () => this.setState({ skill: "Listening" }),
+      skillReading: () => this.setState({ skill: "Reading" }),
+      diffAll: () => this.setState({ difficulty: "Any" }),
+      diffEasy: () => this.setState({ difficulty: "Easy" }),
+      diffMedium: () => this.setState({ difficulty: "Medium" }),
+      diffHard: () => this.setState({ difficulty: "Hard" }),
+      skillAllBg: sk("All").bg, skillAllColor: sk("All").color,
+      skillLisBg: sk("Listening").bg, skillLisColor: sk("Listening").color,
+      skillReadBg: sk("Reading").bg, skillReadColor: sk("Reading").color,
+      diffAllBg: df("Any").bg, diffAllColor: df("Any").color,
+      diffEasyBg: df("Easy").bg, diffEasyColor: df("Easy").color,
+      diffMedBg: df("Medium").bg, diffMedColor: df("Medium").color,
+      diffHardBg: df("Hard").bg, diffHardColor: df("Hard").color,
+      cards: list.map((t) => {
+        const d = DIFF[t.difficulty];
+        return {
+          name: t.name,
+          skill: t.skill,
+          difficulty: t.difficulty,
+          meta: t.meta,
+          diffBg: d.bg, diffColor: d.color,
+          bar1: d.bars[0], bar2: d.bars[1], bar3: d.bars[2],
+          doneLabel: t.times === 0 ? "You haven't done this one yet" : "You've done this " + t.times + (t.times === 1 ? " time" : " times"),
+          doneColor: t.times === 0 ? "#9CA3AF" : "#15803D",
+          action: t.times === 0 ? "Start practice" : "Do it again"
+        };
+      })
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; background:#F7F8FA; color:#111827; font-family:Inter, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#1D4ED8; text-decoration:none; }
+  a:hover { color:#1E40AF; }
+  @media (min-width: 900px) { [data-mobile-tabs] { display: none !important; } }
+  @media (max-width: 899px) { [data-desktop-nav] { display: none !important; } }
+</style>
+</helmet>
+
+<div style="min-height:100vh; display:flex; flex-direction:column">
+
+  <div style="background:#fff; border-bottom:1px solid #E5E7EB">
+    <div style="max-width:1120px; margin:0 auto; padding:0 24px; display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:72px; flex-wrap:wrap">
+      <div style="display:flex; align-items:center; gap:12px">
+        <div style="width:32px; height:32px; border-radius:8px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:16px">B</div>
+        <span style="font-size:17px; font-weight:600; letter-spacing:-.01em">Bright IELTS</span>
+      </div>
+      <nav data-desktop-nav="true" style="display:flex; gap:4px">
+        <a href="03%20Student%20Home.dc.html" style="min-height:48px; display:flex; align-items:center; padding:0 18px; border-radius:8px; color:#4B5563; font-size:16px; font-weight:600">Home</a>
+        <span style="min-height:48px; display:flex; align-items:center; padding:0 18px; border-radius:8px; background:#EFF4FF; color:#1D4ED8; font-size:16px; font-weight:600">My Tests</span>
+        <a href="11%20My%20Progress.dc.html" style="min-height:48px; display:flex; align-items:center; padding:0 18px; border-radius:8px; color:#4B5563; font-size:16px; font-weight:600">Progress</a>
+        <a href="13%20Profile.dc.html" style="min-height:48px; display:flex; align-items:center; padding:0 18px; border-radius:8px; color:#4B5563; font-size:16px; font-weight:600">Profile</a>
+      </nav>
+    </div>
+  </div>
+
+  <div style="max-width:1120px; width:100%; margin:0 auto; padding:32px 24px 64px; display:flex; flex-direction:column; gap:24px">
+
+    <h1 style="margin:0; font-size:28px; line-height:36px; font-weight:700; letter-spacing:-.02em">My Tests</h1>
+
+    <div style="display:flex; gap:4px; background:#fff; border:1px solid #E5E7EB; border-radius:999px; padding:4px; align-self:flex-start">
+      <button type="button" onClick="{{ onTodo }}" style="min-height:48px; padding:0 24px; border:none; border-radius:999px; background:{{ todoBg }}; color:{{ todoColor }}; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">To do · {{ todoCount }}</button>
+      <button type="button" onClick="{{ onPractice }}" style="min-height:48px; padding:0 24px; border:none; border-radius:999px; background:{{ practiceBg }}; color:{{ practiceColor }}; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Practice</button>
+      <button type="button" onClick="{{ onDone }}" style="min-height:48px; padding:0 24px; border:none; border-radius:999px; background:{{ doneBg }}; color:{{ doneColor }}; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Done · {{ doneCount }}</button>
+    </div>
+
+    <p style="margin:0; font-size:16px; line-height:26px; color:#4B5563">{{ tabNote }}</p>
+
+    <sc-for list="{{ cards }}" as="card" hint-placeholder-count="3">
+      <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:24px; display:flex; align-items:center; gap:24px; flex-wrap:wrap; opacity:{{ card.opacity }}">
+        <div style="flex:1; min-width:260px; display:flex; flex-direction:column; gap:12px">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+            <span style="padding:4px 12px; border-radius:999px; background:#EFF4FF; color:#1D4ED8; font-size:14px; font-weight:600">{{ card.skill }}</span>
+            <span style="padding:4px 12px; border-radius:999px; background:#F7F8FA; border:1px solid #E5E7EB; color:#4B5563; font-size:14px; font-weight:600">{{ card.mode }}</span>
+            <span style="display:inline-flex; align-items:center; gap:8px; padding:4px 12px; border-radius:999px; background:{{ card.diffBg }}; color:{{ card.diffColor }}; font-size:14px; font-weight:600">
+              <span style="display:inline-flex; align-items:flex-end; gap:2px" aria-hidden="true">
+                <span style="width:3px; height:7px; border-radius:1px; background:{{ card.bar1 }}"></span>
+                <span style="width:3px; height:10px; border-radius:1px; background:{{ card.bar2 }}"></span>
+                <span style="width:3px; height:13px; border-radius:1px; background:{{ card.bar3 }}"></span>
+              </span>{{ card.difficulty }}
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:8px; padding:4px 12px; border-radius:999px; background:{{ card.statusBg }}; color:{{ card.statusColor }}; font-size:14px; font-weight:600"><span aria-hidden="true">{{ card.statusIcon }}</span>{{ card.status }}</span>
+          </div>
+          <h2 style="margin:0; font-size:20px; line-height:28px; font-weight:600">{{ card.name }}</h2>
+          <span style="font-size:16px; line-height:26px; color:#4B5563">{{ card.meta }}</span>
+        </div>
+        <div style="min-width:220px; display:flex; flex-direction:column; gap:8px">
+          <sc-if value="{{ card.canStart }}" hint-placeholder-val="{{ true }}">
+            <a href="05%20Pre-test%20Instructions.dc.html" style="height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none">{{ card.action }}<span aria-hidden="true">→</span></a>
+          </sc-if>
+          <sc-if value="{{ card.locked }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:8px">
+              <div style="height:56px; border-radius:8px; background:#F7F8FA; border:1px solid #E5E7EB; color:#9CA3AF; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center">{{ card.action }}</div>
+              <span style="font-size:16px; line-height:26px; color:#4B5563">{{ card.reason }}</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ card.finished }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; flex-direction:column; gap:8px">
+              <a href="09%20Result.dc.html" style="height:56px; border:1px solid #E5E7EB; border-radius:8px; background:#fff; color:#111827; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; text-decoration:none">See my result</a>
+              <span style="font-size:16px; line-height:26px; color:#4B5563">{{ card.reason }}</span>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-for>
+
+    <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:48px 24px; display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center">
+        <span style="width:56px; height:56px; border-radius:999px; background:#EFF4FF; display:grid; place-items:center; font-size:24px" aria-hidden="true">📄</span>
+        <h2 style="margin:0; font-size:20px; line-height:28px; font-weight:600">{{ emptyTitle }}</h2>
+        <p style="margin:0; font-size:16px; line-height:26px; color:#4B5563; max-width:44ch">{{ emptyBody }}</p>
+        <a href="12%20Practice%20at%20Home.dc.html" style="height:56px; padding:0 32px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; text-decoration:none">Practice at Home</a>
+      </div>
+    </sc-if>
+  </div>
+
+  <div data-mobile-tabs="true" style="margin-top:auto; display:flex; background:#fff; border-top:1px solid #E5E7EB">
+    <a href="03%20Student%20Home.dc.html" style="flex:1; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#4B5563; text-decoration:none"><span aria-hidden="true">🏠</span><span style="font-size:14px; font-weight:600">Home</span></a>
+    <span style="flex:1; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#1D4ED8"><span aria-hidden="true">📄</span><span style="font-size:14px; font-weight:600">My Tests</span></span>
+    <a href="11%20My%20Progress.dc.html" style="flex:1; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#4B5563; text-decoration:none"><span aria-hidden="true">📈</span><span style="font-size:14px; font-weight:600">Progress</span></a>
+    <a href="13%20Profile.dc.html" style="flex:1; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#4B5563; text-decoration:none"><span aria-hidden="true">👤</span><span style="font-size:14px; font-weight:600">Profile</span></a>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1120,&quot;height&quot;:900}}">
+const DIFF = {
+  Easy: { bg: "#ECFDF3", color: "#15803D", bars: ["#15803D", "#BFE3CB", "#BFE3CB"] },
+  Medium: { bg: "#FFFBEB", color: "#B45309", bars: ["#B45309", "#B45309", "#EBD5AE"] },
+  Hard: { bg: "#FEF3F2", color: "#B42318", bars: ["#B42318", "#B42318", "#B42318"] }
+};
+
+const STATUS = {
+  "Not started": { bg: "#F7F8FA", color: "#4B5563", icon: "○" },
+  "In progress": { bg: "#EFF4FF", color: "#1D4ED8", icon: "▶" },
+  Submitted: { bg: "#ECFDF3", color: "#15803D", icon: "✓" },
+  Locked: { bg: "#F7F8FA", color: "#4B5563", icon: "🔒" },
+  Expired: { bg: "#FEF3F2", color: "#B42318", icon: "✕" }
+};
+
+const TESTS = {
+  todo: [
+    { name: "Listening Mock Test 2", skill: "Listening", mode: "Mock test", difficulty: "Medium", status: "Not started", meta: "40 questions · 30 minutes · Closes today at 6:00 PM", canStart: true, action: "Start Test" },
+    { name: "Reading Mock Test 5", skill: "Reading", mode: "Mock test", difficulty: "Hard", status: "Locked", meta: "40 questions · 60 minutes", locked: true, action: "Start Test", reason: "Opens Monday, 9:00 AM" },
+    { name: "Listening Mock Test 1", skill: "Listening", mode: "Mock test", difficulty: "Easy", status: "Expired", meta: "40 questions · 30 minutes", locked: true, action: "Start Test", reason: "You've used all 2 attempts" }
+  ],
+  practice: [
+    { name: "Gap-fill drill — Section 1", skill: "Listening", mode: "Practice", difficulty: "Easy", status: "Not started", meta: "10 questions · about 8 minutes", canStart: true, action: "Start practice" },
+    { name: "True/False/Not Given drill", skill: "Reading", mode: "Practice", difficulty: "Medium", status: "In progress", meta: "14 questions · you stopped at question 6", canStart: true, action: "Carry on" },
+    { name: "Matching headings drill", skill: "Reading", mode: "Practice", difficulty: "Hard", status: "Not started", meta: "12 questions · about 15 minutes", canStart: true, action: "Start practice" }
+  ],
+  done: [
+    { name: "Reading Mock Test 4", skill: "Reading", mode: "Mock test", difficulty: "Medium", status: "Submitted", meta: "Taken 2 September · 32 of 40 correct", finished: true, reason: "Band 6.5" },
+    { name: "Listening Mock Test 1", skill: "Listening", mode: "Mock test", difficulty: "Easy", status: "Submitted", meta: "Taken 26 August · 30 of 40 correct", finished: true, reason: "Band 6.0" }
+  ]
+};
+
+class Component extends DCLogic {
+  state = { tab: "todo" };
+
+  renderVals() {
+    const tab = this.state.tab;
+    const list = TESTS[tab];
+    const on = (t) => ({ bg: tab === t ? "#EFF4FF" : "transparent", color: tab === t ? "#1D4ED8" : "#4B5563" });
+    const notes = {
+      todo: "Tests your teacher has set for you. Locked ones show why.",
+      practice: "Practise as often as you like. These do not change your band.",
+      done: "Everything you have finished, newest first."
+    };
+
+    return {
+      todoCount: TESTS.todo.length,
+      doneCount: TESTS.done.length,
+      onTodo: () => this.setState({ tab: "todo" }),
+      onPractice: () => this.setState({ tab: "practice" }),
+      onDone: () => this.setState({ tab: "done" }),
+      todoBg: on("todo").bg, todoColor: on("todo").color,
+      practiceBg: on("practice").bg, practiceColor: on("practice").color,
+      doneBg: on("done").bg, doneColor: on("done").color,
+      tabNote: notes[tab],
+      isEmpty: list.length === 0,
+      emptyTitle: "No tests here yet",
+      emptyBody: "Your teacher will add one soon. Until then you can practise on your own.",
+      cards: list.map((t) => {
+        const d = DIFF[t.difficulty];
+        const s = STATUS[t.status];
+        return Object.assign({}, t, {
+          canStart: !!t.canStart,
+          locked: !!t.locked,
+          finished: !!t.finished,
+          reason: t.reason || "",
+          opacity: t.locked ? 0.72 : 1,
+          diffBg: d.bg, diffColor: d.color,
+          bar1: d.bars[0], bar2: d.bars[1], bar3: d.bars[2],
+          statusBg: s.bg, statusColor: s.color, statusIcon: s.icon
+        });
+      })
+    };
+  }
+}
+
+</script>
+</body>
+</html>

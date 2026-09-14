@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; background:#F7F8FA; color:#111827; font-family:Inter, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#1D4ED8; text-decoration:none; }
+  a:hover { color:#1E40AF; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; display:flex; flex-direction:column">
+
+  <div style="background:#fff; border-bottom:1px solid #E5E7EB">
+    <div style="max-width:960px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:12px">
+      <a href="09%20Result.dc.html" style="width:44px; height:44px; border-radius:8px; display:grid; place-items:center; color:#4B5563; font-size:18px" aria-label="Back to result">←</a>
+      <div style="display:flex; flex-direction:column; gap:2px">
+        <span style="font-size:17px; line-height:24px; font-weight:600">See my mistakes</span>
+        <span style="font-size:14px; color:#4B5563">Listening Mock Test 2 · Medium</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:960px; width:100%; margin:0 auto; padding:32px 24px 64px; display:flex; flex-direction:column; gap:24px">
+
+    <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:24px; display:flex; align-items:center; gap:24px; flex-wrap:wrap">
+      <div style="display:flex; align-items:center; gap:12px">
+        <span style="width:36px; height:36px; border-radius:999px; background:#ECFDF3; color:#15803D; display:grid; place-items:center; font-size:18px; font-weight:700" aria-hidden="true">✓</span>
+        <div style="display:flex; flex-direction:column">
+          <span style="font-family:'IBM Plex Mono', monospace; font-size:24px; font-weight:500; font-variant-numeric:tabular-nums">{{ correctCount }}</span>
+          <span style="font-size:16px; color:#4B5563">Correct</span>
+        </div>
+      </div>
+      <div style="width:1px; align-self:stretch; background:#E5E7EB"></div>
+      <div style="display:flex; align-items:center; gap:12px">
+        <span style="width:36px; height:36px; border-radius:999px; background:#FEF3F2; color:#B42318; display:grid; place-items:center; font-size:18px; font-weight:700" aria-hidden="true">✕</span>
+        <div style="display:flex; flex-direction:column">
+          <span style="font-family:'IBM Plex Mono', monospace; font-size:24px; font-weight:500; font-variant-numeric:tabular-nums">{{ wrongCount }}</span>
+          <span style="font-size:16px; color:#4B5563">Wrong</span>
+        </div>
+      </div>
+      <div style="flex:1; min-width:200px"></div>
+      <div style="display:flex; gap:8px; background:#F7F8FA; border:1px solid #E5E7EB; border-radius:999px; padding:4px">
+        <button type="button" onClick="{{ showMistakesOnly }}" style="min-height:44px; padding:0 18px; border:none; border-radius:999px; background:{{ mistakesBg }}; color:{{ mistakesColor }}; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">Only my mistakes</button>
+        <button type="button" onClick="{{ showAll }}" style="min-height:44px; padding:0 18px; border:none; border-radius:999px; background:{{ allBg }}; color:{{ allColor }}; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer">All questions</button>
+      </div>
+    </div>
+
+    <p style="margin:0; font-size:16px; line-height:26px; color:#4B5563">{{ introLine }}</p>
+
+    <sc-for list="{{ rows }}" as="row" hint-placeholder-count="6">
+      <div style="background:#fff; border:1px solid {{ row.cardBorder }}; border-radius:12px; overflow:hidden">
+        <div style="padding:24px; display:flex; flex-direction:column; gap:16px">
+          <div style="display:flex; gap:16px; align-items:flex-start">
+            <span style="width:36px; height:36px; flex:none; border-radius:8px; background:{{ row.numBg }}; color:{{ row.numColor }}; display:grid; place-items:center; font-family:'IBM Plex Mono', monospace; font-size:16px; font-weight:500">{{ row.n }}</span>
+            <div style="display:flex; flex-direction:column; gap:6px; min-width:0">
+              <div style="font-size:17px; line-height:1.7">{{ row.promptEl }}</div>
+              <span style="font-size:14px; line-height:20px; color:#4B5563">{{ row.typeLabel }} · Section {{ row.section }}</span>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <div style="display:flex; align-items:flex-start; gap:12px; padding:14px 16px; border-radius:8px; background:{{ row.yourBg }}">
+              <span style="color:{{ row.yourMarkColor }}; font-weight:700; font-size:17px; line-height:26px" aria-hidden="true">{{ row.yourMark }}</span>
+              <span style="font-size:16px; line-height:26px"><strong style="font-weight:600">Your answer</strong> — {{ row.yourAnswer }}</span>
+            </div>
+            <sc-if value="{{ row.showCorrect }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; align-items:flex-start; gap:12px; padding:14px 16px; border-radius:8px; background:#ECFDF3">
+                <span style="color:#15803D; font-weight:700; font-size:17px; line-height:26px" aria-hidden="true">✓</span>
+                <span style="font-size:16px; line-height:26px"><strong style="font-weight:600">Correct answer</strong> — {{ row.correctAnswer }}</span>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="display:flex; gap:12px; flex-wrap:wrap">
+            <button type="button" onClick="{{ row.onToggle }}" style="min-height:48px; padding:0 18px; border:1px solid #E5E7EB; border-radius:8px; background:#fff; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px">{{ row.toggleLabel }}<span aria-hidden="true">{{ row.toggleIcon }}</span></button>
+            <button type="button" style="min-height:48px; padding:0 18px; border:1px solid #E5E7EB; border-radius:8px; background:#fff; font-family:inherit; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px"><span aria-hidden="true">▶</span>Play this part ({{ row.stamp }})</button>
+          </div>
+        </div>
+
+        <sc-if value="{{ row.open }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:24px; background:#F7F8FA; border-top:1px solid #E5E7EB; display:flex; flex-direction:column; gap:12px">
+            <span style="font-size:14px; line-height:20px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#4B5563">What the speaker said</span>
+            <p style="margin:0; font-size:17px; line-height:1.7">{{ row.evidenceEl }}</p>
+            <p style="margin:0; font-size:16px; line-height:26px; color:#4B5563">{{ row.why }}</p>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+
+    <sc-if value="{{ noneWrong }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:48px 24px; display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center">
+        <span style="width:56px; height:56px; border-radius:999px; background:#ECFDF3; color:#15803D; display:grid; place-items:center; font-size:24px" aria-hidden="true">✓</span>
+        <h3 style="margin:0; font-size:20px; line-height:28px; font-weight:600">You got everything right</h3>
+        <p style="margin:0; font-size:16px; line-height:26px; color:#4B5563; max-width:40ch">Nothing to fix in this test. Switch to All questions if you want to read through it again.</p>
+      </div>
+    </sc-if>
+
+    <div style="display:flex; gap:16px; flex-wrap:wrap">
+      <a href="11%20My%20Progress.dc.html" style="flex:1; min-width:240px; height:56px; border-radius:8px; background:#1D4ED8; color:#fff; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:10px; text-decoration:none">See what to practise<span aria-hidden="true">→</span></a>
+      <a href="03%20Student%20Home.dc.html" style="min-width:200px; height:56px; padding:0 24px; border:1px solid #E5E7EB; border-radius:8px; background:#fff; color:#111827; font-size:17px; font-weight:600; display:flex; align-items:center; justify-content:center; text-decoration:none">Back to home</a>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1000,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { scored: null, onlyWrong: true, open: {} };
+
+  componentDidMount() {
+    import("./ielts-data.js").then((mod) => {
+      this.setState({ scored: mod.scoreAttempt(mod.loadAttempt()) });
+    });
+  }
+
+  typeLabel(type) {
+    if (type === "tfng") return "True / False / Not Given";
+    if (type === "radio") return "Multiple choice";
+    if (type === "match") return "Matching";
+    return "Gap-fill";
+  }
+
+  stampFor(n) {
+    const total = 4 + n * 40;
+    const m = String(Math.floor(total / 60)).padStart(2, "0");
+    const s = String(total % 60).padStart(2, "0");
+    return m + ":" + s;
+  }
+
+  renderVals() {
+    const h = React.createElement;
+    const scored = this.state.scored;
+    if (!scored) return {};
+    const wrong = scored.rows.filter((r) => !r.ok);
+    const shown = this.state.onlyWrong ? wrong : scored.rows;
+
+    return {
+      correctCount: scored.raw,
+      wrongCount: scored.total - scored.raw,
+      noneWrong: this.state.onlyWrong && wrong.length === 0,
+      introLine: this.state.onlyWrong
+        ? "These are the " + wrong.length + " questions you got wrong. Read the answer, then open Show why to see where it came from."
+        : "All 40 questions, in order. Correct ones are marked too.",
+      showMistakesOnly: () => this.setState({ onlyWrong: true }),
+      showAll: () => this.setState({ onlyWrong: false }),
+      mistakesBg: this.state.onlyWrong ? "#fff" : "transparent",
+      mistakesColor: this.state.onlyWrong ? "#1D4ED8" : "#4B5563",
+      allBg: this.state.onlyWrong ? "transparent" : "#fff",
+      allColor: this.state.onlyWrong ? "#4B5563" : "#1D4ED8",
+      rows: shown.map((r) => {
+        const q = r.q;
+        const open = !!this.state.open[q.n];
+        const given = r.given === undefined || String(r.given).trim() === "" ? "You left this empty" : r.given;
+        return {
+          n: q.n,
+          section: q.section,
+          typeLabel: this.typeLabel(q.type),
+          promptEl: h("span", { dangerouslySetInnerHTML: { __html: q.prompt } }),
+          cardBorder: r.ok ? "#E5E7EB" : "#F3B4AE",
+          numBg: r.ok ? "#ECFDF3" : "#FEF3F2",
+          numColor: r.ok ? "#15803D" : "#B42318",
+          yourBg: r.ok ? "#ECFDF3" : "#FEF3F2",
+          yourMark: r.ok ? "✓" : "✕",
+          yourMarkColor: r.ok ? "#15803D" : "#B42318",
+          yourAnswer: given,
+          showCorrect: !r.ok,
+          correctAnswer: q.answer,
+          open: open,
+          onToggle: () => this.setState((s) => ({ open: Object.assign({}, s.open, { [q.n]: !s.open[q.n] }) })),
+          toggleLabel: open ? "Hide why" : "Show why",
+          toggleIcon: open ? "▲" : "▼",
+          stamp: this.stampFor(q.n),
+          evidenceEl: h("span", null, [
+            "… the part you needed was here: ",
+            h("mark", { key: "m", style: { background: "#FFFBEB", padding: "2px 4px", borderRadius: 4, boxShadow: "inset 0 -2px 0 #F1DCA7" } }, String(q.answer)),
+            " — said once, quite quickly."
+          ]),
+          why: r.ok
+            ? "You picked this up correctly."
+            : "The speaker gave this answer just after the question number was announced. Listen for the phrase, not the exact words in the question."
+        };
+      })
+    };
+  }
+}
+
+</script>
+</body>
+</html>

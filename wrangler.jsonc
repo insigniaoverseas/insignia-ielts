@@ -2,22 +2,35 @@
  * For more details on how to configure Wrangler, refer to:
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "insignia-ielts",
+	"name": "muddy-truth-1a57",
+	"main": ".open-next/worker.js",
 	"compatibility_date": "2026-09-11",
-	"main": "vinext/server/fetch-handler",
+	"compatibility_flags": [
+		"global_fetch_strictly_public"
+	],
 	"assets": {
-		"directory": "dist/client",
-		"not_found_handling": "none",
-		"binding": "ASSETS"
-	},
-	"cache": {
-		"enabled": true
+		"binding": "ASSETS",
+		"directory": ".open-next/assets"
 	},
 	"images": {
+		// Enable image optimization
+		// see https://opennext.js.org/cloudflare/howtos/image
 		"binding": "IMAGES"
 	},
+	"services": [
+		{
+			// Self-reference service binding, the service name must match the worker name
+			// see https://opennext.js.org/cloudflare/caching
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "muddy-truth-1a57"
+		}
+	],
 	"observability": {
 		"enabled": true
 	},
@@ -40,9 +53,4 @@
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
 	 */
 	// "vars": {  "MY_VARIABLE": "production_value" }
-	/**
-	 * Service Bindings (communicate between multiple Workers)
-	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-	 */
-	// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
 }

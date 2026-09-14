@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin:0; background:#E9EAEE; color:#111827; font-family:Inter, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#1D4ED8; text-decoration:none; }
+  a:hover { color:#1E40AF; }
+</style>
+</helmet>
+
+<div style="padding:48px; display:flex; flex-direction:column; gap:48px">
+
+  <header style="display:flex; flex-direction:column; gap:8px">
+    <span style="font-size:14px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:#4B5563">Screen 13</span>
+    <h1 style="margin:0; font-size:32px; line-height:40px; font-weight:700; letter-spacing:-.02em">Profile</h1>
+    <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563; max-width:68ch">Name, phone, batch, how long the plan has left, change PIN, log out. Nothing else. Plan validity gets a real date and a bar of time used, because "when does my access end" is the question students actually ask.</p>
+  </header>
+
+  <div style="display:flex; gap:32px; align-items:flex-start; flex-wrap:wrap">
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">mobile · 390</span>
+      <div data-screen-label="Profile mobile" style="width:390px; background:#F7F8FA; border:1px solid #D8DBE2; border-radius:12px; overflow:hidden; display:flex; flex-direction:column">
+        <div style="background:#fff; border-bottom:1px solid #E5E7EB; padding:14px 16px; display:flex; align-items:center; gap:10px">
+          <div style="width:28px; height:28px; border-radius:8px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:15px">B</div>
+          <span style="font-size:16px; font-weight:600">Profile</span>
+        </div>
+
+        <div style="padding:24px 16px 32px; display:flex; flex-direction:column; gap:20px">
+          <div style="display:flex; align-items:center; gap:16px">
+            <div style="width:64px; height:64px; flex:none; border-radius:999px; background:#EFF4FF; color:#1D4ED8; display:grid; place-items:center; font-size:24px; font-weight:700">P</div>
+            <div style="display:flex; flex-direction:column; gap:4px; min-width:0">
+              <span style="font-size:20px; line-height:28px; font-weight:700">Priya Sharma</span>
+              <span style="font-family:'IBM Plex Mono', monospace; font-size:16px; font-variant-numeric:tabular-nums; color:#4B5563">+91 98200 11234</span>
+            </div>
+          </div>
+
+          <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; overflow:hidden">
+            <div style="padding:16px; display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid #E5E7EB">
+              <span style="font-size:16px; color:#4B5563">Batch</span>
+              <span style="font-size:16px; font-weight:600; text-align:right">Andheri — Morning</span>
+            </div>
+            <div style="padding:16px; display:flex; justify-content:space-between; gap:16px">
+              <span style="font-size:16px; color:#4B5563">Your teacher</span>
+              <span style="font-size:16px; font-weight:600; text-align:right">Anita Desai</span>
+            </div>
+          </div>
+
+          <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:16px">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap">
+              <span style="font-size:17px; font-weight:600">Your access</span>
+              <span style="display:inline-flex; align-items:center; gap:8px; padding:4px 12px; border-radius:999px; background:#FFFBEB; color:#B45309; font-size:14px; font-weight:600"><span aria-hidden="true">!</span>5 days left</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px">
+              <div style="height:12px; border-radius:999px; background:#F7F8FA; overflow:hidden"><div style="width:83%; height:100%; border-radius:999px; background:#B45309"></div></div>
+              <div style="display:flex; justify-content:space-between; gap:12px">
+                <span style="font-family:'IBM Plex Mono', monospace; font-size:14px; color:#4B5563">13 Jun 2026</span>
+                <span style="font-family:'IBM Plex Mono', monospace; font-size:14px; font-weight:500">11 Sep 2026</span>
+              </div>
+            </div>
+            <p style="margin:0; font-size:16px; line-height:26px; color:#4B5563">Your access ends on <strong style="font-weight:600; color:#111827">11 September 2026</strong>. Ask your teacher to extend it — you keep all your old results either way.</p>
+          </div>
+
+          <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; overflow:hidden">
+            <a href="02%20First%20Login%20PIN%20Change.dc.html" style="min-height:64px; padding:0 16px; display:flex; align-items:center; gap:14px; color:#111827; text-decoration:none; border-bottom:1px solid #E5E7EB">
+              <span style="width:40px; height:40px; flex:none; border-radius:8px; background:#EFF4FF; display:grid; place-items:center; font-size:18px" aria-hidden="true">🔑</span>
+              <span style="flex:1; font-size:17px; font-weight:600">Change my PIN</span>
+              <span style="color:#9CA3AF" aria-hidden="true">→</span>
+            </a>
+            <a href="01%20Login.dc.html" style="min-height:64px; padding:0 16px; display:flex; align-items:center; gap:14px; color:#111827; text-decoration:none">
+              <span style="width:40px; height:40px; flex:none; border-radius:8px; background:#F7F8FA; display:grid; place-items:center; font-size:18px" aria-hidden="true">↩</span>
+              <span style="flex:1; font-size:17px; font-weight:600">Log out</span>
+              <span style="color:#9CA3AF" aria-hidden="true">→</span>
+            </a>
+          </div>
+        </div>
+
+        <div style="margin-top:auto; display:flex; background:#fff; border-top:1px solid #E5E7EB">
+          <a href="03%20Student%20Home.dc.html" style="flex:1; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#4B5563; text-decoration:none"><span aria-hidden="true">🏠</span><span style="font-size:14px; font-weight:600">Home</span></a>
+          <a href="04%20My%20Tests.dc.html" style="flex:1; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#4B5563; text-decoration:none"><span aria-hidden="true">📄</span><span style="font-size:14px; font-weight:600">My Tests</span></a>
+          <a href="11%20My%20Progress.dc.html" style="flex:1; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#4B5563; text-decoration:none"><span aria-hidden="true">📈</span><span style="font-size:14px; font-weight:600">Progress</span></a>
+          <span style="flex:1; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#1D4ED8"><span aria-hidden="true">👤</span><span style="font-size:14px; font-weight:600">Profile</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">log out confirm</span>
+      <div data-screen-label="Profile log out" style="width:390px; min-height:560px; background:#F7F8FA; border:1px solid #D8DBE2; border-radius:12px; position:relative; overflow:hidden">
+        <div style="padding:24px 16px; display:flex; flex-direction:column; gap:20px; filter:blur(1px); opacity:.5">
+          <div style="display:flex; align-items:center; gap:16px">
+            <div style="width:64px; height:64px; flex:none; border-radius:999px; background:#EFF4FF; color:#1D4ED8; display:grid; place-items:center; font-size:24px; font-weight:700">P</div>
+            <span style="font-size:20px; font-weight:700">Priya Sharma</span>
+          </div>
+          <div style="height:120px; background:#fff; border:1px solid #E5E7EB; border-radius:12px"></div>
+          <div style="height:80px; background:#fff; border:1px solid #E5E7EB; border-radius:12px"></div>
+        </div>
+        <div style="position:absolute; inset:0; background:rgba(14,26,52,.55); display:flex; align-items:center; justify-content:center; padding:16px">
+          <div style="width:100%; background:#fff; border-radius:12px; box-shadow:0 1px 3px rgba(16,24,40,.06); padding:24px; display:flex; flex-direction:column; gap:16px">
+            <h2 style="margin:0; font-size:20px; line-height:28px; font-weight:600">Log out of this device?</h2>
+            <p style="margin:0; font-size:16px; line-height:26px; color:#4B5563">You will need your phone number and PIN to get back in.</p>
+            <div style="display:flex; flex-direction:column; gap:12px">
+              <button type="button" style="min-height:56px; border:none; border-radius:8px; background:#1D4ED8; color:#fff; font-family:inherit; font-size:17px; font-weight:600; cursor:pointer">Stay logged in</button>
+              <button type="button" style="min-height:56px; border:1px solid #E5E7EB; border-radius:8px; background:#fff; color:#111827; font-family:inherit; font-size:17px; font-weight:600; cursor:pointer">Yes, log out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px">
+      <span style="font-size:14px; font-family:'IBM Plex Mono', monospace; color:#4B5563">desktop · 1280</span>
+      <div data-screen-label="Profile desktop" style="width:1280px; background:#F7F8FA; border:1px solid #D8DBE2; border-radius:12px; overflow:hidden">
+        <div style="background:#fff; border-bottom:1px solid #E5E7EB; padding:0 32px; display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:72px">
+          <div style="display:flex; align-items:center; gap:12px">
+            <div style="width:32px; height:32px; border-radius:8px; background:#0E1A34; color:#fff; display:grid; place-items:center; font-weight:700; font-size:16px">B</div>
+            <span style="font-size:17px; font-weight:600; letter-spacing:-.01em">Bright IELTS</span>
+          </div>
+          <nav style="display:flex; gap:4px">
+            <a href="03%20Student%20Home.dc.html" style="min-height:48px; display:flex; align-items:center; padding:0 18px; border-radius:8px; color:#4B5563; font-size:16px; font-weight:600">Home</a>
+            <a href="04%20My%20Tests.dc.html" style="min-height:48px; display:flex; align-items:center; padding:0 18px; border-radius:8px; color:#4B5563; font-size:16px; font-weight:600">My Tests</a>
+            <a href="11%20My%20Progress.dc.html" style="min-height:48px; display:flex; align-items:center; padding:0 18px; border-radius:8px; color:#4B5563; font-size:16px; font-weight:600">Progress</a>
+            <span style="min-height:48px; display:flex; align-items:center; padding:0 18px; border-radius:8px; background:#EFF4FF; color:#1D4ED8; font-size:16px; font-weight:600">Profile</span>
+          </nav>
+        </div>
+
+        <div style="padding:48px 32px 64px; max-width:840px; margin:0 auto; display:flex; flex-direction:column; gap:24px">
+          <div style="display:flex; align-items:center; gap:20px">
+            <div style="width:72px; height:72px; flex:none; border-radius:999px; background:#EFF4FF; color:#1D4ED8; display:grid; place-items:center; font-size:28px; font-weight:700">P</div>
+            <div style="display:flex; flex-direction:column; gap:4px">
+              <h2 style="margin:0; font-size:28px; line-height:36px; font-weight:700; letter-spacing:-.02em">Priya Sharma</h2>
+              <span style="font-family:'IBM Plex Mono', monospace; font-size:17px; font-variant-numeric:tabular-nums; color:#4B5563">+91 98200 11234</span>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:1px; background:#E5E7EB; border:1px solid #E5E7EB; border-radius:12px; overflow:hidden">
+            <div style="background:#fff; padding:24px; display:flex; flex-direction:column; gap:4px">
+              <span style="font-size:16px; color:#4B5563">Batch</span>
+              <span style="font-size:17px; font-weight:600">Andheri — Morning</span>
+            </div>
+            <div style="background:#fff; padding:24px; display:flex; flex-direction:column; gap:4px">
+              <span style="font-size:16px; color:#4B5563">Your teacher</span>
+              <span style="font-size:17px; font-weight:600">Anita Desai</span>
+            </div>
+          </div>
+
+          <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:32px; display:flex; flex-direction:column; gap:20px">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap">
+              <h3 style="margin:0; font-size:20px; line-height:28px; font-weight:600">Your access</h3>
+              <span style="display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px; background:#FFFBEB; color:#B45309; font-size:16px; font-weight:600"><span aria-hidden="true">!</span>5 days left</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px">
+              <div style="height:14px; border-radius:999px; background:#F7F8FA; overflow:hidden"><div style="width:83%; height:100%; border-radius:999px; background:#B45309"></div></div>
+              <div style="display:flex; justify-content:space-between; gap:16px">
+                <span style="font-family:'IBM Plex Mono', monospace; font-size:16px; color:#4B5563">Started 13 Jun 2026</span>
+                <span style="font-family:'IBM Plex Mono', monospace; font-size:16px; font-weight:500">Ends 11 Sep 2026</span>
+              </div>
+            </div>
+            <p style="margin:0; font-size:17px; line-height:1.7; color:#4B5563; max-width:64ch">You have used 83 of your 90 days. Ask your teacher to extend your access — you keep all your old results either way.</p>
+          </div>
+
+          <div style="background:#fff; border:1px solid #E5E7EB; border-radius:12px; overflow:hidden">
+            <a href="02%20First%20Login%20PIN%20Change.dc.html" style="min-height:72px; padding:0 24px; display:flex; align-items:center; gap:16px; color:#111827; text-decoration:none; border-bottom:1px solid #E5E7EB" style-hover="background:#F7F8FA">
+              <span style="width:40px; height:40px; flex:none; border-radius:8px; background:#EFF4FF; display:grid; place-items:center; font-size:18px" aria-hidden="true">🔑</span>
+              <span style="flex:1; display:flex; flex-direction:column; gap:2px"><span style="font-size:17px; font-weight:600">Change my PIN</span><span style="font-size:14px; color:#4B5563">You will need your current PIN</span></span>
+              <span style="color:#9CA3AF; font-size:18px" aria-hidden="true">→</span>
+            </a>
+            <a href="01%20Login.dc.html" style="min-height:72px; padding:0 24px; display:flex; align-items:center; gap:16px; color:#111827; text-decoration:none" style-hover="background:#F7F8FA">
+              <span style="width:40px; height:40px; flex:none; border-radius:8px; background:#F7F8FA; display:grid; place-items:center; font-size:18px" aria-hidden="true">↩</span>
+              <span style="flex:1; font-size:17px; font-weight:600">Log out</span>
+              <span style="color:#9CA3AF; font-size:18px" aria-hidden="true">→</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>
