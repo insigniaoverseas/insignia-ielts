@@ -21,9 +21,9 @@
 | | |
 |---|---|
 | **Active milestone** | **M0 — Foundations** |
-| **Last completed** | Specification written (`MVP-1.md`), design docs reviewed, all decisions D1–D13 locked |
-| **Next task** | **[`BUILD-STEPS.md`](BUILD-STEPS.md) step 1** — answer Q1–Q3 in §7 below, then step 2: ⚠️ create the Supabase project in `ap-south-1` (irreversible). Steps 3–4 run in parallel. |
-| **Blocked on** | Nothing. Two non-blocking open questions in §7. |
+| **Last completed** | M0-01 scaffold swapped from `vinext` to Next.js 16.3.4 + OpenNext (commit `576a7f3`). `opennextjs-cloudflare build` produces `.open-next/worker.js`. |
+| **Next task** | **Finish M0-01** — one fix outstanding: repair the broken lint script (§5). Then [`BUILD-STEPS.md`](BUILD-STEPS.md) step 2: ⚠️ create the Supabase project in `ap-south-1` (irreversible). |
+| **Blocked on** | Nothing. Open questions in §7 are non-blocking. |
 | **Branch** | `main` |
 
 ---
@@ -36,7 +36,7 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M0-01 Re-scaffold Next.js 16 + OpenNext | todo | | | Discard `vinext`, `app/page.tsx`, `next.config.ts` |
+| M0-01 Re-scaffold Next.js 16 + OpenNext | in_progress | goverdhan-gaur | 2026-09-15 | ✅ Next 16.3.4, React 19, `@opennextjs/cloudflare` 1.20.3; vinext fully removed; no `@vercel/*`; Worker build passes. ✅ Worker renamed `muddy-truth-1a57` → `insignia-test` in all 3 places (`package.json`, `wrangler.jsonc` name, `services[0].service`) — uncommitted. ⬜ **Fix lint** (§5). Uses `src/app/` — see §4. |
 | M0-02 Tailwind v4 `@theme` tokens + fonts | todo | | | v4 is CSS-first — not a `tailwind.config.js` |
 | M0-03 shadcn/ui init + restyle to tokens | todo | | | |
 | M0-04 ⚠️ Supabase project in `ap-south-1` | todo | | | **Region cannot be changed later** |
@@ -199,6 +199,9 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-09-15 | M0-01 | Renamed the worker `muddy-truth-1a57` → `insignia-test` in `package.json`, `wrangler.jsonc` `name` and `services[0].service` — all three consistent. | `package.json`, `wrangler.jsonc` (uncommitted) | goverdhan-gaur |
+| 2026-09-15 | — | Recorded the scaffold swap. Corrected `MVP-1.md` §15 and `BUILD-STEPS.md` steps 5–6 to match the `src/` layout and `cloudflare-env.d.ts`. | `PROJECT-MEMORY.md`, `MVP-1.md`, `BUILD-STEPS.md` | Claude |
+| 2026-09-15 | M0-01 | Replaced the `vinext` scaffold with Next.js 16.3.4 + `@opennextjs/cloudflare` 1.20.3. Verified: `opennextjs-cloudflare build` succeeds and emits `.open-next/worker.js`; `.dev.vars` is gitignored and absent from history. Outstanding: worker rename, lint fix. | `package.json`, `wrangler.jsonc`, `next.config.ts`, `open-next.config.ts`, `src/app/*`, `eslint.config.mjs` (commit `576a7f3`) | goverdhan-gaur |
 | 2026-09-14 | — | Specification written. Reviewed all four `Design files/*.md` docs, the 12 rendered student screens and the design system. Fetched the three official ielts.org format pages for the question-type taxonomy. Locked decisions D1–D13. | `MVP-1.md`, `PROJECT-MEMORY.md`, `CLAUDE.md` | Claude + goverdhan-gaur |
 
 ---
@@ -217,7 +220,11 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
 
-*(No build-time decisions yet — D1–D13 in `MVP-1.md` §3 cover everything decided so far.)*
+### 2026-09-15 — App code lives under `src/`  (task: M0-01)
+**Chose:** the `src/` layout the OpenNext scaffold generated — `src/app`, `src/components`, `src/lib`, `src/db`. The `@/*` alias resolves to `./src/*`, so imports read `@/lib/scoring`. Tooling that CLIs expect at the root stays there: `supabase/`, `mcp/`, `scripts/`, `docs/`.
+**Because:** it's what the scaffold produced, it's a standard Next.js layout, and it separates app code from config/tooling cleanly.
+**Rejected:** moving everything back to a root `app/` to match the original `MVP-1.md` tree — churn for no benefit.
+**Correction applied:** `MVP-1.md` §15 repo tree updated. Paths elsewhere in `MVP-1.md` written as `lib/…` mean `src/lib/…`.
 
 ---
 
@@ -242,7 +249,13 @@ Things that cost an hour and would cost the next agent the same hour. Add as you
 
 ### Discovered during the build
 
-*(none yet)*
+| Area | Constraint | Found |
+|---|---|---|
+| **`next lint` is gone in Next 16** | `npm run lint` currently runs `next lint`, which Next 16 no longer has — it misreads `lint` as a directory name and fails. Change the script to `"lint": "eslint ."`. | M0-01 |
+| **`FlatCompat` breaks with `eslint-config-next` 16** | The scaffolded `eslint.config.mjs` wraps `next/core-web-vitals` in `FlatCompat`, which crashes with *"Converting circular structure to JSON"*. v16 ships native flat configs — import them directly (verified both load as arrays): `import nextVitals from "eslint-config-next/core-web-vitals"`, `import nextTs from "eslint-config-next/typescript"`, then `export default [...nextVitals, ...nextTs, { ignores: [".next/**", ".open-next/**", "cloudflare-env.d.ts"] }]`. Drop the `@eslint/eslintrc` devDependency afterwards. | M0-01 |
+| **`create-cloudflare` assigns a random worker name** | It named the worker `muddy-truth-1a57`. The name appears in **three** places — `package.json`, `wrangler.jsonc` `name`, and `wrangler.jsonc` `services[0].service` (OpenNext's self-reference binding). The last one **must equal the worker name** or caching breaks. Rename all three together, before the first deploy. If it's already been deployed under the random name, the old worker lingers — delete it from the dashboard. **Resolved 2026-09-15** (→ `insignia-test`). Two stale copies of the old name remain and regenerate on their own: `package-lock.json` (next `npm install`) and a comment in `cloudflare-env.d.ts` (next `npm run cf-typegen`). | M0-01 |
+| **Binding types file renamed** | The OpenNext scaffold generates `cloudflare-env.d.ts` via `npm run cf-typegen`, replacing the vinext-era `worker-configuration.d.ts`. Re-run `cf-typegen` after adding any binding (R2 at M0-12). | M0-01 |
+| **`npm run start` doesn't exercise the Worker** | It runs plain `next start` on Node. To test on the actual Cloudflare runtime locally, use `npm run preview`. | M0-01 |
 
 ---
 
@@ -256,7 +269,7 @@ Things that cost an hour and would cost the next agent the same hour. Add as you
 | Supabase project | *TBD* — must be **`ap-south-1`** | supabase.com dashboard | ⬜ M0-04 |
 | R2 bucket — content | *TBD* | Cloudflare dashboard | ⬜ M0-12 |
 | R2 bucket — audio | *TBD* | Cloudflare dashboard | ⬜ M0-12 |
-| Worker | `insignia-ielts` | `wrangler.jsonc` | ✅ named |
+| Worker | `insignia-test` | `wrangler.jsonc`, `package.json` | ✅ named |
 | Domain | *TBD* | | ⬜ |
 | Resend sending domain | *TBD* | needs SPF/DKIM/DMARC | ⬜ M1-04 |
 | Sentry project | *TBD* | | ⬜ |
@@ -296,6 +309,16 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 ---
 
 ## 8. Session handoff notes
+
+### 2026-09-15
+
+**Done.** M0-01 scaffold swap is in (`576a7f3`). Verified the Worker build end to end and confirmed `.dev.vars` has never been committed.
+
+**Half-done.** M0-01 stays `in_progress` for one fix, detailed in §5: replace the `next lint` script and the `FlatCompat` ESLint config. Lint must pass before any later task can meet the definition of done, so fix it first. The worker rename to `insignia-test` is done but not yet committed.
+
+**Not yet touched, but worth knowing.** `src/app/layout.tsx` still loads Geist fonts with "Create Next App" metadata and `globals.css` has scaffold colours — that's M0-02 (tokens + Inter / IBM Plex Mono), not a defect. The README is the stock OpenNext starter text.
+
+**Start with.** The M0-01 lint fix, then `BUILD-STEPS.md` step 2 — the Supabase project in `ap-south-1`.
 
 ### 2026-09-14
 

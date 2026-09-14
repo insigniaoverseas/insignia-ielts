@@ -47,7 +47,9 @@ Resend (invite email — step 40), Sentry, Cloudflare Turnstile. Record names in
 ## Phase 1 — Skeleton (2–3 days)
 
 ### 5. Re-scaffold onto Next.js 16 + OpenNext `(M0-01)`
-The repo currently holds a `vinext` scaffold. Scaffold fresh to a sibling directory, then move the app files across — keep `.git`, `Design files/`, `MVP-1.md`, `PROJECT-MEMORY.md`, `CLAUDE.md`, `BUILD-STEPS.md`.
+> ✅ **Done 2026-09-15** (commit `576a7f3`) — Next 16.3.4 + `@opennextjs/cloudflare` 1.20.3, app code under `src/`. The lint script still needs fixing; see `PROJECT-MEMORY.md` §5. Instructions kept below for reference.
+
+The repo held a `vinext` scaffold. Scaffold fresh to a sibling directory, then move the app files across — keep `.git`, `Design files/`, `MVP-1.md`, `PROJECT-MEMORY.md`, `CLAUDE.md`, `BUILD-STEPS.md`.
 
 ```bash
 cd ..
@@ -59,11 +61,12 @@ Then delete from the old tree: `vite.config.ts`, `next.config.ts` boilerplate, `
 **✅ Done when** `npm run dev` serves a page and `npm run build` produces Worker output.
 
 ### 6. Port `wrangler.jsonc` `(M0-01)`
-Keep `name: "insignia-ielts"`, `observability`, `upload_source_maps`. Add the R2 bindings from step 3.
-**✅ Done when** `npx wrangler types` regenerates `worker-configuration.d.ts` with both buckets.
+The worker is named `insignia-test`. ⚠️ If you ever rename it, change **all three** places together — `package.json` name, `wrangler.jsonc` `name`, and `services[0].service` — the self-reference binding must match the worker name or OpenNext caching breaks.
+Keep `observability` and `upload_source_maps`. Add the R2 bindings from step 3.
+**✅ Done when** `npm run cf-typegen` regenerates `cloudflare-env.d.ts` with both buckets.
 
 ### 7. Tailwind v4 tokens `(M0-02)`
-Paste the `@theme` block from [`MVP-1.md` §15](MVP-1.md#15-repo-structure-and-design-system) into `app/globals.css`. Load Inter + IBM Plex Mono.
+Paste the `@theme` block from [`MVP-1.md` §15](MVP-1.md#15-repo-structure-and-design-system) into `src/app/globals.css`. Load Inter + IBM Plex Mono in `src/app/layout.tsx`, replacing the scaffold's Geist fonts.
 ⚠️ **Tailwind v4 is CSS-first.** The `tailwind.config.js` block printed in `00 Design System.dc.html` is v3 syntax — the *values* carry over, the mechanism does not.
 **✅ Done when** a `bg-brand text-surface` div renders `#1D4ED8`.
 
