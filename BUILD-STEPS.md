@@ -61,7 +61,16 @@ Then delete from the old tree: `vite.config.ts`, `next.config.ts` boilerplate, `
 **✅ Done when** `npm run dev` serves a page and `npm run build` produces Worker output.
 
 ### 6. Port `wrangler.jsonc` `(M0-01)`
-The worker is named `insignia-test`. ⚠️ If you ever rename it, change **all three** places together — `package.json` name, `wrangler.jsonc` `name`, and `services[0].service` — the self-reference binding must match the worker name or OpenNext caching breaks.
+**Cloudflare Git auto-deploy (Workers Builds)** — set these in the dashboard (the Worker → Settings → Builds → Build configuration). The default `npm run build` only runs `next build` and the deploy then fails with *"Could not find compiled Open Next config"*:
+
+| Field | Value |
+|---|---|
+| Build command | `npx opennextjs-cloudflare build` |
+| Deploy command | `npx opennextjs-cloudflare deploy` |
+
+⚠️ **Don't** "fix" it by changing `package.json` to `"build": "opennextjs-cloudflare build"` — OpenNext's build calls `npm run build` internally, so that loops forever.
+
+The worker is named `insignia-test`, and the dashboard Worker the repo is connected to must have the same name. ⚠️ If you ever rename it, change **all three** places together — `package.json` name, `wrangler.jsonc` `name`, and `services[0].service` — the self-reference binding must match the worker name or OpenNext caching breaks.
 Keep `observability` and `upload_source_maps`. Add the R2 bindings from step 3.
 **✅ Done when** `npm run cf-typegen` regenerates `cloudflare-env.d.ts` with both buckets.
 

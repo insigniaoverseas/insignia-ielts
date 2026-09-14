@@ -22,8 +22,8 @@
 |---|---|
 | **Active milestone** | **M0 — Foundations** |
 | **Last completed** | M0-01 scaffold swapped from `vinext` to Next.js 16.3.4 + OpenNext (commit `576a7f3`). `opennextjs-cloudflare build` produces `.open-next/worker.js`. |
-| **Next task** | **Finish M0-01** — one fix outstanding: repair the broken lint script (§5). Then [`BUILD-STEPS.md`](BUILD-STEPS.md) step 2: ⚠️ create the Supabase project in `ap-south-1` (irreversible). |
-| **Blocked on** | Nothing. Open questions in §7 are non-blocking. |
+| **Next task** | **Finish M0-01** — two fixes outstanding: (1) set the Cloudflare Workers Builds build/deploy commands in the dashboard (§5 — auto-deploy is currently failing), (2) repair the broken lint script (§5). Then [`BUILD-STEPS.md`](BUILD-STEPS.md) step 2: ⚠️ create the Supabase project in `ap-south-1` (irreversible). |
+| **Blocked on** | Auto-deploy fails until the dashboard build command is changed — a dashboard setting, no code change. Open questions in §7 are non-blocking. |
 | **Branch** | `main` |
 
 ---
@@ -36,7 +36,7 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M0-01 Re-scaffold Next.js 16 + OpenNext | in_progress | goverdhan-gaur | 2026-09-15 | ✅ Next 16.3.4, React 19, `@opennextjs/cloudflare` 1.20.3; vinext fully removed; no `@vercel/*`; Worker build passes. ✅ Worker renamed `muddy-truth-1a57` → `insignia-test` in all 3 places (`package.json`, `wrangler.jsonc` name, `services[0].service`) — uncommitted. ⬜ **Fix lint** (§5). Uses `src/app/` — see §4. |
+| M0-01 Re-scaffold Next.js 16 + OpenNext | in_progress | goverdhan-gaur | 2026-09-15 | ✅ Next 16.3.4, React 19, `@opennextjs/cloudflare` 1.20.3; vinext fully removed; no `@vercel/*`; Worker build passes. ✅ Worker renamed `muddy-truth-1a57` → `insignia-test` in all 3 places (`package.json`, `wrangler.jsonc` name, `services[0].service`) — pushed in `6f4a4b0`. ⬜ **Fix Workers Builds commands** in the dashboard (§5) — auto-deploy failing. ⬜ **Fix lint** (§5). Uses `src/app/` — see §4. |
 | M0-02 Tailwind v4 `@theme` tokens + fonts | todo | | | v4 is CSS-first — not a `tailwind.config.js` |
 | M0-03 shadcn/ui init + restyle to tokens | todo | | | |
 | M0-04 ⚠️ Supabase project in `ap-south-1` | todo | | | **Region cannot be changed later** |
@@ -199,7 +199,8 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
-| 2026-09-15 | M0-01 | Renamed the worker `muddy-truth-1a57` → `insignia-test` in `package.json`, `wrangler.jsonc` `name` and `services[0].service` — all three consistent. | `package.json`, `wrangler.jsonc` (uncommitted) | goverdhan-gaur |
+| 2026-09-15 | M0-01 | Cloudflare Workers Builds auto-deploy of `6f4a4b0` failed: *"Could not find compiled Open Next config, did you run the build command?"*. Cause: the dashboard build step runs `npm run build` (= `next build`), which never creates `.open-next/`. Fix is a dashboard setting — see §5. | — | goverdhan-gaur, diagnosed by Claude |
+| 2026-09-15 | M0-01 | Renamed the worker `muddy-truth-1a57` → `insignia-test` in `package.json`, `wrangler.jsonc` `name` and `services[0].service` — all three consistent. Committed and pushed with the doc updates. | `package.json`, `wrangler.jsonc`, docs (commit `6f4a4b0`) | goverdhan-gaur |
 | 2026-09-15 | — | Recorded the scaffold swap. Corrected `MVP-1.md` §15 and `BUILD-STEPS.md` steps 5–6 to match the `src/` layout and `cloudflare-env.d.ts`. | `PROJECT-MEMORY.md`, `MVP-1.md`, `BUILD-STEPS.md` | Claude |
 | 2026-09-15 | M0-01 | Replaced the `vinext` scaffold with Next.js 16.3.4 + `@opennextjs/cloudflare` 1.20.3. Verified: `opennextjs-cloudflare build` succeeds and emits `.open-next/worker.js`; `.dev.vars` is gitignored and absent from history. Outstanding: worker rename, lint fix. | `package.json`, `wrangler.jsonc`, `next.config.ts`, `open-next.config.ts`, `src/app/*`, `eslint.config.mjs` (commit `576a7f3`) | goverdhan-gaur |
 | 2026-09-14 | — | Specification written. Reviewed all four `Design files/*.md` docs, the 12 rendered student screens and the design system. Fetched the three official ielts.org format pages for the question-type taxonomy. Locked decisions D1–D13. | `MVP-1.md`, `PROJECT-MEMORY.md`, `CLAUDE.md` | Claude + goverdhan-gaur |
@@ -255,6 +256,9 @@ Things that cost an hour and would cost the next agent the same hour. Add as you
 | **`FlatCompat` breaks with `eslint-config-next` 16** | The scaffolded `eslint.config.mjs` wraps `next/core-web-vitals` in `FlatCompat`, which crashes with *"Converting circular structure to JSON"*. v16 ships native flat configs — import them directly (verified both load as arrays): `import nextVitals from "eslint-config-next/core-web-vitals"`, `import nextTs from "eslint-config-next/typescript"`, then `export default [...nextVitals, ...nextTs, { ignores: [".next/**", ".open-next/**", "cloudflare-env.d.ts"] }]`. Drop the `@eslint/eslintrc` devDependency afterwards. | M0-01 |
 | **`create-cloudflare` assigns a random worker name** | It named the worker `muddy-truth-1a57`. The name appears in **three** places — `package.json`, `wrangler.jsonc` `name`, and `wrangler.jsonc` `services[0].service` (OpenNext's self-reference binding). The last one **must equal the worker name** or caching breaks. Rename all three together, before the first deploy. If it's already been deployed under the random name, the old worker lingers — delete it from the dashboard. **Resolved 2026-09-15** (→ `insignia-test`). Two stale copies of the old name remain and regenerate on their own: `package-lock.json` (next `npm install`) and a comment in `cloudflare-env.d.ts` (next `npm run cf-typegen`). | M0-01 |
 | **Binding types file renamed** | The OpenNext scaffold generates `cloudflare-env.d.ts` via `npm run cf-typegen`, replacing the vinext-era `worker-configuration.d.ts`. Re-run `cf-typegen` after adding any binding (R2 at M0-12). | M0-01 |
+| **Workers Builds needs OpenNext's own build command** | Cloudflare's Git auto-deploy defaults its build step to `npm run build`, which here is plain `next build` — it produces `.next/` but not `.open-next/`. The deploy step then fails with *"Could not find compiled Open Next config, did you run the build command?"* because it requires `.open-next/.build/open-next.config.edge.mjs`, which **only** `opennextjs-cloudflare build` creates. **Fix (dashboard → the Worker → Settings → Builds → Build configuration):** Build command `npx opennextjs-cloudflare build` · Deploy command `npx opennextjs-cloudflare deploy`. | M0-01 |
+| **⚠️ Never set `"build": "opennextjs-cloudflare build"`** | It's the obvious-looking fix and it's wrong. `opennextjs-cloudflare build` internally runs `npm run build` to do the Next.js compile (`@opennextjs/aws/dist/build/buildNextApp.js`), so pointing the `build` script at it recurses forever. Keep `"build": "next build"`; put the OpenNext command in the dashboard. | M0-01 |
+| **Workers Builds: config name must match the connected Worker** | Workers Builds deploys to the Worker the repo is connected to in the dashboard, and the `name` in `wrangler.jsonc` must match it. The repo now says `insignia-test`. If the dashboard Worker is still `muddy-truth-1a57` (the name when Git was first connected), the build will fail on a name mismatch *after* the command fix — rename the Worker in the dashboard to `insignia-test`, or connect the repo to a new `insignia-test` Worker and delete the old one. *Not verified from here — the Cloudflare connector wasn't connected this session.* | M0-01 |
 | **`npm run start` doesn't exercise the Worker** | It runs plain `next start` on Node. To test on the actual Cloudflare runtime locally, use `npm run preview`. | M0-01 |
 
 ---
@@ -314,11 +318,11 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 
 **Done.** M0-01 scaffold swap is in (`576a7f3`). Verified the Worker build end to end and confirmed `.dev.vars` has never been committed.
 
-**Half-done.** M0-01 stays `in_progress` for one fix, detailed in §5: replace the `next lint` script and the `FlatCompat` ESLint config. Lint must pass before any later task can meet the definition of done, so fix it first. The worker rename to `insignia-test` is done but not yet committed.
+**Half-done.** M0-01 stays `in_progress` for two fixes, both in §5: (1) the Cloudflare Workers Builds auto-deploy fails because the dashboard build step runs `next build` instead of `opennextjs-cloudflare build` — a dashboard setting, not a code change; (2) replace the `next lint` script and the `FlatCompat` ESLint config. The worker rename to `insignia-test` is committed and pushed (`6f4a4b0`).
 
 **Not yet touched, but worth knowing.** `src/app/layout.tsx` still loads Geist fonts with "Create Next App" metadata and `globals.css` has scaffold colours — that's M0-02 (tokens + Inter / IBM Plex Mono), not a defect. The README is the stock OpenNext starter text.
 
-**Start with.** The M0-01 lint fix, then `BUILD-STEPS.md` step 2 — the Supabase project in `ap-south-1`.
+**Start with.** The dashboard build-command fix (and confirm the dashboard Worker is named `insignia-test`), then the lint fix, then `BUILD-STEPS.md` step 2 — the Supabase project in `ap-south-1`.
 
 ### 2026-09-14
 
