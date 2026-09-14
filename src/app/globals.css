@@ -1,26 +1,242 @@
+/*
+ * Insignia IELTS — design tokens (M0-02)
+ *
+ * Source of truth: "Design files/Prioritizing project scope/00 Design System.dc.html"
+ * and DESIGN-PROMPT.md §A2–A4. Every value below maps 1:1 to that file.
+ *
+ * Tailwind v4 is CSS-first: tokens live here in @theme, not in a tailwind.config.js.
+ * Utilities follow the token names: bg-brand, text-ink-2, border-line, rounded-card,
+ * text-body, h-primary, shadow-soft …
+ *
+ * The default Tailwind palette and type scale are switched OFF (the `initial` resets
+ * below), so off-system values like `bg-blue-500` or `text-sm` generate nothing.
+ * If you need a colour that isn't here, add a token — don't reach for an arbitrary value.
+ */
+
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+ * Raw colour values. Components never read these directly — they use the
+ * utilities generated from @theme below. Kept as variables so the dark palette
+ * can swap them.
+ * ------------------------------------------------------------------------- */
 :root {
-	--background: #ffffff;
-	--foreground: #171717;
+	/* A2 · Colour — from the design system */
+	--brand: #1d4ed8; /* primary buttons, active nav, links, focus */
+	--brand-hover: #1e40af;
+	--brand-soft: #eff4ff; /* selected rows, info panels, active chips */
+	--success: #15803d; /* correct, passed, active plan */
+	--success-soft: #ecfdf3;
+	--warning: #b45309; /* expiring soon, time running low */
+	--warning-soft: #fffbeb;
+	--danger: #b42318; /* wrong, expired, destructive */
+	--danger-soft: #fef3f2;
+	--ink: #111827; /* primary text */
+	--ink-2: #4b5563; /* secondary text */
+	--ink-3: #9ca3af; /* hints, placeholders, disabled */
+	--line: #e5e7eb; /* borders, dividers */
+	--surface: #ffffff; /* cards, inputs */
+	--bg: #f7f8fa; /* page background */
+
+	/* Supporting tints — used in the design files but not named in the token table.
+	   Named here so nobody hardcodes them. */
+	--brand-line: #d6e0ff; /* info banner border */
+	--success-muted: #bfe3cb; /* difficulty bars, unfilled (Easy) */
+	--warning-line: #f5d9a0; /* warning banner + timer border */
+	--warning-muted: #ebd5ae; /* difficulty bars, unfilled (Medium) */
+	--danger-hover: #912018; /* danger button hover */
+	--danger-line: #f3b4ae; /* danger banner + timer border */
+	--skeleton: #eef0f3; /* loading shimmer */
+	--night: #0e1a34; /* Listening player audio band, modal backdrop (screen 06) */
+	--success-bright: #4ade80; /* ✓ on a dark toast */
 }
 
+/*
+ * Dark palette — opt-in only via <html data-theme="dark">. Never applied
+ * automatically: every screen is designed and shown in light (DESIGN-PROMPT §A2).
+ *
+ * Values marked DESIGN come from the dark block in 00 Design System.dc.html.
+ * Values marked DERIVED are NOT in the design — placeholders so the palette is
+ * complete. Check contrast (WCAG AA) before enabling dark mode for real.
+ */
+[data-theme="dark"] {
+	--brand: #4f7dfb; /* DESIGN */
+	--brand-hover: #6b90fc; /* DERIVED */
+	--brand-soft: #1b2a4a; /* DESIGN */
+	--brand-line: #2a3d66; /* DERIVED */
+	--success: #4ade80; /* DESIGN */
+	--success-soft: #0f2a1c; /* DERIVED */
+	--success-muted: #1f4d33; /* DERIVED */
+	--warning: #fbbf24; /* DESIGN */
+	--warning-soft: #2a1f0b; /* DERIVED */
+	--warning-line: #5c4414; /* DERIVED */
+	--warning-muted: #4a3a17; /* DERIVED */
+	--danger: #f87171; /* DESIGN */
+	--danger-hover: #fca5a5; /* DERIVED */
+	--danger-soft: #2b1414; /* DERIVED */
+	--danger-line: #5c2626; /* DERIVED */
+	--ink: #f9fafb; /* DESIGN */
+	--ink-2: #d1d5db; /* DESIGN (caption colour in the dark block) */
+	--ink-3: #9ca3af; /* DERIVED */
+	--line: #1f2937; /* DESIGN (border colour in the dark block) */
+	--surface: #151b28; /* DESIGN */
+	--bg: #0b1120; /* DESIGN */
+	--skeleton: #1f2937; /* DERIVED */
+	color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------------------
+ * Theme — colours and fonts reference the variables above (hence `inline`).
+ * ------------------------------------------------------------------------- */
 @theme inline {
-	--color-background: var(--background);
-	--color-foreground: var(--foreground);
-	--font-sans: var(--font-geist-sans);
-	--font-mono: var(--font-geist-mono);
+	--color-*: initial; /* palette discipline: only these colours exist */
+	--color-white: #ffffff;
+	--color-brand: var(--brand);
+	--color-brand-hover: var(--brand-hover);
+	--color-brand-soft: var(--brand-soft);
+	--color-brand-line: var(--brand-line);
+	--color-success: var(--success);
+	--color-success-soft: var(--success-soft);
+	--color-success-muted: var(--success-muted);
+	--color-success-bright: var(--success-bright);
+	--color-warning: var(--warning);
+	--color-warning-soft: var(--warning-soft);
+	--color-warning-line: var(--warning-line);
+	--color-warning-muted: var(--warning-muted);
+	--color-danger: var(--danger);
+	--color-danger-hover: var(--danger-hover);
+	--color-danger-soft: var(--danger-soft);
+	--color-danger-line: var(--danger-line);
+	--color-ink: var(--ink);
+	--color-ink-2: var(--ink-2);
+	--color-ink-3: var(--ink-3);
+	--color-line: var(--line);
+	--color-surface: var(--surface);
+	--color-bg: var(--bg);
+	--color-skeleton: var(--skeleton);
+	--color-night: var(--night);
+
+	/* A3 · One family: Inter. IBM Plex Mono for timers, scores, phone numbers.
+	   The --font-inter / --font-plex-mono variables are set by next/font in layout.tsx. */
+	--font-*: initial;
+	--font-sans: var(--font-inter), system-ui, "Segoe UI", Roboto, sans-serif;
+	--font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--background: #0a0a0a;
-		--foreground: #ededed;
+@theme {
+	/* A3 · Type scale. rem so it respects the user's browser font size.
+	   Students never go below text-body (16px). text-small is admin/teacher only. */
+	--text-*: initial;
+	--text-small: 0.875rem; /* 14/20 400 — metadata, admin/teacher only */
+	--text-small--line-height: 1.25rem;
+	--text-body: 1rem; /* 16/26 400 — the default */
+	--text-body--line-height: 1.625rem;
+	--text-h3: 1.0625rem; /* 17/24 600 — card title */
+	--text-h3--line-height: 1.5rem;
+	--text-h3--font-weight: 600;
+	--text-h2: 1.25rem; /* 20/28 600 — section heading */
+	--text-h2--line-height: 1.75rem;
+	--text-h2--font-weight: 600;
+	--text-h1: 1.5rem; /* 24/32 700 — screen title */
+	--text-h1--line-height: 2rem;
+	--text-h1--font-weight: 700;
+	--text-display: 2rem; /* 32/40 700 — big numbers, timer */
+	--text-display--line-height: 2.5rem;
+	--text-display--font-weight: 700;
+	--text-passage: 1.0625rem; /* 17px / 1.7 — reading passages + question text, max ~70ch */
+	--text-passage--line-height: 1.7;
+	--text-hero: 4rem; /* 64px — the band score number only */
+	--text-hero--line-height: 1;
+
+	/* A4 · Spacing: Tailwind's default 4px step already equals the 8pt scale
+	   (p-1=4 p-2=8 p-3=12 p-4=16 p-6=24 p-8=32 p-12=48 p-16=64). Two named sizes: */
+	--spacing-touch: 3rem; /* 48px — minimum tap target */
+	--spacing-primary: 3.5rem; /* 56px — student primary button / input height */
+
+	/* A4 · Shape */
+	--radius-control: 0.5rem; /* 8px — inputs, buttons */
+	--radius-card: 0.75rem; /* 12px — cards */
+	/* pills/chips use rounded-full */
+
+	/* A4 · Depth: cards get a 1px border, never a shadow. This one soft shadow is
+	   for modals, dropdowns and sticky bars ONLY. */
+	--shadow-soft: 0 1px 3px rgb(16 24 40 / 0.06);
+
+	/* Motion — calm. Never flashing. */
+	--animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
+	--animate-shimmer: shimmer 1.4s linear infinite;
+
+	@keyframes pulse-soft {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.55;
+		}
+	}
+
+	@keyframes shimmer {
+		0% {
+			background-position: -320px 0;
+		}
+		100% {
+			background-position: 320px 0;
+		}
 	}
 }
 
-body {
-	background: var(--background);
-	color: var(--foreground);
-	font-family: Arial, Helvetica, sans-serif;
+/* Loading skeleton — "skeleton blocks matching final layout, never a spinner". */
+@utility skeleton-shimmer {
+	background-image: linear-gradient(90deg, var(--skeleton) 0%, var(--bg) 50%, var(--skeleton) 100%);
+	background-size: 320px 100%;
+	animation: var(--animate-shimmer);
+}
+
+@layer base {
+	html {
+		color-scheme: light;
+		-webkit-text-size-adjust: 100%;
+	}
+
+	body {
+		background-color: var(--bg);
+		color: var(--ink);
+		font-family: var(--font-sans);
+		font-size: var(--text-body);
+		line-height: var(--text-body--line-height);
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
+
+	/* Keyboard users exist: a visible 2px brand ring on every focusable element. */
+	:focus-visible {
+		outline: 2px solid var(--brand);
+		outline-offset: 2px;
+	}
+
+	a {
+		color: var(--brand);
+		text-decoration: none;
+	}
+	a:hover {
+		color: var(--brand-hover);
+		text-decoration: underline;
+	}
+
+	/* Timers, scores and phone numbers must not jitter as digits change. */
+	.font-mono {
+		font-variant-numeric: tabular-nums;
+	}
+}
+
+/* Respect reduced-motion: the timer's pulse and the skeleton shimmer stop. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	::before,
+	::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
 }
