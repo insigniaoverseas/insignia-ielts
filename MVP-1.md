@@ -714,21 +714,29 @@ Lives in `mcp/`, over that same importer.
 
 ### Helper functions
 
-`SECURITY DEFINER` functions in the `auth` schema, used by every policy:
+`SECURITY DEFINER` functions in the **`private`** schema, used by every policy. `private` is not exposed through the Data API, so nobody can call them over HTTP; `authenticated` gets `EXECUTE` so policies can. (Supabase no longer lets projects create objects in `auth` — corrected 2026-09-15.) Each answers only about the caller, and returns `NULL`/`false` for a suspended or inactive user.
 
 ```
-auth_role()             → the current user's role key
-auth_branch()           → the current user's branch_id
-is_teacher_of(uuid)     → true if the caller teaches a batch containing that student
-same_branch(uuid)       → true if that entity is in the caller's branch
-is_staff()              → role in (super_admin, admin, teacher, invigilator)
+private.auth_role()           → the caller's role key                          M0-06
+private.auth_branch()         → the caller's branch_id                         M0-06
+private.is_staff()            → role in (super_admin, admin, teacher, invigilator)  M0-06
+private.same_branch(uuid)     → true if that user is in the caller's branch    M0-06
+private.is_teacher_of(uuid)   → true if the caller teaches a batch containing that student   M0-07
 ```
+
+### Grants are a gate too
+
+RLS decides *which rows*; grants decide *which tables and columns*. Supabase grants every new `public` table to `anon` and `authenticated` by default, so each migration revokes that and grants back explicitly:
+
+- **`anon` gets nothing.**
+- **`authenticated` gets only the columns it needs.** Secret hashes (`pin_hash`, `device_secret_hash`, `token_hash`) are never granted, so a student calling the Data API with their own JWT still can't read them. A consequence: `select *` on those tables is refused — always name columns.
+- **Identity tables are read-only through the API.** Creating users, changing role/status/branch, issuing invitations, devices and sessions is server code using the service role, behind `lib/rbac.ts`, audit-logged.
 
 ### Policy intent
 
 | Table | Student | Teacher | Admin | Super admin |
 |---|---|---|---|---|
-| `users` | own row only | students in own batches | own branch | all |
+| `users` | own row only | students in own batches *(M0-07 — own row only until then)* | own branch | all |
 | `student_plans` | own | own batches (read) | own branch | all |
 | `batches` | own membership | assigned batches | own branch | all |
 | `tests` | published, via assignment only | own + published | own branch | all |

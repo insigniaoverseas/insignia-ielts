@@ -143,17 +143,18 @@ One migration per group, from [`MVP-1.md` §6](MVP-1.md#6-database--erd-and-tabl
 
 | Step | Migration | Tables |
 |---|---|---|
-| 14 | `identity` | `branches`, `roles`, `users`, `invitations`, `user_devices`, `user_sessions` |
-| 15 | `cohorts` | `batches`, `batch_teachers`, `batch_students`, `student_plans`, `plan_history` |
+| 14 | `identity` | `branches`, `roles`, `users`, `invitations`, `user_devices`, `user_sessions` — plus the `private` schema and the helpers `auth_role`, `auth_branch`, `is_staff`, `same_branch` (brought forward from step 19) |
+| 15 | `cohorts` | `batches`, `batch_teachers`, `batch_students`, `student_plans`, `plan_history` — plus `private.is_teacher_of()`, the "teacher reads students in own batches" policy on `users`, and the `invitations.batch_id` foreign key |
 | 16 | `content` | `tests`, `band_scales`, `band_scale_rows`, `assignments`, `assignment_targets`, `assignment_unlocks` |
 | 17 | `assessment` | `attempts`, `answers`, `attempt_events` |
 | 18 | `crosscutting` | `audit_log`, `rate_limits` |
 
-Every table gets `ALTER TABLE … ENABLE ROW LEVEL SECURITY` and **no permissive fallback policy**.
+Every table gets `ALTER TABLE … ENABLE ROW LEVEL SECURITY` and **no permissive fallback policy**. Every table also gets `revoke all … from anon, authenticated` and explicit, column-limited grants back ([`MVP-1.md` §13](MVP-1.md#13-row-level-security) "Grants are a gate too").
+**Workflow:** the agent writes the migration and runs it against a local PGlite harness that mimics Supabase's roles and `auth.uid()` (no Docker needed), plus `db push --dry-run`; the user reviews and runs the real `db push` ([`PROJECT-MEMORY.md`](PROJECT-MEMORY.md) §5).
 **✅ Done when** `npx supabase db push` applies all five and `npm run db:types` has regenerated `database.types.ts` from them.
 
 ### 19. ⚠️ RLS helpers and the default-deny test `(M0-11)`
-Write `auth_role()`, `auth_branch()`, `is_teacher_of()`, `same_branch()`, `is_staff()` as `SECURITY DEFINER`.
+The helpers now ship with the tables that need them (steps 14–15), as `SECURITY DEFINER` functions in the `private` schema — not `auth`, which Supabase has locked. ~~Write `auth_role()`, `auth_branch()`, `is_teacher_of()`, `same_branch()`, `is_staff()`~~ superseded 2026-09-15.
 
 Then the test that is the actual deliverable: **for every table, a query as a student role returns nothing unless a policy explicitly allows it.** A table you forget to police must return zero rows, not every row.
 **✅ Done when** the test passes for all 20 tables, and fails if you drop one policy.
