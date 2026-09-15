@@ -22,7 +22,7 @@
 |---|---|
 | **Active milestone** | **M0 — Foundations** |
 | **Last completed** | **M0-19** roles + the institute's band charts, pushed and verified. Earlier: M0-11 (default-deny test + sweep), M0-10 (audit, rate limits — **schema complete, 24 tables**), M0-09 (assessment), M0-08 (content), M0-07 (cohorts), M0-06 (identity), M0-05 (CLI, types), M0-04 (Supabase project `insignia-ielts` in `ap-south-1`, §6), M0-03 + M0-23 (shadcn primitives, gallery), M0-01 (scaffold, lint, auto-deploy). |
-| **Next task** | **Step 22 — `lib/rbac.ts`** (M1-13 brought forward): permissions in `roles.permissions`, `can(user, 'test:publish')`. Needs a permission list agreed first. Also waiting on the user: create the Supabase **secret key** and put the 3 values in `.dev.vars` + Wrangler secrets (M0-14). Then step 21's clients get their first real use (Supabase clients `server/client/admin.ts`, M0-05) and step 22 (`lib/rbac.ts`). No-DB tasks still open: M0-12 (R2), M0-13 (CSP), M0-14 (secrets), M0-15, M0-18, M0-21, M0-22. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
+| **Next task** | **Step 22** — written and tested; **waiting on the user's `db push`** of `20260915180655_role_permissions.sql`. Then pick up the unfinished Phase 0–1 steps: 3 (R2 buckets), 9 (CSP + sanitize), 11 (docs/ADRs), 12 (CI running `test:db`, `test:db:sweep`, `test:unit`) — then Phase 3 (question types, upload schema, importer, scoring) (Supabase clients `server/client/admin.ts`, M0-05) and step 22 (`lib/rbac.ts`). No-DB tasks still open: M0-12 (R2), M0-13 (CSP), M0-14 (secrets), M0-15, M0-18, M0-21, M0-22. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
 | ~~**Next task**~~ | ~~M0-06 — waiting on the user's `db push`~~ — superseded 2026-09-15: pushed and verified. |
 | ~~**Next task**~~ | ~~M0-06 — resolve where RLS helpers live first~~ — superseded 2026-09-15: `private` schema, approved by the user. |
 | ~~**Next task**~~ | ~~**M0-05** finish: only `npx supabase db push` left~~ — superseded 2026-09-15: pushed by the user, advisor clean. |
@@ -79,7 +79,7 @@
 | M1-10 Durable Object rate limiter | todo | | | Login, PIN, invite, MCP only — never autosave. Counts in memory; write storage only on a lockout (free DO quota) |
 | M1-11 Turnstile on login + accept-invite | todo | | | |
 | M1-12 Session cookies + single active session | todo | | | |
-| M1-13 `lib/rbac.ts` + route guards | todo | | | Independent second gate over RLS |
+| M1-13 `lib/rbac.ts` + route guards | in_progress | Claude, goverdhan-gaur | 2026-09-15 | ✅ Permission matrix agreed (§4). ✅ `supabase/migrations/20260915180655_role_permissions.sql` (Owner label, permissions + `CHECK`). ✅ `lib/permissions.ts` (pure, TSDoc) + `lib/rbac.ts` (`getActor` via `getClaims()` + secret-key lookup, `requirePermission`, `ForbiddenError`). ✅ `npm run test:unit` 29/29 against the seeded data; a deliberate "teacher can publish" seed is caught. ⬜ User `db push`. ⬜ Route guards with the first privileged routes (M1); `getActor` gets an integration test then. |
 | M1-14 Device list + revoke (server side) | todo | | | UI lands in M4-06 |
 
 ### M2 — Student core, Listening
@@ -202,6 +202,7 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-09-15 | step 22 (M1-13) | Owner/Admin decided with the user; permission matrix agreed. Migration `role_permissions` (Owner label, permissions, `CHECK`). `lib/permissions.ts` + `lib/rbac.ts`. DB test shim moved to `tests/db/setup.mjs` (shared by `rls.test`, the sweep and unit tests). `npm run test:unit` 29/29; `test:db` 240/240. **Not yet pushed.** | `supabase/migrations/20260915180655_role_permissions.sql`, `src/lib/{permissions,rbac}.ts`, `tests/db/setup.mjs`, `tests/unit/permissions.test.mjs`, `package.json`, `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | goverdhan-gaur (decision), Claude |
 | 2026-09-15 | M0-14 | User set `.dev.vars` and the three Wrangler secrets. Verified without printing values, then probed the live PostgREST API: `anon` refused on every table probed, `private` helpers unreachable, secret key works. First API-level (not just SQL) confirmation of the grants. | `PROJECT-MEMORY.md` | goverdhan-gaur, Claude |
 | 2026-09-15 | step 21 (M0-05), M0-14 | Supabase clients: `lib/supabase/server.ts`, `admin.ts`, `env.ts` (TSDoc, `server-only`), no browser client (§4). `.dev.vars.example`. Packages pinned. Verified: a `"use client"` import of `admin.ts` fails `next build` (probe added, built, removed); normal `next build`, tsc and lint pass. Key names renamed to publishable/secret across docs. | `src/lib/supabase/*`, `.dev.vars.example`, `package.json`, `package-lock.json`, `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | Claude |
 | 2026-09-15 | M0-19 | User ran `db push`. Verified live over MCP. Types regenerated (`below_band`, nullable `band`). M0-19 closed. | `src/lib/supabase/database.types.ts`, `PROJECT-MEMORY.md` | goverdhan-gaur, Claude |
@@ -248,6 +249,23 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-15 — Owner and Admin; the permission matrix  (task: step 22 / M1-13)
+**Chose (user, 2026-09-15):** keep two top roles, shown as **Owner** (`super_admin`) and **Admin**. The Owner is the only one who can add or remove admins and change roles; Admins run students, plans, batches and staff for their branch. Teachers draft tests; only Admins and the Owner publish. Seeded matrix (permission → scope):
+
+| Permission | Student | Invigilator | Teacher | Admin | Owner |
+|---|---|---|---|---|---|
+| `attempt:take` | own | | | | |
+| `session:invigilate` | | branch | batch | branch | all |
+| `assignment:manage`, `results:release`, `mark:override` | | | batch | branch | all |
+| `test:author` | | | own | all | all |
+| `test:publish`, `band_scale:edit` | | | | all | all |
+| `student:manage`, `staff:manage`, `audit:read` | | | | branch | all |
+| `admin:manage`, `role:change` | | | | | all |
+
+**Because:** the user's institute has office staff doing admin work, and only the owner should be able to hand out power. Renaming the display name (not the key) avoids rewriting 25 policies that test `'super_admin'`.
+**Rejected:** merging into one Admin role — any admin could create more admins. Renaming the key to `owner` — churn in every policy for a label.
+**Design:** permissions are data (`roles.permissions`, `CHECK`-validated); `lib/permissions.ts` is the vocabulary and pure logic; `lib/rbac.ts` resolves the actor with the secret-key client so the second gate doesn't inherit an RLS mistake. Nobody can invite or be assigned Owner through the app.
 
 ### 2026-09-15 — No browser Supabase client; publishable/secret key names  (task: step 21 / M0-05)
 **Chose:** `lib/supabase/server.ts` (user-scoped, RLS) and `admin.ts` (secret key), both `server-only`; **no `client.ts`**. Env names `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` instead of `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`. All three packages pinned exactly (`@supabase/supabase-js` 2.116.0, `@supabase/ssr` 0.12.7, `server-only` 0.0.1).
@@ -500,7 +518,9 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 
 **Then.** M0-19 pushed, verified, closed. Step 21 done (clients, no browser client).
 
-**Start with.** Step 22 `lib/rbac.ts` once the user confirms the permission matrix proposed in the chat (seeded into `roles.permissions` by a migration). Secrets are set and verified (M0-14). **Every future migration:** extend `tests/db/rls.test.mjs` (see its README) and run both `test:db` commands before asking the user to push. Q11 answered: Workers Free. Open: whether to commit the PGlite harness as the M0-11 test; the Worker's workers.dev URL (not in the repo, and wrangler can't print it) — needed to measure real CPU per request with `wrangler tail`.
+**Then.** User chose Owner + Admin; step 22 written and tested; not pushed.
+
+**Start with.** If the user has pushed `role_permissions`: verify (Owner label, 5 permission maps, `CHECK`), `db:types`. Then offer the unfinished early steps (R2 buckets, CSP, CI, docs) before Phase 3. Secrets are set and verified (M0-14). **Every future migration:** extend `tests/db/rls.test.mjs` (see its README) and run both `test:db` commands before asking the user to push. Q11 answered: Workers Free. Open: whether to commit the PGlite harness as the M0-11 test; the Worker's workers.dev URL (not in the repo, and wrangler can't print it) — needed to measure real CPU per request with `wrangler tail`.
 
 ### 2026-09-15 (second session)
 

@@ -13,7 +13,8 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts",
     "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/database.types.ts",
     "test:db": "node tests/db/rls.test.mjs",
-    "test:db:sweep": "node tests/db/policy-sweep.mjs"
+    "test:db:sweep": "node tests/db/policy-sweep.mjs",
+    "test:unit": "node --test \"tests/unit/**/*.test.mjs\""
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.3",

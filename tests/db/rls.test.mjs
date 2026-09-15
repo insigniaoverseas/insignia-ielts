@@ -5,13 +5,9 @@
 //   RLS_DROP_POLICY='band_scales:Read: staff' npm run test:db
 //
 // The second form drops one policy after migrating — the run must then FAIL.
-import { PGlite } from "@electric-sql/pglite";
-import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
-import { readFileSync, readdirSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { MIG, migratedDatabase } from "./setup.mjs";
 
-const MIG = fileURLToPath(new URL("../../supabase/migrations/", import.meta.url));
-const db = new PGlite({ extensions: { btree_gist } });
 process.on("unhandledRejection", (e) => { console.error("FATAL:", e.message, e.detail ?? "", e.where ?? ""); process.exit(2); });
 
 let pass = 0, fail = 0;
@@ -20,41 +16,9 @@ const ok = (name, cond, detail = "") => {
   else { fail++; console.log("  ✗", name, detail); }
 };
 
-// ── Supabase shim ────────────────────────────────────────────────────────────
-await db.exec(`
-  create role anon nologin noinherit;
-  create role authenticated nologin noinherit;
-  create role service_role nologin noinherit bypassrls;
-  create schema auth;
-  create schema extensions;
-  create table auth.users (id uuid primary key, email text);
-  create function auth.uid() returns uuid language sql stable as $$
-    select (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')::uuid
-  $$;
-  grant usage on schema auth to anon, authenticated, service_role;
-  grant execute on function auth.uid() to anon, authenticated, service_role;
-  grant usage on schema public to anon, authenticated, service_role;
-  -- Supabase's default grants in public (copied from the live project's pg_default_acl)
-  alter default privileges for role postgres in schema public grant all on tables to anon, authenticated, service_role;
-  alter default privileges for role postgres in schema public grant all on sequences to anon, authenticated, service_role;
-  alter default privileges for role postgres in schema public grant all on functions to anon, authenticated, service_role;
-  -- stub of Supabase's auto-RLS function, so migration 1 has something to revoke on
-  create function public.rls_auto_enable() returns event_trigger language plpgsql security definer as $$ begin end $$;
-`);
-
-// ── Apply migrations in order ────────────────────────────────────────────────
-for (const f of readdirSync(MIG).filter((f) => f.endsWith(".sql")).sort()) {
-  await db.exec(readFileSync(`${MIG}/${f}`, "utf8"));
-  console.log("applied", f);
-}
-
-// Optional: prove the suite notices a missing policy.
-if (process.env.RLS_DROP_POLICY) {
-  const [table, ...rest] = process.env.RLS_DROP_POLICY.split(":");
-  const policy = rest.join(":").replaceAll('"', '""');
-  await db.exec(`drop policy "${policy}" on public.${table}`);
-  console.log(`dropped policy "${rest.join(":")}" on ${table} — this run should fail`);
-}
+// Every migration applied to a Supabase-shaped PGlite database (setup.mjs).
+// RLS_DROP_POLICY drops one policy afterwards — then this run must fail.
+const db = await migratedDatabase({ log: true, dropPolicy: process.env.RLS_DROP_POLICY });
 
 // ── Fixtures (as postgres, bypassing nothing — postgres owns the tables) ─────
 const id = {

@@ -175,6 +175,8 @@ Five roles with permissions. Default Listening ladder: 39–40→9.0, 37–38→
 **✅ Done when** importing `admin.ts` from a `"use client"` file fails the build.
 
 ### 22. `lib/rbac.ts` `(M1-13, brought forward)`
+> ✅ **Written 2026-09-15.** Migration `20260915180655_role_permissions.sql` seeds `roles.permissions` (permission → scope) and shows `super_admin` as **Owner**; `lib/permissions.ts` (pure) + `lib/rbac.ts` (`getActor`, `requirePermission`, server-only). `npm run test:unit`: 29 checks read the seeded column — `can(actor, 'test:publish')` is false for a teacher because the **database** says so. Route guards come with the first privileged routes (M1).
+
 The second independent gate over RLS. Every privileged route calls it *and* relies on RLS — two gates, because one missing policy shouldn't be a breach.
 **✅ Done when** `can(user, 'test:publish')` resolves from the `roles.permissions` column, not a hardcoded string.
 

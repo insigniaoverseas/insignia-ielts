@@ -285,6 +285,7 @@ erDiagram
 **`branches`** — `id` · `name` · `address` · `created_at`
 
 **`roles`** — `id` · `key` (`super_admin`|`admin`|`teacher`|`invigilator`|`student`) · `name` · `permissions jsonb` · `created_at`
+**`super_admin` is shown as "Owner"** (decided 2026-09-15): the Owner is the only role that can add or remove admins and change roles; Admins run the day-to-day. `permissions` maps permission → scope (`own`|`batch`|`branch`|`all`), missing = not allowed, validated by a `CHECK`; the vocabulary is `lib/permissions.ts`. The agreed matrix is in `PROJECT-MEMORY.md` §4.
 Stored as data, not hardcoded strings, so a new role does not need a deploy (`PLAN-V2.md` §3).
 
 **`users`** — `id uuid PK` (= `auth.users.id`) · **`email unique`** *(the identifier — D9)* · `name` · `phone` *(optional contact only)* · `country_code` · `role_id` · `branch_id` · `status` (`active`|`inactive`|`suspended`) · `dob` · `guardian_consent bool` · `guardian_name` · `guardian_phone` · `created_by` · `created_at` · `updated_at`
@@ -759,7 +760,7 @@ RLS decides *which rows*; grants decide *which tables and columns*. Supabase gra
 
 ### Policy intent
 
-| Table | Student | Teacher | Admin | Super admin |
+| Table | Student | Teacher | Admin | Owner (`super_admin`) |
 |---|---|---|---|---|
 | `users` | own row only | students *currently* in own batches | own branch | all |
 | `student_plans` | own | own batches (read) | own branch | all |
@@ -846,7 +847,8 @@ insignia-ielts/
 │     ├─ import/{test-upload.schema,import-test}.ts
 │     ├─ question-types.ts           §10 — single source of truth
 │     ├─ scoring.ts                  SERVER ONLY — band tables, variant matching
-│     ├─ rbac.ts
+│     ├─ permissions.ts           permission vocabulary + pure checks (unit-tested)
+│     ├─ rbac.ts                  server-only: getActor, requirePermission — the second gate
 │     └─ r2.ts
 ├─ supabase/migrations/              schema + RLS + functions, always together — the only schema source
 ├─ tests/db/                         access-control test on PGlite + policy sweep (M0-11)
@@ -977,6 +979,7 @@ docs/
 
 | Layer | Covers |
 |---|---|
+| **Permissions** (`npm run test:unit`) | `lib/permissions.ts` against the permissions the migrations actually seed — the agreed matrix, who can invite whom, fail-closed parsing, the `CHECK` on `roles.permissions`. Node's built-in runner until Vitest lands (M0-18). |
 | **DB access control** (`npm run test:db`, `test:db:sweep`) | Every migration on PGlite, probed as each role: RLS, column grants, triggers (clock, state machine, deadline, revision), append-only tables. The sweep drops each policy in turn and requires a failure. `tests/db/README.md`. |
 | **Vitest** | `lib/scoring.ts` — normalisation, accepted variants, word limits, hyphens, plurals, band lookup. `lib/question-types.ts` — the variant gating matrix. |
 | **Playwright** | The three annotated flows in `DESIGN-PROMPT.md` Part D: student completes a mock · teacher assigns and releases · admin invites and extends plans. Plus the [§19](#19-verification) security checks. |
