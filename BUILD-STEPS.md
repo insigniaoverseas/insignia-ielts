@@ -33,6 +33,8 @@ Record the project ref in `PROJECT-MEMORY.md` §6. Set a usage alert at 70%.
 **✅ Done when** the project exists, the region reads `ap-south-1`, and the ref is recorded.
 
 ### 3. ⚡ Create the R2 buckets `(M0-12 part 1)`
+> ✅ **Done 2026-09-15** (with the user's OK): both created with `--location apac`; `wrangler r2 bucket info` shows 0 objects and "Public access via the r2.dev URL is disabled". Bound in `wrangler.jsonc` as `CONTENT_BUCKET` / `AUDIO_BUCKET`; `cloudflare-env.d.ts` regenerated. Commands kept for reference.
+
 ```bash
 npx wrangler r2 bucket create insignia-ielts-content
 npx wrangler r2 bucket create insignia-ielts-audio

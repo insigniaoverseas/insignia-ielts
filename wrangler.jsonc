@@ -31,6 +31,13 @@
 			"service": "insignia-test"
 		}
 	],
+	// Private R2 buckets (MVP-1 §14) — public r2.dev URL disabled, APAC location hint.
+	// key.json is read only through CONTENT_BUCKET inside server code; it is never signed.
+	// Local dev (`wrangler dev`, `npm run preview`) uses local simulations, not these buckets.
+	"r2_buckets": [
+		{ "binding": "CONTENT_BUCKET", "bucket_name": "insignia-ielts-content" },
+		{ "binding": "AUDIO_BUCKET", "bucket_name": "insignia-ielts-audio" }
+	],
 	"observability": {
 		"enabled": true
 	},
