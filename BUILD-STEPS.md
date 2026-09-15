@@ -260,10 +260,12 @@ Password path, plus the PIN fast path **offered only when a known device secret 
 
 ### 39. Lockout + rate limiter + Turnstile `(M1-09, M1-10, M1-11)`
 5 failures → 15-minute lock, on **both** password and PIN. Durable Object counter, limiting by IP **and** account. Turnstile on login and accept-invite.
-**✅ Done when** six wrong attempts lock the account and the sixth request is rate-limited by IP too.
+⚠️ **Then loosen Supabase's own limit, because ours now does the job** ([`MVP-1.md` §4](MVP-1.md#free-plans-200-students-at-once)): a lab of 200 behind one IP otherwise hits Supabase Auth's per-IP sign-in limit. Dashboard → Authentication → Rate Limits: raise the sign-in limit, and turn on **IP address forwarding** so the Worker can pass the student's real IP in `Sb-Forwarded-For` (needs the secret key, server-side only).
+**✅ Done when** six wrong attempts lock the account, the sixth request is rate-limited by IP too, and 200 scripted sign-ins from one IP inside 5 minutes all succeed.
 
 ### 40. Sessions `(M1-12, M1-14)`
 httpOnly + Secure + SameSite cookies. **One active session per student** — a new login revokes the old. Concurrent-login flag. Device list + revoke (server side; UI at step 68).
+Set the JWT lifetime just longer than the longest test, so no token refresh lands mid-test, and verify sessions with `getClaims()` (local check, asymmetric JWT keys) — not `getUser()`, which calls Supabase Auth on every request. Revocation comes from the `user_sessions` check, not from JWT expiry.
 **✅ Done when** logging in on a second machine ends the first session.
 
 🚦 **CHECKPOINT** — a real student can be invited by email and log in. No public signup route exists.
@@ -286,6 +288,7 @@ The *why not* is the product — screen 04 shows "Opens Monday 9:00 AM", never a
 ### 43. ⚠️ Attempt lifecycle server actions `(M2-07)`
 `start` · `resume` · `autosave` · `submit` · `expire`. Every one re-reads the attempt row and rejects if it isn't `in_progress` or if `now() > expires_at` — then force-submits and scores.
 `start` sets **`expires_at` server-side**. Autosave upserts on `UNIQUE(attempt_id, q_number)` and guards with `revision`.
+Autosave fires **on change** — debounced ~3 s, all changed answers in one request — plus a 30 s heartbeat. Never a fixed 10-second timer: at 200 students that alone would eat most of the Workers free daily request cap ([`MVP-1.md` §4](MVP-1.md#free-plans-200-students-at-once)).
 `submit` scores in `lib/scoring.ts`, then saves marks, band and status in **one** Postgres function (`.rpc()`), so a half-submitted attempt can't exist. `supabase-js` has no multi-statement transactions.
 **✅ Done when** a replayed autosave request is rejected and the prior answer survives.
 
@@ -294,7 +297,7 @@ Every response carries `server_now` + `expires_at`. The browser **renders** a co
 **✅ Done when** changing the OS clock and overriding `Date` in devtools does not move expiry.
 
 ### 45. Audio preload + owner-bound cache `(M2-06)`
-Service worker. Full MP3 from a signed URL **before the timer starts**, cached under the stable key `/audio-cache/{testId}/v{n}` so the expiring signature isn't part of the cache identity. IndexedDB holds `cache_owner`.
+Service worker. Full MP3 from a signed URL **before the timer starts** — on a pre-test screen that opens 10–15 min early, so 200 downloads spread out. Audio is 48–64 kbps mono (~11–15 MB per test). Cached under the stable key `/audio-cache/{testId}/v{n}` so the expiring signature isn't part of the cache identity. IndexedDB holds `cache_owner`.
 ⚠️ **On every session start and logout, if `cache_owner` ≠ current user, delete the cache and all local attempt state before the app renders.** Without this, student B pulls student A's cached audio for a test B hasn't taken. R2 object untouched.
 **✅ Done when** switching users on one machine purges the cache and the R2 object still exists.
 
@@ -410,7 +413,7 @@ Build in this order — it's the order a real institute needs them.
 
 | Step | Task |
 |---|---|
-| 85 | Supabase Realtime channel on `attempts` `(M7-01)` — no polling |
+| 85 | Live-monitor endpoint `(M7-01)` — one aggregated query per session, **polled every 10 s** by staff screens. ~~Supabase Realtime channel — no polling~~ superseded 2026-09-15: Realtime isn't needed and would spend the free-plan quota. |
 | 86 | Live monitor grid `(M7-02)` — status, time left, answered count, "last updated" stamp |
 | 87 | Invigilator actions `(M7-03)` — +5 minutes, force submit, unlock. **All server-side.** |
 
@@ -444,8 +447,8 @@ Build in this order — it's the order a real institute needs them.
 | 96 | Users & roles `(M9-03)` | Permission matrix |
 | 97 | Audit log screen `(M9-02)` | |
 | 98 | Error / edge screens `(M9-04)` | *"Your answers are saved. Reconnecting…"* — reassure, don't alarm |
-| 99 | ⚠️ Load test at 40 concurrent `(M9-05)` | The real risk is 30 students pulling a 9 MB MP3 at once. If it stutters, the ₹12,000 LAN mini-PC is the answer. |
-| 100 | Backups + **a restore drill that actually restores** `(M9-06)` | An untested backup is not a backup |
+| 99 | ⚠️ Load test at **200** concurrent `(M9-05)` | Against a second, throwaway **free** Supabase project (never the real one). Script: 200 sign-ins from one IP, start, save-on-change autosave, submit. Watch Auth 429s, Worker CPU errors, the Workers daily request count, and DB CPU. Run it first right after step 43, again here. If audio stutters in the lab, the ₹12,000 LAN mini-PC is the answer. |
+| 100 | Nightly backup + **a restore drill that actually restores** `(M9-06)` | Supabase Free has no backups: GitHub Actions runs `supabase db dump` nightly into a private R2 bucket. An untested backup is not a backup. **Must exist before the first real student.** |
 | 101 | Full security review `(M9-07)` | Run `/security-review`, then walk every check in [`MVP-1.md` §19](MVP-1.md#19-verification) by hand |
 | 102 | DPDP retention + deletion path `(M9-08)` | DOB, guardian consent, stated retention |
 | 103 | Docs completeness pass `(M9-09)` | |

@@ -91,7 +91,7 @@ A task is done when **all** of these hold:
 | **D1** | **Next.js 16 App Router + React 19 + TypeScript**, deployed via `@opennextjs/cloudflare` to Workers | `TECH-STACK.md` §4. The repo's existing `vinext` scaffold is boilerplate only; re-scaffold. Avoid `@vercel/*` packages so hosting stays a swap, not a rewrite. |
 | **D2** | Scope = **full product**: student + teacher + admin | PLAN-V2 phases 0–3 plus analytics. |
 | **D3** | **Build admin UI**, not Supabase Studio | Non-technical staff must run a batch without a developer. Students/Invites, Test library and Answer-key editor ship first. |
-| **D4** | **Postgres** for people and results; **R2** for content | Supabase: users, auth, sessions, roles, plans, batches, assignments, attempts, answers, stats, realtime. R2: test content, answer keys, transcripts, audio, images. See the consequence note below. |
+| **D4** | **Postgres** for people and results; **R2** for content | Supabase: users, auth, sessions, roles, plans, batches, assignments, attempts, answers, stats. R2: test content, answer keys, transcripts, audio, images. See the consequence note below. |
 | **D5** | Difficulty is **`easy` / `medium` / `hard`** | Word plus three-bar indicator, never colour alone. Display labels are **Easy / Medium / Hard** (settled 2026-09-15, `PROJECT-MEMORY.md` §7 Q1). |
 | **D6** | **The client holds no authority over anything affecting a score** | Timer, progress, attempt state, correctness and statistics are computed and stored server-side. [§7](#7-server-authority-d6). |
 | **D7** | Security is designed in from M0 | Not a hardening milestone. [§8](#8-security--threat-model-and-controls-d7). A security review gates every milestone. |
@@ -138,7 +138,7 @@ Everything outside that boundary is **detected and flagged, not prevented**. Tho
 | Auth | Supabase Auth, email + password, invite-only | D9 |
 | Authorization | Postgres Row-Level Security + `lib/rbac.ts` | Two independent gates. [§13](#13-row-level-security) |
 | Content, audio, keys | Cloudflare R2 | Zero egress. [§14](#14-r2-layout-and-signing-rules) |
-| Realtime | Supabase Realtime | Live session monitor (M7) |
+| Live monitor | Staff screen polls one aggregated query every 10 s — **no Supabase Realtime in MVP** | Free-plan budget — [below](#free-plans-200-students-at-once) (M7) |
 | Email | **Resend** | Critical path — invite-only means no email, no enrolment. |
 | Errors | Sentry, PII scrubbed | |
 | CI | GitHub Actions | [§16](#16-documentation-and-code-organisation-d13) |
@@ -167,6 +167,23 @@ Testing           Vitest (unit) · Playwright (E2E)
 
 The player bundle must stay **under ~200 KB gzipped**. Students practise at home on four-year-old mid-range Android phones. Test on one, not on your laptop.
 
+### Free plans, 200 students at once
+
+**Target:** 200 students in one timed test at the same moment, on **Supabase Free** (decided 2026-09-15, `PROJECT-MEMORY.md` §4). Every rule below exists to fit that.
+
+| Limit | What it means here | Design rule |
+|---|---|---|
+| **Supabase compute (Nano):** shared CPU, 0.5 GB RAM, 60 direct / 200 pooled connections | ~5–10 small writes a second at peak — comfortable | Students never hold a database connection. Data goes Worker → `supabase-js` over HTTPS → PostgREST's own small pool. |
+| **Supabase Auth, per IP:** password sign-in and token refresh share `/auth/v1/token` — bursts of ~30, then ~1 every 2 s; the sign-in limit is configurable | A lab behind one IP logging in together would get "too many requests" | Raise the sign-in limit (our lockout, Durable Object limiter and Turnstile are the real brute-force guard — §8). IP forwarding (`Sb-Forwarded-For`, secret key) so limits apply per real client. JWT lifetime longer than the longest test, so nothing refreshes mid-test. Verify sessions locally with `getClaims()`, never an Auth round-trip per request. Tests open 10–15 min early. |
+| **Supabase Realtime:** 200 connections, 100 messages/s | — | **Not used in MVP.** The live monitor polls. |
+| **Supabase database: 500 MB** | ~40 `answers` rows per attempt ≈ 250–300 MB a year at 200 students × 3 tests a week | Lean `answers` rows. Before 400 MB, archive old per-question detail to R2 and keep per-type summaries. |
+| **Supabase egress: 5 GB/month** | Only small JSON rows leave Supabase | Audio, content and images come from R2, which has no egress fee (D4). |
+| **No backups on Free** | A disk failure loses results | Nightly `supabase db dump` → private R2 bucket, from GitHub Actions (M9-06). |
+| **Paused after ~7 quiet days** | Over a holiday, logins fail until someone presses Resume (data is kept 90 days) | Daily use prevents it. For long breaks, a tiny daily scheduled request — or Resume. In `docs/runbook.md`. |
+| **Cloudflare Workers Free:** 100,000 requests/day, 10 ms CPU per request, 3 MB bundle (953 KB today) | A fixed 10-second autosave is ~75,000 requests for one 200-student hour | Save on change + heartbeat (§7) ≈ 25–30,000 per session. If the cap or the 10 ms CPU limit bites in the load test, Workers Paid is $5/month — `PROJECT-MEMORY.md` §7 Q11. |
+
+**Proof, not hope:** the load test (M9-05) runs **200** concurrent attempts against a second, throwaway free Supabase project — first as soon as autosave exists (M2-07), again before go-live.
+
 ---
 
 ## 5. Architecture
@@ -190,7 +207,6 @@ graph TB
     subgraph SB["Supabase — Mumbai ap-south-1"]
         AUTH["Auth<br/>email + password"]
         PG[("Postgres<br/>+ Row-Level Security")]
-        RT["Realtime<br/>live session monitor"]
     end
 
     subgraph Ext["External"]
@@ -208,9 +224,6 @@ graph TB
     ST -.->|"ONE signed URL: test.mp3 only"| R2
     W <--> AUTH
     W <-->|"RLS-scoped queries"| PG
-    ST <-.-> RT
-    TC <-.-> RT
-    RT --- PG
     W --> RS
     W --> SEN
 
@@ -365,7 +378,7 @@ Append-only integrity log.
 |---|---|
 | **Timer** | `attempts.expires_at` is set server-side at start. Every server response carries `server_now` + `expires_at`; the browser only *renders* a countdown derived from them and re-syncs on each autosave. A client clock change does nothing — expiry is decided by Postgres. |
 | **Attempt state** | A state machine (`in_progress → submitted \| expired \| voided`) enforced in the DB. Every write re-reads the row and rejects if it is not `in_progress`, or if `now() > expires_at` — in which case it force-submits and scores. |
-| **Answers in flight** | Autosave is a Server Action. `localStorage` is a crash-recovery convenience **only** — never the source of truth on submit. The server scores what the server stored. Payloads are zod-validated: `q_number` in range, value shaped for the question's type, length-capped. |
+| **Answers in flight** | Autosave is a Server Action, sent **when an answer changes** (debounced ~3 s, every changed answer in one request), plus a heartbeat every 30 s that also re-syncs the clock — never a fixed 10-second timer ([§4 free-plan budget](#free-plans-200-students-at-once)). A crash loses at most the last few seconds. `localStorage` is a crash-recovery convenience **only** — never the source of truth on submit. The server scores what the server stored. Payloads are zod-validated: `q_number` in range, value shaped for the question's type, length-capped. |
 | **Replay / rewind** | Optimistic concurrency via `answers.revision`. An out-of-order or replayed request is rejected, not applied. |
 | **Answer key** | Lives only at `key.json`, read through the R2 **binding** inside a Server Action. Never signed, never in a response body, never in the client bundle. CI-enforced. |
 | **Correctness before submit** | No endpoint can return `is_correct` for an `in_progress` mock or class attempt — enforced in the route **and** in RLS. Practice mode's instant feedback is a per-question server round-trip returning the verdict for **that one committed answer only**, never the rest of the key. |
@@ -385,7 +398,7 @@ Append-only integrity log.
 | **One student reading another's data** | RLS as the floor (`student_id = auth.uid()`); `lib/rbac.ts` as an independent second gate; explicit ownership re-check on every attempt/result/profile route so an IDOR can't slip past a missing policy; UUID keys, no enumerable integers. **A student-role session has no route, query or policy that can return another user's name, email, attempt, answer, band or plan.** | everywhere | M0, M1 |
 | **Answer-key leakage** | [§7](#7-server-authority-d6), plus a CI check that fails the build if scoring logic or an R2 key path appears in a client bundle. | `.github/workflows` | M0 |
 | **Cross-student data on a shared lab PC** | Owner-bound cache purge ([§12](#12-audio-caching-d8--d10)); `localStorage`/IndexedDB cleared on logout **and** on user change. | service worker | M2 |
-| **Session hijacking / credential sharing** | httpOnly + Secure + SameSite cookies; short-lived JWT + refresh; `user_sessions` enforcing one active session; concurrent-login flag; device revocation from Profile. | `lib/security/session.ts` | M1, M4 |
+| **Session hijacking / credential sharing** | httpOnly + Secure + SameSite cookies; JWT lifetime just longer than the longest test, so no refresh happens mid-test (Auth rate limits — §4) — the per-request `user_sessions` check is what revokes, not JWT expiry; `user_sessions` enforcing one active session; concurrent-login flag; device revocation from Profile. | `lib/security/session.ts` | M1, M4 |
 | **Stored XSS via teacher-authored passage HTML** | **The highest-likelihood web vulnerability in this product** — passages are rich HTML entered by staff *and* by the MCP. Sanitised on write **and** on render (`rehype-sanitize`, strict allowlist), plus a nonce-based CSP with no `unsafe-inline`. | `lib/security/sanitize.ts` | M0, M3, M8 |
 | **CSRF** | Server Actions' built-in origin checking; origin + double-submit token on Route Handlers. | middleware | M0 |
 | **SQL injection** | `supabase-js` query builder and `.rpc()` only — values travel as parameters, never concatenated into SQL. Inside Postgres functions, dynamic SQL uses `format()` with `%L`/`%I` only. No string-built SQL anywhere. zod at every boundary, including the MCP's. | `lib/supabase/`, `supabase/migrations/` | M0 |
@@ -678,7 +691,8 @@ Lives in `mcp/`, over that same importer.
 
 | Step | Behaviour |
 |---|---|
-| **Download** | The full MP3 is fetched from a 5-minute signed URL on the pre-test screen, **before the timer starts**. Progress bar: *"Getting your audio ready…"* |
+| **Download** | The full MP3 is fetched from a 5-minute signed URL on the pre-test screen, **before the timer starts** — and the pre-test screen opens 10–15 minutes before the test, so 200 downloads spread out. Progress bar: *"Getting your audio ready…"* |
+| **Encoding** | Speech at **48–64 kbps mono** — about 11–15 MB for a 30-minute test, so 200 students is 2–3 GB through the lab line (≈3–4 min at 100 Mbps). The importer rejects anything above 64 kbps. |
 | **Cache key** | Written to the Cache API under a **stable key** — `/audio-cache/{testId}/v{n}` — so the expiring signature never becomes part of the cache identity. |
 | **Ownership** | An IndexedDB record stores `cache_owner = user_id` alongside each cached entry. |
 | **Purge on user change** | On **every session start and on logout**, the service worker compares `cache_owner` to the current user. **If they differ, the cached audio and all local attempt state are deleted before the app renders.** The R2 object is untouched. |
@@ -687,7 +701,7 @@ Lives in `mcp/`, over that same importer.
 
 **Why the purge matters:** without it, student B sitting down at student A's lab PC could pull a cached copy of a test B hasn't taken yet. This is the single highest-value line of code in the caching layer.
 
-**Operational fallback** (not MVP code): `PLAN.md` §1 suggests a ~₹12,000 mini-PC on the lab LAN caching audio locally if wifi still struggles with 30 simultaneous downloads. Documented in `docs/runbook.md`.
+**Operational fallback** (not MVP code): `PLAN.md` §1 suggests a ~₹12,000 mini-PC on the lab LAN caching audio locally if wifi still struggles with 200 simultaneous downloads. Documented in `docs/runbook.md`.
 
 ---
 
@@ -1116,7 +1130,7 @@ Nothing user-visible; everything depends on it. **One task here is irreversible.
 
 | ID | Task |
 |---|---|
-| M7-01 | Supabase Realtime channel on `attempts` |
+| M7-01 | Live-monitor endpoint — one aggregated query per session, polled every 10 s by staff screens (no Realtime — §4) |
 | M7-02 | Live session monitor (17) — student grid, status, time left, answered count, "last updated" |
 | M7-03 | Invigilator actions: +5 minutes, force submit, unlock — all server-side |
 
@@ -1142,8 +1156,8 @@ Nothing user-visible; everything depends on it. **One task here is irreversible.
 | M9-02 | Audit log screen (29) |
 | M9-03 | Users & roles (28) — role permission matrix |
 | M9-04 | Error / edge screens (30) — *"Your answers are saved. Reconnecting…"* |
-| M9-05 | Load test at 40 concurrent attempts |
-| M9-06 | Backups + **a restore drill that actually restores** |
+| M9-05 | Load test at **200** concurrent attempts, against a throwaway free Supabase project — first run as soon as M2-07 lands |
+| M9-06 | Nightly `supabase db dump` → private R2 (Free has no backups) + **a restore drill that actually restores**. Must exist before the first real student. |
 | M9-07 | Full `/security-review` pass |
 | M9-08 | DPDP retention policy + deletion path |
 | M9-09 | Documentation completeness pass against [§16](#16-documentation-and-code-organisation-d13) |
@@ -1213,14 +1227,18 @@ Every rule in [§7](#7-server-authority-d6) has a test here. These are the check
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| 30 students downloading a 9 MB MP3 on lab wifi | Session collapses | R2 + full preload before the timer; owner-bound cache ([§12](#12-audio-caching-d8--d10)); LAN mini-PC fallback (~₹12,000) |
-| Power or browser crash mid-mock | Lost attempt, angry student | 10-second autosave + server-held clock. **Build in M2, not M9** — power cuts in Indian labs are a *when*, not an *if* |
+| 200 students downloading audio on lab wifi | Session collapses | R2 + 48–64 kbps mono + preload on a pre-test screen that opens early; owner-bound cache ([§12](#12-audio-caching-d8--d10)); LAN mini-PC fallback (~₹12,000) |
+| **A whole lab logging in at once** | "Too many requests" at the door — Supabase Auth limits per IP | Raised sign-in limit, IP forwarding, long-enough JWT, local `getClaims()`, early opening ([§4](#free-plans-200-students-at-once)) |
+| Power or browser crash mid-mock | Lost attempt, angry student | Save-on-change autosave + 30 s heartbeat + server-held clock. **Build in M2, not M9** — power cuts in Indian labs are a *when*, not an *if* |
 | **Email deliverability** | **Invite-only means an invite in spam blocks enrolment entirely** | SPF/DKIM/DMARC in M1-04, not later. Monitor bounce rate. |
 | Content-entry backlog | A platform with nothing to test on | The MCP (M8) and the answer-key editor (M5-09) exist precisely for this |
 | **Question-type breadth** | 18 canonical types across 6 widgets is the largest single chunk of player work | Most likely source of slippage in M2/M3. Widgets are shared deliberately. |
 | OpenNext adapter friction on Next 16 | Build or runtime surprises | Keep business logic in Route Handlers and Server Actions; avoid `@vercel/*` and Node middleware, so a move to Vercel Pro stays a one-day migration |
 | Content/key drift vs. scored attempts | Historical results become unexplainable | `content_version` on `tests` **and** `attempts`; versioned R2 paths |
-| Free-tier limit hit mid-session | Outage during a live test | Supabase usage alert at 70% |
+| Free-tier limit hit mid-session | Outage during a live test | Design to the budget in [§4](#free-plans-200-students-at-once); prove it with the 200-student load test (M9-05). The user chose not to set a usage alert. |
+| **Supabase Free has no backups** | Results lost on a disk failure | Nightly `db dump` to R2 + restore drill (M9-06), before the first real student |
+| **Free project paused after a quiet week** | Logins fail after a holiday | Daily use; a daily scheduled request over long breaks; Resume in the dashboard — steps in `docs/runbook.md` |
+| **500 MB database cap** | Writes restricted once exceeded | Lean `answers`; archive old per-question detail to R2 before 400 MB |
 | Student reuses a mock paper at home | Burns the paper | `tests.kind` — mock, class and practice are separate pools; the practice library only lists `practice` |
 | PIN or password sharing | Cheating | One active session; device binding; concurrent-login flag |
 | Region chosen wrong | Full migration | ⚠️ M0-04 — `ap-south-1`, **cannot be changed after creation** |

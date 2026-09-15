@@ -160,7 +160,7 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M7-01 Realtime channel on `attempts` | todo | | | |
+| M7-01 Live-monitor endpoint (polled) | todo | | | ~~Realtime channel on `attempts`~~ superseded 2026-09-15 — polling every 10 s, no Realtime (§4) |
 | M7-02 Live session monitor (17) | todo | | | |
 | M7-03 Invigilator actions | todo | | | +5 min, force submit, unlock |
 
@@ -186,8 +186,8 @@
 | M9-02 Audit log screen (29) | todo | | | |
 | M9-03 Users & roles (28) | todo | | | |
 | M9-04 Error / edge screens (30) | todo | | | |
-| M9-05 Load test at 40 concurrent | todo | | | |
-| M9-06 Backups + restore drill | todo | | | The drill must actually restore |
+| M9-05 Load test at **200** concurrent | todo | | | ~~40~~ → 200 (user, 2026-09-15). Throwaway free Supabase project. First run right after M2-07 |
+| M9-06 Backups + restore drill | todo | | | The drill must actually restore. Free has no backups → nightly `db dump` to private R2. **Before the first real student** |
 | M9-07 Full security review | todo | | | |
 | M9-08 DPDP retention + deletion path | todo | | | |
 | M9-09 Docs completeness pass | todo | | | |
@@ -200,6 +200,7 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-09-15 | cross-cutting | Designed for 200 concurrent students on Supabase Free (§4): no Realtime, save-on-change autosave, Auth rate-limit plan, audio encoding + early preload, nightly backups, 200-student load test. Spec and walkthrough corrected. Opened Q11 (Cloudflare plan). Checked: Worker bundle is 953 KB gzipped (`wrangler deploy --dry-run`). | `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | goverdhan-gaur (constraint), Claude |
 | 2026-09-15 | — (step 1), M0-04, M1-01 | User answered Q1–Q3; spec rewritten to match (three test pools, per-assignment result release — §4). New Q9, Q10 opened. User turned off public signup in the dashboard — verified via the public `/auth/v1/settings` endpoint: `disable_signup: true`, email the only provider. User chose to skip the 70% usage alert. | `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | goverdhan-gaur, Claude |
 | 2026-09-15 | M0-05 | User ran `npx supabase db push`. Verified: `harden_rls_auto_enable` recorded remotely, security advisor clean. M0-05 closed. Found that `auth` schema is closed to `postgres` — spec §13 needs correcting before M0-06 (§5). | `PROJECT-MEMORY.md` | goverdhan-gaur, Claude |
 | 2026-09-15 | M0-05 | Supabase CLI wired: `supabase` devDependency (2.117.0), `supabase init` output committed (`config.toml`, `supabase/.gitignore` — `.temp/` stays ignored), `db:types` script, first generated `database.types.ts` (empty `public`), `lib/supabase/README.md`. User ran `login`/`init`/`link`. `db push --dry-run` lists only `harden_rls_auto_enable`. tsc + lint clean. | `package.json`, `package-lock.json`, `supabase/{config.toml,.gitignore}`, `src/lib/supabase/{database.types.ts,README.md}` | goverdhan-gaur, Claude |
@@ -229,6 +230,12 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-15 — Stay on Supabase Free; design for 200 students at once  (task: cross-cutting)
+**Chose:** the user's constraint — 200 concurrent test-takers, Supabase Free only. Design rules in `MVP-1.md` §4 "Free plans, 200 students at once": no Supabase Realtime (live monitor polls every 10 s); autosave on change + 30 s heartbeat instead of a fixed 10 s timer; students never hold a DB connection; raised Auth sign-in limit + IP forwarding + JWT longer than a test + local `getClaims()`; audio 48–64 kbps mono, preloaded on a pre-test screen that opens early; nightly `db dump` to R2 (Free has no backups); load test at 200 on a throwaway free project.
+**Because:** the Realtime table the user pasted is the wrong worry — students don't need Realtime. The real limits are Auth's per-IP sign-in/refresh limits (a lab shares one IP), the lab's own bandwidth, no backups, pausing after a quiet week, the 500 MB cap, and Cloudflare Workers Free's 100k requests/day (a 10 s autosave alone uses ~75k for one 200-student hour).
+**Rejected:** Supabase Realtime for the monitor — spends quota for no gain at 2–3 staff viewers. Paid plans — excluded by the user for Supabase; Workers Paid ($5/mo) held in reserve pending Q11 and the load test.
+**Correction applied:** `MVP-1.md` §3 D4, §4 (stack row + new budget subsection), §5 diagram (Realtime removed), §7 answers-in-flight, §8 session row, §12 download + encoding, §18 M7-01/M9-05/M9-06, §20 risks. `BUILD-STEPS.md` steps 39, 40, 43, 45, 85, 99, 100.
 
 ### 2026-09-15 — Three test pools; result release chosen per assignment  (task: step 1 / Q1–Q3)
 **Chose:** `tests.kind` (`mock`|`class`|`practice`) — each test is in exactly one pool; practice tests carry `practice_question_type`. `assignments.results_release` (`immediate`|`scheduled`|`manual`, default `manual`) + `results_released_at timestamptz`. The release gate is `results_release = 'immediate' OR results_released_at <= now()`, evaluated in Postgres.
@@ -327,6 +334,7 @@ Things that cost an hour and would cost the next agent the same hour. Add as you
 | **Check the Supabase region by reading it back** | The first project landed in `ap-northeast-2` (Seoul) despite the plan saying Mumbai — the dashboard's region picker is easy to get wrong. `list_projects` over the Supabase MCP returns `region`; read it, don't assume. **Resolved 2026-09-15** (recreated in `ap-south-1`). | M0-04 |
 | **`public.rls_auto_enable()` comes with the project** | Enabling "auto-enable RLS" at creation installs an `ensure_rls` event trigger → `public.rls_auto_enable()` (`SECURITY DEFINER`, owner `postgres`). It turns RLS on for every `CREATE TABLE` in `public` — **it adds no policies**, so a table with no policy is simply unreadable through the API, which is the default-deny we want. The function being `EXECUTE`-able by `anon`/`authenticated` trips advisor lints 0028/0029; `20260915090941_harden_rls_auto_enable.sql` revokes it. Until that migration is pushed, the advisor keeps showing both warnings. Don't drop the function or trigger. | M0-04 |
 | **Supabase MCP is wired in `.mcp.json`** | The untracked `.mcp.json` noted in the second-session handoff is the user's Supabase MCP config (gitignored, holds no secret). It can list projects, read schema/advisors and run read-only SQL. The agent permission policy blocks `apply_migration` and reads of `auth.users` rows — schema changes go through migration files + `supabase db push`. | M0-04 |
+| **Supabase Free limits that matter (checked in Supabase docs 2026-09-15)** | Nano compute: shared CPU, 0.5 GB RAM, 60 direct / 200 pooled connections, 500 MB DB. **No backups** (Supabase says: `db dump` yourself). **Paused after ~7 days of low activity**; restorable for 90 days. Auth `/auth/v1/token` — used by **password sign-in and refresh** — is limited per IP (bursts of 30, 1800/hour); the sign-in limit is configurable under Authentication → Rate Limits; `Sb-Forwarded-For` (secret key only, must be enabled) makes limits per real client. Over-quota projects get HTTP 402 restrictions, paused ones 540. | cross-cutting |
 | **⚠️ RLS helpers can't live in the `auth` schema** | `MVP-1.md` §13 says `auth_role()`, `is_teacher_of()` etc. are `SECURITY DEFINER` functions "in the `auth` schema". On this project `auth` is owned by `supabase_admin` and `postgres` has **no CREATE** on it (checked 2026-09-15) — Supabase locked down `auth` for user objects. A migration creating them there will fail. Put them in a non-exposed schema (e.g. `private` — not in `config.toml` `[api] schemas`, so PostgREST can't call them). **Open — fix §13 and step 19 with M0-06.** | M0-05 |
 | **`supabase login` needs a real terminal** | The agent's shell has no TTY, so the CLI's browser login can't run there. The user runs `npx supabase login` in the VS Code terminal; the token is saved on the Mac and the agent's CLI calls pick it up. Never paste the token into chat. | M0-05 |
 | **`db push` needs no DB password** | CLI 2.117 connects through a temporary login role ("Initialising login role…") using the CLI login, not the database password. `npx supabase db push --dry-run` is safe to run any time — it lists pending migrations and changes nothing. | M0-05 |
@@ -381,6 +389,7 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 | ~~Q3~~ | ~~Practice library — reuse mock papers, or a separate pool?~~ | **Answered 2026-09-15:** three separate pools. **Mock** = full tests. **Class** = full tests, different papers from the mocks. **Practice** = totally different content, organised **by question type**. Spec: `MVP-1.md` §6 `tests.kind`. | ✅ closed |
 | ~~Q9~~ | ~~Do class tests run under full exam conditions like mocks?~~ | **Confirmed 2026-09-15 (goverdhan-gaur): yes** — server timer, audio once, no seek. | ✅ closed |
 | ~~Q10~~ | ~~Is each practice set one question type?~~ | **Confirmed 2026-09-15: yes, one type per set** (`tests.practice_question_type`). | ✅ closed |
+| Q11 | Which **Cloudflare Workers plan** is the account on — Free or Paid ($5/mo)? | Free caps the app at 100,000 requests/day and 10 ms CPU per request. Save-on-change autosave fits ~3 full 200-student tests a day; the 10 ms CPU limit may be tight for Next.js page rendering. The load test (M9-05) settles it. | No — before M2-07 |
 | Q4 | Plan validity — purely time-based, or also test-count based? | `test_quota` column exists and is nullable, so either works. Cheap now, awkward later. | No |
 | Q5 | Multiple branches, ever? | `branch_id` is already in the schema, so building it in costs nothing. Confirm it should stay. | No |
 | Q6 | Who enters test content? | 40-question answer keys per test is the real bottleneck, not code. The MCP (M8) and answer-key editor (M5-09) address it, but someone's time still has to be budgeted. | No |
