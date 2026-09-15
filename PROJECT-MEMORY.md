@@ -11,7 +11,7 @@
 1. **Update it in the same commit as the work.** Never as a batch afterwards, never "I'll write it up later."
 2. **Never delete history.** Supersede an entry with a new one and mark the old one `~~superseded~~`.
 3. **If `MVP-1.md` and reality disagree, fix `MVP-1.md`** and record the correction in §4 below.
-4. **No secrets. Ever.** This file is committed to git. Record *names and locations* — "the Supabase service-role key lives in Wrangler secrets as `SUPABASE_SERVICE_ROLE_KEY`" — never a value.
+4. **No secrets. Ever.** This file is committed to git. Record *names and locations* — "the Supabase secret key lives in Wrangler secrets as `SUPABASE_SECRET_KEY`" — never a value.
 5. Tick tasks **here**, not in `MVP-1.md`.
 
 ---
@@ -22,7 +22,7 @@
 |---|---|
 | **Active milestone** | **M0 — Foundations** |
 | **Last completed** | **M0-19** roles + the institute's band charts, pushed and verified. Earlier: M0-11 (default-deny test + sweep), M0-10 (audit, rate limits — **schema complete, 24 tables**), M0-09 (assessment), M0-08 (content), M0-07 (cohorts), M0-06 (identity), M0-05 (CLI, types), M0-04 (Supabase project `insignia-ielts` in `ap-south-1`, §6), M0-03 + M0-23 (shadcn primitives, gallery), M0-01 (scaffold, lint, auto-deploy). |
-| **Next task** | **M0-19** — `20260915174541_reference_data.sql` written (roles + 3 institute band scales + "Below 4" support); `test:db` 240/240, sweep 25/25, dry-run clean. **Waiting on the user to review and `npx supabase db push`.** Then step 21 (Supabase clients `server/client/admin.ts`, M0-05) and step 22 (`lib/rbac.ts`). No-DB tasks still open: M0-12 (R2), M0-13 (CSP), M0-14 (secrets), M0-15, M0-18, M0-21, M0-22. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
+| **Next task** | **Step 22 — `lib/rbac.ts`** (M1-13 brought forward): permissions in `roles.permissions`, `can(user, 'test:publish')`. Needs a permission list agreed first. Also waiting on the user: create the Supabase **secret key** and put the 3 values in `.dev.vars` + Wrangler secrets (M0-14). Then step 21's clients get their first real use (Supabase clients `server/client/admin.ts`, M0-05) and step 22 (`lib/rbac.ts`). No-DB tasks still open: M0-12 (R2), M0-13 (CSP), M0-14 (secrets), M0-15, M0-18, M0-21, M0-22. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
 | ~~**Next task**~~ | ~~M0-06 — waiting on the user's `db push`~~ — superseded 2026-09-15: pushed and verified. |
 | ~~**Next task**~~ | ~~M0-06 — resolve where RLS helpers live first~~ — superseded 2026-09-15: `private` schema, approved by the user. |
 | ~~**Next task**~~ | ~~**M0-05** finish: only `npx supabase db push` left~~ — superseded 2026-09-15: pushed by the user, advisor clean. |
@@ -52,7 +52,7 @@
 | M0-11 RLS helpers + default-deny test | done | Claude, goverdhan-gaur | 2026-09-15 | Helpers shipped with M0-06…09. ✅ `tests/db/rls.test.mjs` (`npm run test:db`): all migrations on PGlite, 229 checks across all 24 tables, ~2 s. ✅ `tests/db/policy-sweep.mjs` (`npm run test:db:sweep`): drops each of 25 policies, **every drop fails the test** — first run caught `band_scales` untested, fixed. `@electric-sql/pglite` 0.5.8 pinned as devDependency (user approved). README in `tests/db/`. Lint clean. |
 | M0-12 R2 private buckets + `lib/r2.ts` signing | todo | | | `key.json` never signable |
 | M0-13 Security headers + nonce CSP + sanitize | todo | | | |
-| M0-14 Wrangler secrets + `.dev.vars.example` | todo | | | Verify nothing sensitive in `wrangler.jsonc` |
+| M0-14 Wrangler secrets + `.dev.vars.example` | in_progress | Claude, goverdhan-gaur | 2026-09-15 | ✅ `.dev.vars.example` (names only; `.dev.vars` confirmed gitignored). Names: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` (§6). ⬜ User: create the Supabase secret key; fill `.dev.vars`; `wrangler secret put` × 3. ⬜ Resend/Turnstile/Sentry names when those land. |
 | M0-15 `lib/question-types.ts` | todo | | | MVP-1 §10 matrix — single source of truth |
 | M0-16 Upload schema + `docs/test-authoring.md` | todo | | | One worked sample per variant |
 | M0-17 Importer: validate → split → upload | todo | | | The split is what keeps the key server-side |
@@ -202,6 +202,7 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-09-15 | step 21 (M0-05), M0-14 | Supabase clients: `lib/supabase/server.ts`, `admin.ts`, `env.ts` (TSDoc, `server-only`), no browser client (§4). `.dev.vars.example`. Packages pinned. Verified: a `"use client"` import of `admin.ts` fails `next build` (probe added, built, removed); normal `next build`, tsc and lint pass. Key names renamed to publishable/secret across docs. | `src/lib/supabase/*`, `.dev.vars.example`, `package.json`, `package-lock.json`, `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | Claude |
 | 2026-09-15 | M0-19 | User ran `db push`. Verified live over MCP. Types regenerated (`below_band`, nullable `band`). M0-19 closed. | `src/lib/supabase/database.types.ts`, `PROJECT-MEMORY.md` | goverdhan-gaur, Claude |
 | 2026-09-15 | M0-19 | Reference-data migration written: 5 roles and the institute's three band charts (Listening, Academic Reading, GT Reading — user-supplied images), plus "Below 4" support (`band_scale_rows.band` nullable, `attempt_scores.below_band`). Harness updated (seeded roles/scales) and extended to 240 checks incl. per-scale coverage and chart spot checks; sweep 25/25. **Not yet pushed.** | `supabase/migrations/20260915174541_reference_data.sql`, `tests/db/rls.test.mjs`, `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | goverdhan-gaur (charts, decision), Claude |
 | 2026-09-15 | M0-11 | The PGlite harness is now in the repo: `tests/db/rls.test.mjs` (reads `supabase/migrations/` in order; `RLS_DROP_POLICY` option) and `tests/db/policy-sweep.mjs`. Scripts `test:db`, `test:db:sweep`. `@electric-sql/pglite` 0.5.8 pinned (devDependency, user approved). The sweep's first run found `band_scales` had no positive test — added. 229/229; sweep 25/25. | `tests/db/*`, `package.json`, `package-lock.json`, `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | Claude, goverdhan-gaur |
@@ -246,6 +247,12 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-15 — No browser Supabase client; publishable/secret key names  (task: step 21 / M0-05)
+**Chose:** `lib/supabase/server.ts` (user-scoped, RLS) and `admin.ts` (secret key), both `server-only`; **no `client.ts`**. Env names `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` instead of `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`. All three packages pinned exactly (`@supabase/supabase-js` 2.116.0, `@supabase/ssr` 0.12.7, `server-only` 0.0.1).
+**Because:** the spec already has the browser never talking to Supabase Auth, content rendered server-side, and no Realtime (§4 free-plan budget). A browser client would need the session outside httpOnly cookies and add `supabase-js` to the student bundle (~200 KB budget) for no feature. Supabase's current key model is publishable/secret; Auth IP forwarding (the lab-login fix in `MVP-1.md` §4) only works with a secret key.
+**Rejected:** `client.ts` "for later" — add it the day a feature needs it, with its own review.
+**Open for M1-12:** Supabase's Next.js guide refreshes sessions in a `proxy.ts`; Next 16 proxy runs on the Node runtime, which OpenNext on Workers may not support. Our design (JWT longer than a test, refresh in Server Actions/Route Handlers) may not need it — decide there.
 
 ### 2026-09-15 — "Below 4" is a marker, not a number  (task: M0-19)
 **Chose:** the user's charts end in "Below 4"; the user chose to show exactly that. A scale's lowest row has `band` NULL; a score stores `below_band` (the scale's lowest band, e.g. 4.0) instead of `band` — exactly one of the two, by `CHECK`. The UI shows `band` or "Below {below_band}"; averages use `band` only.
@@ -428,15 +435,16 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 
 | Secret name | Used by | Set? |
 |---|---|---|
-| `SUPABASE_URL` | server + client | ⬜ |
-| `SUPABASE_ANON_KEY` | client | ⬜ |
-| `SUPABASE_SERVICE_ROLE_KEY` | **server only**, role-checked code paths | ⬜ |
+| `SUPABASE_URL` | server (`lib/supabase/env.ts`) | ⬜ |
+| `SUPABASE_PUBLISHABLE_KEY` | server — RLS-scoped client (`server.ts`) | ⬜ |
+| `SUPABASE_SECRET_KEY` | **server only**, `admin.ts`, behind `lib/rbac.ts` — bypasses RLS | ⬜ |
+| ~~`SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`~~ | superseded 2026-09-15 by the publishable/secret key names above — Supabase's current key model; IP forwarding for Auth rate limits (§4) requires a secret key | — |
 | `RESEND_API_KEY` | invite email | ⬜ |
 | `TURNSTILE_SECRET_KEY` | login + accept-invite | ⬜ |
 | `SENTRY_DSN` | error reporting | ⬜ |
 | `MCP_SERVICE_CREDENTIAL` | authoring MCP (M8) | ⬜ |
 
-⚠️ **`SUPABASE_SERVICE_ROLE_KEY` must never appear in `wrangler.jsonc` vars, a client bundle, or this file.**
+⚠️ **`SUPABASE_SECRET_KEY` must never appear in `wrangler.jsonc` vars, a client bundle, or this file.** `.dev.vars.example` lists the names.
 
 ---
 
@@ -489,7 +497,9 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 
 **Then.** User supplied the three band charts and chose "Below 4". M0-19 migration written and tested; not pushed.
 
-**Start with.** If the user has pushed M0-19: verify (5 roles, 3 default scales × 12 rows), `db:types`, close it. Then steps 21–22 (Supabase clients, `lib/rbac.ts`). **Every future migration:** extend `tests/db/rls.test.mjs` (see its README) and run both `test:db` commands before asking the user to push. Q11 answered: Workers Free. Open: whether to commit the PGlite harness as the M0-11 test; the Worker's workers.dev URL (not in the repo, and wrangler can't print it) — needed to measure real CPU per request with `wrangler tail`.
+**Then.** M0-19 pushed, verified, closed. Step 21 done (clients, no browser client).
+
+**Start with.** Step 22 `lib/rbac.ts` once the user confirms the permission matrix proposed in the chat (seeded into `roles.permissions` by a migration). The user still has to create the secret key and fill `.dev.vars` / Wrangler secrets (M0-14). **Every future migration:** extend `tests/db/rls.test.mjs` (see its README) and run both `test:db` commands before asking the user to push. Q11 answered: Workers Free. Open: whether to commit the PGlite harness as the M0-11 test; the Worker's workers.dev URL (not in the repo, and wrangler can't print it) — needed to measure real CPU per request with `wrangler tail`.
 
 ### 2026-09-15 (second session)
 

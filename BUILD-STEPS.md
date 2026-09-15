@@ -99,11 +99,11 @@ Do this now, not at hardening. Retrofitting a nonce CSP onto a finished app mean
 ### 10. ⚡ Wire secrets `(M0-14)`
 ```bash
 npx wrangler secret put SUPABASE_URL
-npx wrangler secret put SUPABASE_ANON_KEY
-npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+npx wrangler secret put SUPABASE_PUBLISHABLE_KEY   # sb_publishable_…
+npx wrangler secret put SUPABASE_SECRET_KEY        # sb_secret_… — create it under Project Settings → API keys
 ```
 Create `.dev.vars` (gitignored) and `.dev.vars.example` (names only, committed).
-⚠️ **`SUPABASE_SERVICE_ROLE_KEY` must never appear in `wrangler.jsonc` vars or any client bundle.**
+⚠️ **`SUPABASE_SECRET_KEY` must never appear in `wrangler.jsonc` vars or any client bundle.** (Renamed 2026-09-15 from `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` — Supabase's publishable/secret keys.) `.dev.vars.example` already exists.
 **✅ Done when** `grep -r "eyJ" wrangler.jsonc .dev.vars.example` returns nothing.
 
 ### 11. ⚡ `docs/` tree + ADRs `(M0-21)`
@@ -169,7 +169,9 @@ Five roles with permissions. Default Listening ladder: 39–40→9.0, 37–38→
 **✅ Done when** `SELECT * FROM band_scale_rows` returns the ladder and it's editable.
 
 ### 21. Supabase clients `(M0-05)`
-`lib/supabase/{server,client,admin}.ts`. The `admin` one uses the service-role key and must be importable **only** from server code behind a role check.
+> ✅ **Done 2026-09-15.** `server.ts` (RLS-scoped, cookies via `@supabase/ssr`), `admin.ts` (secret key), `env.ts`; **no `client.ts`** — see `PROJECT-MEMORY.md` §4. Verified: a `"use client"` import of `admin.ts` fails `next build` with the `server-only` error; the normal build passes.
+
+~~`lib/supabase/{server,client,admin}.ts`~~. The `admin` one uses the secret key and must be importable **only** from server code behind a role check.
 **✅ Done when** importing `admin.ts` from a `"use client"` file fails the build.
 
 ### 22. `lib/rbac.ts` `(M1-13, brought forward)`

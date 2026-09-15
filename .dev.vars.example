@@ -1,0 +1,12 @@
+# Copy to .dev.vars (gitignored) and fill in. Names only here — never commit values.
+# Deployed values live in Wrangler secrets: npx wrangler secret put <NAME>
+# Where each comes from: PROJECT-MEMORY.md §6.
+
+NEXTJS_ENV=development
+
+# Supabase → Project Settings → API
+SUPABASE_URL=
+# Publishable key (sb_publishable_…) — RLS-scoped requests
+SUPABASE_PUBLISHABLE_KEY=
+# Secret key (sb_secret_…) — BYPASSES RLS. Server-only, behind lib/rbac.ts.
+SUPABASE_SECRET_KEY=
