@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 export type Difficulty = "easy" | "medium" | "hard";
 
 /**
- * Display label per level. Kept separate from the stored value on purpose:
- * PROJECT-MEMORY §7 Q1 asks whether the third level reads "Hard" or "Difficult".
- * Answering that is a one-line change here.
+ * Display label per level. Kept separate from the stored value on purpose, so a
+ * wording change never touches data. Labels settled in PROJECT-MEMORY §7 Q1
+ * (2026-09-15): Easy / Medium / Hard.
  */
 export const DIFFICULTY_LABEL: Record<Difficulty, string> = {
 	easy: "Easy",
