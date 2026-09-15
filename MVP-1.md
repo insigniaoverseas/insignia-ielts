@@ -335,7 +335,8 @@ The `r2_*` path columns are **never granted to API roles** — only server code 
 Because the pools never overlap, a student can't meet a mock paper at home — the old `usage_policy` column is gone.
 
 **`band_scales`** — `id` · `skill` · **`variant`** *(Academic and General Training reading use different ladders — added 2026-09-15)* · `name` · `is_default bool` *(one default per skill + variant)* · `created_by` · `created_at`
-**`band_scale_rows`** — `scale_id` · `raw_min` · `raw_max` · `band numeric(2,1)` *(half-bands only; ranges in one scale may not overlap — `btree_gist` exclusion constraint)*
+**`band_scale_rows`** — `scale_id` · `raw_min` · `raw_max` · `band numeric(2,1)` *(half-bands only; ranges in one scale may not overlap — `btree_gist` exclusion constraint; **`band` NULL = "Below" the scale's lowest band**, at most one such row per scale — added 2026-09-15)*
+**Default scales** (M0-19): the institute's charts for Listening, Academic Reading and General Training Reading, each covering raw 0–40, lowest row "Below 4" (Listening/Academic 0–9, GT 0–14).
 Editable in admin, **never hardcoded** — official conversions vary by paper (`PLAN.md` §4). Seed with the Listening ladder in [§18 M0-19](#m0--foundations--2-weeks), then verify against a current Cambridge book before go-live.
 
 ### Assignment
@@ -364,7 +365,7 @@ A trigger sets `kind`, `content_version`, `status`, `started_at` and **`expires_
 The PK makes autosave an idempotent upsert. A trigger rejects any write unless the attempt is `in_progress` and `now() <= expires_at` — **for every role, service role included** — keeps `q_number` within the test, and requires `revision` to rise, so a replayed or out-of-order save is rejected. Students write their own answers through RLS (insert/update policies + column grants), so even buggy server code can't write into someone else's attempt.
 
 **`answer_marks`** — PK (`attempt_id`, `q_number`) · `section_no` · **`question_type`** *(denormalised at scoring time — D4)* · `is_correct bool` · `marks_awarded numeric(3,1)` · `overridden_by` · `override_note` · `overridden_at` · `scored_at` — one row per question, answered or not. Written by the scorer.
-**`attempt_scores`** — `attempt_id` PK · `raw_score` · `band numeric(2,1)` · `section_scores jsonb` · `scored_at`.
+**`attempt_scores`** — `attempt_id` PK · `raw_score` · `band numeric(2,1)` *(NULL when below the scale)* · **`below_band`** *(set instead of `band`: 4.0 → shown "Below 4", left out of band averages — exactly one of the two)* · `section_scores jsonb` · `scored_at`.
 **Why two extra tables (2026-09-15):** RLS hides rows, not columns. Correctness and scores can't sit on rows the student must read mid-test, so they have their own tables whose policies only show a student a row once the attempt is finished and the release gate is open — `answer_marks` additionally needs `allow_review`. Practice: visible at once. Staff in scope always see them.
 
 **`attempt_events`** — `id` · `attempt_id` · `type` (`start`|`resume`|`tab_blur`|`tab_focus`|`paste_blocked`|`audio_error`|`clock_skew`|`cache_purged`|`force_submit`|`extra_time`) · `meta jsonb` · `at`

@@ -162,6 +162,8 @@ Then the test that is the actual deliverable: **for every table, a query as a st
 **✅ Done when** the test passes for all 20 tables, and fails if you drop one policy.
 
 ### 20. Seed roles and the band scale `(M0-19)`
+> ✅ **Written 2026-09-15** as migration `20260915174541_reference_data.sql`: the five roles, plus default Listening, Academic Reading and General Training Reading scales from **the institute's own charts** (supplied 2026-09-15), each covering 0–40, with a "Below 4" row. Permissions come with step 22. Instructions kept below for reference.
+
 Five roles with permissions. Default Listening ladder: 39–40→9.0, 37–38→8.5, 35–36→8.0, 32–34→7.5, 30–31→7.0, 26–29→6.5, 23–25→6.0, 18–22→5.5, 16–17→5.0.
 ⚠️ **Verify against a current Cambridge book before go-live** — official conversions vary by paper, which is why this is a table and not a constant.
 **✅ Done when** `SELECT * FROM band_scale_rows` returns the ladder and it's editable.

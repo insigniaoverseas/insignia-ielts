@@ -22,7 +22,7 @@
 |---|---|
 | **Active milestone** | **M0 — Foundations** |
 | **Last completed** | **M0-11** default-deny test + policy sweep in the repo. Earlier: M0-10 (audit, rate limits — **schema complete, 24 tables**), M0-09 (assessment), M0-08 (content), M0-07 (cohorts), M0-06 (identity), M0-05 (CLI, types), M0-04 (Supabase project `insignia-ielts` in `ap-south-1`, §6), M0-03 + M0-23 (shadcn primitives, gallery), M0-01 (scaffold, lint, auto-deploy). |
-| **Next task** | **M0-19** seed roles + default band scales ([`BUILD-STEPS.md`](BUILD-STEPS.md) step 20) — a seed migration; ⚠️ the band ladder must be checked against a current Cambridge book. Then step 21 (Supabase clients `server/client/admin.ts`, M0-05) and step 22 (`lib/rbac.ts`). No-DB tasks still open: M0-12 (R2), M0-13 (CSP), M0-14 (secrets), M0-15, M0-18, M0-21, M0-22. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
+| **Next task** | **M0-19** — `20260915174541_reference_data.sql` written (roles + 3 institute band scales + "Below 4" support); `test:db` 240/240, sweep 25/25, dry-run clean. **Waiting on the user to review and `npx supabase db push`.** Then step 21 (Supabase clients `server/client/admin.ts`, M0-05) and step 22 (`lib/rbac.ts`). No-DB tasks still open: M0-12 (R2), M0-13 (CSP), M0-14 (secrets), M0-15, M0-18, M0-21, M0-22. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
 | ~~**Next task**~~ | ~~M0-06 — waiting on the user's `db push`~~ — superseded 2026-09-15: pushed and verified. |
 | ~~**Next task**~~ | ~~M0-06 — resolve where RLS helpers live first~~ — superseded 2026-09-15: `private` schema, approved by the user. |
 | ~~**Next task**~~ | ~~**M0-05** finish: only `npx supabase db push` left~~ — superseded 2026-09-15: pushed by the user, advisor clean. |
@@ -57,7 +57,7 @@
 | M0-16 Upload schema + `docs/test-authoring.md` | todo | | | One worked sample per variant |
 | M0-17 Importer: validate → split → upload | todo | | | The split is what keeps the key server-side |
 | M0-18 `lib/scoring.ts` + Vitest suite | todo | | | Word limits, hyphens, variants, plurals, bands |
-| M0-19 Seed roles + default band scale | todo | | | ⚠️ Verify band ladder against a current Cambridge book |
+| M0-19 Seed roles + default band scale | in_progress | Claude, goverdhan-gaur | 2026-09-15 | ✅ `supabase/migrations/20260915174541_reference_data.sql`: 5 roles; default Listening / Academic Reading / GT Reading scales from **the institute's charts** (user-supplied 2026-09-15, "approximate marks out of 40") — replaces "verify against a Cambridge book"; `band` NULL = "Below" (≤1 per scale); `attempt_scores.below_band` (exactly one of band/below_band). Seed inserts idempotent. ✅ `test:db` 240/240 (coverage 0–40 per scale, 16 spot checks vs the charts, re-run changes nothing), sweep 25/25, dry-run. ⬜ User review + `db push`. ⬜ Verify + `db:types`. |
 | M0-20 Port legacy Listening test | todo | | | From `Design files/.../ielts-data.js` |
 | M0-21 `docs/` tree + ADRs 0001–0013 | todo | | | |
 | M0-22 CI gates incl. bundle-grep guard | todo | | | |
@@ -202,6 +202,7 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-09-15 | M0-19 | Reference-data migration written: 5 roles and the institute's three band charts (Listening, Academic Reading, GT Reading — user-supplied images), plus "Below 4" support (`band_scale_rows.band` nullable, `attempt_scores.below_band`). Harness updated (seeded roles/scales) and extended to 240 checks incl. per-scale coverage and chart spot checks; sweep 25/25. **Not yet pushed.** | `supabase/migrations/20260915174541_reference_data.sql`, `tests/db/rls.test.mjs`, `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | goverdhan-gaur (charts, decision), Claude |
 | 2026-09-15 | M0-11 | The PGlite harness is now in the repo: `tests/db/rls.test.mjs` (reads `supabase/migrations/` in order; `RLS_DROP_POLICY` option) and `tests/db/policy-sweep.mjs`. Scripts `test:db`, `test:db:sweep`. `@electric-sql/pglite` 0.5.8 pinned (devDependency, user approved). The sweep's first run found `band_scales` had no positive test — added. 229/229; sweep 25/25. | `tests/db/*`, `package.json`, `package-lock.json`, `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | Claude, goverdhan-gaur |
 | 2026-09-15 | M0-10 | User ran `db push`. Verified live; security advisor shows only the intended INFO on `rate_limits`. Types regenerated. M0-10 closed — all 24 tables live. | `src/lib/supabase/database.types.ts`, `PROJECT-MEMORY.md` | goverdhan-gaur, Claude |
 | 2026-09-15 | M0-10 | Cross-cutting migration written: `audit_log`, `rate_limits`, and a fix for M0-07's `plan_history.actor_id` FK (blocked staff erasure). PGlite harness to 228 checks with a final sweep; 2 deliberate breaks caught. **Not yet pushed.** | `supabase/migrations/20260915172936_crosscutting.sql`, `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | Claude |
@@ -244,6 +245,12 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-15 — "Below 4" is a marker, not a number  (task: M0-19)
+**Chose:** the user's charts end in "Below 4"; the user chose to show exactly that. A scale's lowest row has `band` NULL; a score stores `below_band` (the scale's lowest band, e.g. 4.0) instead of `band` — exactly one of the two, by `CHECK`. The UI shows `band` or "Below {below_band}"; averages use `band` only.
+**Because:** storing 0 (or an invented 3.5) would misreport the student and drag every batch average down.
+**Rejected:** finer bands below 4 — no source data from the institute. A text `label` column — a second way to express the same fact.
+**Source of the defaults:** the institute's Listening, Academic Reading and GT Reading charts, supplied by the user on 2026-09-15. They replace the spec's "verify against a current Cambridge book" — staff can still edit scales, and an assignment can pick another.
 
 ### 2026-09-15 — Audit trails keep actor ids without foreign keys  (task: M0-10)
 **Chose:** `audit_log.actor_id` has no FK, and M0-10 drops the FK on `plan_history.actor_id`. `audit_log` gains `branch_id` for the admin policy. `rate_limits` is RLS-on with no policy and no grants.
@@ -479,7 +486,9 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 
 **Then.** M0-10 pushed, verified, closed — all 24 tables live. M0-11 done: the harness is in the repo (`npm run test:db`, `test:db:sweep`).
 
-**Start with.** M0-19 (seed roles + default band scales — verify the ladder against a Cambridge book), then steps 21–22. **Every future migration:** extend `tests/db/rls.test.mjs` (see its README) and run both `test:db` commands before asking the user to push. Q11 answered: Workers Free. Open: whether to commit the PGlite harness as the M0-11 test; the Worker's workers.dev URL (not in the repo, and wrangler can't print it) — needed to measure real CPU per request with `wrangler tail`.
+**Then.** User supplied the three band charts and chose "Below 4". M0-19 migration written and tested; not pushed.
+
+**Start with.** If the user has pushed M0-19: verify (5 roles, 3 default scales × 12 rows), `db:types`, close it. Then steps 21–22 (Supabase clients, `lib/rbac.ts`). **Every future migration:** extend `tests/db/rls.test.mjs` (see its README) and run both `test:db` commands before asking the user to push. Q11 answered: Workers Free. Open: whether to commit the PGlite harness as the M0-11 test; the Worker's workers.dev URL (not in the repo, and wrangler can't print it) — needed to measure real CPU per request with `wrangler tail`.
 
 ### 2026-09-15 (second session)
 

@@ -78,7 +78,8 @@ const id = {
 await db.exec(`
   insert into public.branches (id, name) values ('${id.b1}', 'Main'), ('${id.b2}', 'North');
   insert into public.roles (key, name) values
-    ('super_admin','Super admin'), ('admin','Admin'), ('teacher','Teacher'), ('invigilator','Invigilator'), ('student','Student');
+    ('super_admin','Super admin'), ('admin','Admin'), ('teacher','Teacher'), ('invigilator','Invigilator'), ('student','Student')
+  on conflict (key) do nothing; -- seeded by the reference_data migration
 `);
 const users = [
   ["studentA", "student", "b1", "active"], ["studentB", "student", "b1", "active"],
@@ -144,7 +145,7 @@ await db.exec([
   T("tArchived", "Old mock", "mock", "archived"),
 ].join("\n"));
 await db.exec(`
-  insert into public.band_scales (id, skill, variant, name, is_default) values ('${id.scale}', 'listening', 'n_a', 'Default listening', true);
+  insert into public.band_scales (id, skill, variant, name, is_default) values ('${id.scale}', 'listening', 'n_a', 'Custom listening', false);
   insert into public.band_scale_rows (scale_id, raw_min, raw_max, band) values ('${id.scale}', 39, 40, 9.0), ('${id.scale}', 37, 38, 8.5), ('${id.scale}', 35, 36, 8.0);
   insert into public.assignments (id, test_id, branch_id, created_by) values
     ('${id.aX}', '${id.tMockX}', '${id.b1}', '${id.admin1}'),
@@ -339,8 +340,8 @@ ok("select * on tests refused (R2 paths in *)", denied(await as("authenticated",
 ok("service_role can read r2_key_key (server code)", !(await as("service_role", null, `select r2_key_key from public.tests`)).error);
 
 console.log("\ncontent — band scales");
-ok("teacher reads the band scale", (await count("authenticated", "teacher", `select 1 from public.band_scales`)) === 1);
-ok("teacher reads band scale rows", (await count("authenticated", "teacher", `select 1 from public.band_scale_rows`)) === 3);
+ok("teacher reads the band scales (3 seeded + 1 custom)", (await count("authenticated", "teacher", `select 1 from public.band_scales`)) === 4);
+ok("teacher reads band scale rows (36 seeded + 3 custom)", (await count("authenticated", "teacher", `select 1 from public.band_scale_rows`)) === 39);
 ok("student reads no band scales", (await count("authenticated", "studentA", `select 1 from public.band_scales`)) === 0 && (await count("authenticated", "studentA", `select 1 from public.band_scale_rows`)) === 0);
 
 console.log("\ncontent — assignments, targets, unlocks");
@@ -516,6 +517,38 @@ await db.exec(`
   insert into public.audit_log (actor_id, branch_id, action, entity) values ('00000000-0000-0000-0000-0000000000a3', '${id.b1}', 'plan.extend', 'student_plans');`);
 ok("erasing a staff user who changed a plan succeeds", !(await bad(`delete from auth.users where id = '00000000-0000-0000-0000-0000000000a3'`)));
 ok("…and their plan_history and audit rows keep the actor id", (await one(`select count(*)::int c from public.plan_history where actor_id = '00000000-0000-0000-0000-0000000000a3'`)).c === 1 && (await one(`select count(*)::int c from public.audit_log where actor_id = '00000000-0000-0000-0000-0000000000a3'`)).c === 1);
+
+
+console.log("\nreference data (M0-19)");
+ok("the five roles are seeded", (await db.query(`select key from public.roles order by key`)).rows.map((r) => r.key).join() === "admin,invigilator,student,super_admin,teacher");
+const defaults = (await db.query(`select skill || '/' || variant as sv, id from public.band_scales where is_default order by 1`)).rows;
+ok("one default scale each: listening, academic reading, general reading", defaults.map((d) => d.sv).join() === "listening/n_a,reading/academic,reading/general");
+for (const d of defaults) {
+  const cov = await one(`select min(raw_min) lo, max(raw_max) hi, sum(raw_max - raw_min + 1)::int cells, count(*) filter (where band is null)::int below,
+    (select raw_min from public.band_scale_rows where scale_id = '${d.id}' and band is null) below_from from public.band_scale_rows where scale_id = '${d.id}'`);
+  ok(`${d.sv}: covers 0–40 with no gaps, one "Below" row starting at 0`, cov.lo === 0 && cov.hi === 40 && cov.cells === 41 && cov.below === 1 && cov.below_from === 0);
+}
+const bandFor = async (sv, raw) => (await one(`select r.band from public.band_scale_rows r join public.band_scales s on s.id = r.scale_id
+  where s.is_default and s.skill || '/' || s.variant = '${sv}' and ${raw} between r.raw_min and r.raw_max`)).band;
+const spot = [
+  ["listening/n_a", 31, 7], ["listening/n_a", 32, 7.5], ["listening/n_a", 10, 4], ["listening/n_a", 9, null], ["listening/n_a", 40, 9],
+  ["reading/academic", 31, 7], ["reading/academic", 33, 7.5], ["reading/academic", 26, 6], ["reading/academic", 9, null], ["reading/academic", 10, 4],
+  ["reading/general", 31, 6], ["reading/general", 36, 7.5], ["reading/general", 39, 8.5], ["reading/general", 40, 9], ["reading/general", 14, null], ["reading/general", 15, 4],
+];
+ok("spot checks match the institute's charts", (await Promise.all(spot.map(async ([sv, raw, want]) => {
+  const got = await bandFor(sv, raw); return (got === null ? null : Number(got)) === want;
+}))).every(Boolean));
+ok("a second \"Below\" row in one scale rejected", await bad(`insert into public.band_scale_rows (scale_id, raw_min, raw_max, band) values ('${id.scale}', 0, 1, null), ('${id.scale}', 2, 3, null)`));
+const scoreIns = (band, below) => `insert into public.attempt_scores (attempt_id, raw_score, band, below_band) values ('${att.practice}', 5, ${band}, ${below})`;
+await db.exec(`delete from public.attempt_scores where attempt_id = '${att.practice}'`);
+ok("score with both band and below_band rejected", await bad(scoreIns("6.0", "4.0")));
+ok("score with neither rejected", await bad(scoreIns("null", "null")));
+ok("\"Below 4\" score stored as below_band", !(await bad(scoreIns("null", "4.0"))));
+const seedSql = "-- ─── Roles" + readFileSync(`${MIG}/20260915174541_reference_data.sql`, "utf8").split("-- ─── Roles")[1];
+const seedBefore = await one(`select (select count(*) from public.roles)::int r, (select count(*) from public.band_scales)::int s, (select count(*) from public.band_scale_rows)::int rw`);
+await db.exec(seedSql);
+const seedAfter = await one(`select (select count(*) from public.roles)::int r, (select count(*) from public.band_scales)::int s, (select count(*) from public.band_scale_rows)::int rw`);
+ok("re-running the seed inserts changes nothing", JSON.stringify(seedBefore) === JSON.stringify(seedAfter), JSON.stringify({ seedBefore, seedAfter }));
 
 console.log("\npolicy hygiene");
 const multi = (await db.query(`select tablename, cmd, count(*)::int n from pg_policies where schemaname = 'public' group by 1, 2 having count(*) > 1`)).rows;
