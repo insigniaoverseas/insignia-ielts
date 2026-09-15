@@ -326,21 +326,24 @@ export type Database = {
       attempt_scores: {
         Row: {
           attempt_id: string
-          band: number
+          band: number | null
+          below_band: number | null
           raw_score: number
           scored_at: string
           section_scores: Json
         }
         Insert: {
           attempt_id: string
-          band: number
+          band?: number | null
+          below_band?: number | null
           raw_score: number
           scored_at?: string
           section_scores?: Json
         }
         Update: {
           attempt_id?: string
-          band?: number
+          band?: number | null
+          below_band?: number | null
           raw_score?: number
           scored_at?: string
           section_scores?: Json
@@ -483,19 +486,19 @@ export type Database = {
       }
       band_scale_rows: {
         Row: {
-          band: number
+          band: number | null
           raw_max: number
           raw_min: number
           scale_id: string
         }
         Insert: {
-          band: number
+          band?: number | null
           raw_max: number
           raw_min: number
           scale_id: string
         }
         Update: {
-          band?: number
+          band?: number | null
           raw_max?: number
           raw_min?: number
           scale_id?: string
