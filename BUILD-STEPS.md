@@ -22,7 +22,9 @@
 Nothing here is code. All of it blocks code.
 
 ### 1. Answer the two questions that change what gets built
-Open [`PROJECT-MEMORY.md`](PROJECT-MEMORY.md) §7. Q2 (mock results auto-release vs teacher-released) and Q3 (practice library pool) set defaults you'll bake into the assignment engine at step 69. Q1 is a one-word label. The rest can wait.
+> ✅ **Done 2026-09-15.** Q1 → Easy / Medium / Hard. Q2 → release is chosen per assignment: right away, on a schedule, or when a teacher releases (default). Q3 → mock, class and practice are three separate pools; practice sets are by question type. Spec updated in `MVP-1.md` §6. Instructions kept below for reference.
+
+Open [`PROJECT-MEMORY.md`](PROJECT-MEMORY.md) §7. Q2 (mock results auto-release vs teacher-released) and Q3 (practice library pool) set defaults you'll bake into the assignment engine at step 81. Q1 is a one-word label. The rest can wait.
 **✅ Done when** Q1–Q3 have answers written into §7.
 
 ### 2. ⚠️ Create the Supabase project in `ap-south-1` (Mumbai) `(M0-04)`

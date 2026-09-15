@@ -35,7 +35,7 @@
 
 ## 1. How to use this file
 
-**The product.** An IELTS Listening + Reading practice-test platform for a coaching institute in India. Students take timed mock and practice tests in a computer lab or at home; teachers assign tests and release results; admins manage accounts, batches and plan validity.
+**The product.** An IELTS Listening + Reading practice-test platform for a coaching institute in India. Students take timed mock tests, class tests and question-type practice in a computer lab or at home; teachers assign tests and release results; admins manage accounts, batches and plan validity.
 
 **The one design rule that overrides everything** (from `DESIGN-PROMPT.md`): *a 10-year-old must be able to use the student side without being told how.* One obvious action per screen, words over icons, plain language, nothing below 16px, no nesting deeper than two taps from home. Teacher and admin sides may be dense — they are power users — but use the same visual language.
 
@@ -92,7 +92,7 @@ A task is done when **all** of these hold:
 | **D2** | Scope = **full product**: student + teacher + admin | PLAN-V2 phases 0–3 plus analytics. |
 | **D3** | **Build admin UI**, not Supabase Studio | Non-technical staff must run a batch without a developer. Students/Invites, Test library and Answer-key editor ship first. |
 | **D4** | **Postgres** for people and results; **R2** for content | Supabase: users, auth, sessions, roles, plans, batches, assignments, attempts, answers, stats, realtime. R2: test content, answer keys, transcripts, audio, images. See the consequence note below. |
-| **D5** | Difficulty is **`easy` / `medium` / `hard`** | Word plus three-bar indicator, never colour alone. ⚠️ *You said "difficult"; the rendered design system says "Hard". Stored value is `hard`; the display label is an open question — see `PROJECT-MEMORY.md` §7.* |
+| **D5** | Difficulty is **`easy` / `medium` / `hard`** | Word plus three-bar indicator, never colour alone. Display labels are **Easy / Medium / Hard** (settled 2026-09-15, `PROJECT-MEMORY.md` §7 Q1). |
 | **D6** | **The client holds no authority over anything affecting a score** | Timer, progress, attempt state, correctness and statistics are computed and stored server-side. [§7](#7-server-authority-d6). |
 | **D7** | Security is designed in from M0 | Not a hardening milestone. [§8](#8-security--threat-model-and-controls-d7). A security review gates every milestone. |
 | **D8** | **One audio file per Listening test** | Not one per section. Sections are timestamp markers into it. Downloads fully before the timer starts, plays straight through; section navigation never seeks or re-requests. |
@@ -304,9 +304,19 @@ The audit trail required by `PLAN-V2.md` §1.2 A4.
 
 ### Content catalogue
 
-**`tests`** — `id` · `title` · `skill` (`listening`|`reading`|`writing`|`speaking`) · `variant` (`academic`|`general`|`n_a`) · **`difficulty`** (`easy`|`medium`|`hard` — D5) · `duration_seconds` · `transfer_seconds` · `total_questions` · `section_count` · `status` (`draft`|`published`|`archived`) · `tags text[]` · **`content_version int`** · **`r2_content_key`** · **`r2_key_key`** · **`r2_transcript_key`** · **`r2_audio_key`** *(one file — D8)* · **`r2_assets_prefix`** *(labelling images — §10)* · `audio_duration_seconds` · `usage_policy` (`mock_only`|`practice_ok`|`both`) · `created_by` · `published_at` · `created_at` · `updated_at`
+**`tests`** — `id` · `title` · `skill` (`listening`|`reading`|`writing`|`speaking`) · `variant` (`academic`|`general`|`n_a`) · **`difficulty`** (`easy`|`medium`|`hard` — D5) · `duration_seconds` · `transfer_seconds` · `total_questions` · `section_count` · `status` (`draft`|`published`|`archived`) · `tags text[]` · **`content_version int`** · **`r2_content_key`** · **`r2_key_key`** · **`r2_transcript_key`** · **`r2_audio_key`** *(one file — D8)* · **`r2_assets_prefix`** *(labelling images — §10)* · `audio_duration_seconds` · **`kind`** (`mock`|`class`|`practice`) · **`practice_question_type`** *(practice only — the one official type it drills, from §10; `NULL` otherwise, enforced by a `CHECK`)* · `created_by` · `published_at` · `created_at` · `updated_at`
 
 **No child `questions` table** — see the D4 consequence note in [§3](#3-decision-log).
+
+**Three separate pools — a test belongs to exactly one `kind`** (decided 2026-09-15, `PROJECT-MEMORY.md` §7 Q3):
+
+| `kind` | What it is | Conditions | Results |
+|---|---|---|---|
+| `mock` | Full test, exam conditions | Server timer, audio once, no seek | Per assignment — see `results_release` below |
+| `class` | Full test, **different papers from the mocks** | Same as mock | Per assignment — see `results_release` below |
+| `practice` | **Short sets, one question type each** (e.g. "Matching headings — Set 3"). Not a full paper. | Full audio controls; untimed or loosely timed | Instant, per question ([§7](#7-server-authority-d6)) |
+
+Because the pools never overlap, a student can't meet a mock paper at home — the old `usage_policy` column is gone.
 
 **`band_scales`** — `id` · `skill` · `name` · `is_default bool` · `created_by` · `created_at`
 **`band_scale_rows`** — `scale_id` · `raw_min` · `raw_max` · `band numeric(2,1)`
@@ -314,14 +324,24 @@ Editable in admin, **never hardcoded** — official conversions vary by paper (`
 
 ### Assignment
 
-**`assignments`** — `id` · `test_id` · `mode` (`mock`|`practice`|`homework`) · `available_from` · `due_by` · `max_attempts` · `allow_review bool` · `results_released bool` · `released_at` · `released_by` · `band_scale_id` · `created_by` · `created_at`
+**`assignments`** — `id` · `test_id` *(its `kind` is the assignment's mode)* · `available_from` · `due_by` · `max_attempts` · `allow_review bool` · **`results_release`** (`immediate`|`scheduled`|`manual`) · **`results_released_at timestamptz NULL`** · `released_by` · `band_scale_id` · `created_by` · `created_at`
+
+**Result release is chosen per assignment by the admin or the batch's teacher** (Q2) — and can be changed later, e.g. "release now" on a scheduled one:
+
+| `results_release` | Student sees their result… | `results_released_at` |
+|---|---|---|
+| `immediate` | right after submitting | unused |
+| `scheduled` | from a set date and time | set when assigning, in the future |
+| `manual` *(default)* | when a teacher or admin presses Release | `NULL` until pressed, then `now()` |
+
+The gate is one Postgres expression, evaluated against the **server** clock: `results_release = 'immediate' OR (results_released_at IS NOT NULL AND results_released_at <= now())`. No cron job is needed for scheduled release. Practice attempts ignore this — their feedback is always instant.
 **`assignment_targets`** — `id` · `assignment_id` · `target_type` (`batch`|`student`) · `target_id`
 **`assignment_unlocks`** — `id` · `assignment_id` · `student_id` · `unlocked_by` · `until` · `reason` · `at`
 The per-student "unlock now" override for latecomers and retakes (`PLAN-V2.md` §1.3 T2).
 
 ### Assessment
 
-**`attempts`** — `id` · `assignment_id NULL` · `test_id` · `student_id` · `mode` · **`content_version`** · `started_at` · **`expires_at`** *(the server clock)* · `submitted_at` · `time_remaining_seconds` · `last_autosave_at` · `audio_downloaded_at` · `audio_started_at` · `audio_completed_at` · `status` (`in_progress`|`submitted`|`expired`|`voided`) · `raw_score` · `band numeric(2,1)` · `section_scores jsonb` · `tab_switches int` · `device_info jsonb` · `created_at`
+**`attempts`** — `id` · `assignment_id NULL` *(`NULL` only for self-started practice)* · `test_id` · `student_id` · `kind` *(copied from `tests.kind` at start)* · **`content_version`** · `started_at` · **`expires_at`** *(the server clock)* · `submitted_at` · `time_remaining_seconds` · `last_autosave_at` · `audio_downloaded_at` · `audio_started_at` · `audio_completed_at` · `status` (`in_progress`|`submitted`|`expired`|`voided`) · `raw_score` · `band numeric(2,1)` · `section_scores jsonb` · `tab_switches int` · `device_info jsonb` · `created_at`
 
 **`answers`** — `id` · `attempt_id` · **`q_number`** · **`section_no`** · **`question_type`** *(denormalised at scoring time — D4)* · `given_answer text` · `is_correct bool` · `marks_awarded numeric` · `flagged bool` · **`revision int`** · `overridden_by` · `override_note` · `overridden_at` · `answered_at` · `updated_at`
 `UNIQUE(attempt_id, q_number)` — autosave is an idempotent upsert.
@@ -348,8 +368,8 @@ Append-only integrity log.
 | **Answers in flight** | Autosave is a Server Action. `localStorage` is a crash-recovery convenience **only** — never the source of truth on submit. The server scores what the server stored. Payloads are zod-validated: `q_number` in range, value shaped for the question's type, length-capped. |
 | **Replay / rewind** | Optimistic concurrency via `answers.revision`. An out-of-order or replayed request is rejected, not applied. |
 | **Answer key** | Lives only at `key.json`, read through the R2 **binding** inside a Server Action. Never signed, never in a response body, never in the client bundle. CI-enforced. |
-| **Correctness before submit** | No endpoint can return `is_correct` for an `in_progress` mock attempt — enforced in the route **and** in RLS. Practice mode's instant feedback is a per-question server round-trip returning the verdict for **that one committed answer only**, never the rest of the key. |
-| **Results & review** | Gated on `attempt.status = 'submitted'` **and** `assignment.results_released`. The transcript is signed only after that gate opens. |
+| **Correctness before submit** | No endpoint can return `is_correct` for an `in_progress` mock or class attempt — enforced in the route **and** in RLS. Practice mode's instant feedback is a per-question server round-trip returning the verdict for **that one committed answer only**, never the rest of the key. |
+| **Results & review** | Gated on `attempt.status = 'submitted'` **and** the assignment's release gate ([§6](#assignment) — `immediate`, or `results_released_at <= now()` on the server clock). The transcript is signed only after that gate opens. Only an admin or the batch's teacher can change an assignment's release setting, and every change is audit-logged. |
 | **Progress & stats** | Aggregated in Postgres, delivered server-rendered. No endpoint accepts a client-supplied score, band or time-taken. |
 | **Test content** | Server-rendered via RSC. The browser never holds the full test JSON. |
 
@@ -557,7 +577,8 @@ One versioned, zod-backed schema: `lib/import/test-upload.schema.ts`. Full field
   "difficulty": "medium",                  // easy | medium | hard        (D5)
   "duration_seconds": 1800,
   "transfer_seconds": 120,
-  "usage_policy": "mock_only",             // mock_only | practice_ok | both
+  "kind": "mock",                          // mock | class | practice — one pool per test
+  // "practice_question_type": "matching_headings",   // required when kind = practice (§10 type)
   "tags": ["cambridge-18", "urban"],
 
   // ONE audio file for the whole test (D8)
@@ -661,7 +682,7 @@ Lives in `mcp/`, over that same importer.
 | **Cache key** | Written to the Cache API under a **stable key** — `/audio-cache/{testId}/v{n}` — so the expiring signature never becomes part of the cache identity. |
 | **Ownership** | An IndexedDB record stores `cache_owner = user_id` alongside each cached entry. |
 | **Purge on user change** | On **every session start and on logout**, the service worker compares `cache_owner` to the current user. **If they differ, the cached audio and all local attempt state are deleted before the app renders.** The R2 object is untouched. |
-| **Post-attempt purge** | For `mock_only` tests, the local copy is dropped once the attempt is submitted, so it cannot be replayed. |
+| **Post-attempt purge** | For `mock` and `class` tests, the local copy is dropped once the attempt is submitted, so it cannot be replayed. |
 | **Logging** | Cache hits and purges write to `attempt_events`. |
 
 **Why the purge matters:** without it, student B sitting down at student A's lab PC could pull a cached copy of a test B hasn't taken yet. This is the single highest-value line of code in the caching layer.
@@ -723,7 +744,7 @@ audio/{testId}/v{n}/test.mp3          ONE file for the whole test (D8)
 | `test.mp3` | ✅ **Yes** — the only one | Pre-test screen, 5-min TTL, scoped to the attempt |
 | `assets/*` | ✅ Yes | While rendering an `image_label` question, 5-min TTL |
 | `content.json` | ❌ **Never** | Read by the Worker via binding, rendered through RSC |
-| `transcript.json` | ⚠️ Only after release | `attempt.status='submitted'` **and** `assignment.results_released` |
+| `transcript.json` | ⚠️ Only after release | `attempt.status='submitted'` **and** the assignment's release gate ([§6](#assignment)) |
 | `key.json` | ❌ **Never, under any condition** | Read by the Worker via binding, inside a Server Action, for scoring only |
 
 Buckets are **private**. The R2 public dev URL is **disabled**. All R2 keys are **server-generated** — no user-controlled path component, ever.
@@ -849,7 +870,7 @@ From `DESIGN-PROMPT.md` §A2–A4. **Tailwind v4 is CSS-first** — this goes in
 | 7 | **Question navigator** — 1–40 grid, 4 states, legend always visible | **custom** |
 | 8 | **Answer widgets** — the 6 from [§10](#10-question-types-d12) | **custom** |
 | 8b | **Containers** — form, note, table, flow_chart, summary, sentence, plain | **custom** |
-| 9 | **Audio player** — mock: no seek, no replay; practice: full controls + speed | **custom** |
+| 9 | **Audio player** — mock and class: no seek, no replay; practice: full controls + speed | **custom** |
 | 10 | **Band score display** — the hero number | **custom** |
 | 11 | Data table — sticky header, multi-select, sticky bulk bar | shadcn + TanStack Table |
 | 12 | Filter chips + search | shadcn |
@@ -1036,7 +1057,7 @@ Nothing user-visible; everything depends on it. **One task here is irreversible.
 | M2-15 | Listening player shell (06) — sticky bar, single-play audio, section navigation that never re-requests |
 | M2-16 | Submit confirmation modal (08) — unanswered questions as clickable chips |
 | M2-17 | Scoring on submit + band lookup + `section_scores` |
-| M2-18 | Result screen (09) — band hero, raw score, section bars, held-for-release variant |
+| M2-18 | Result screen (09) — band hero, raw score, section bars, held-for-release variant ("Results on Mon 9:00 AM" when scheduled, "Your teacher will share results" when manual) |
 | M2-19 | Crash-recovery E2E: kill the browser mid-test, resume with correct server time |
 
 ### M3 — Reading player · 1.5 weeks
@@ -1062,7 +1083,7 @@ Nothing user-visible; everything depends on it. **One task here is irreversible.
 | M4-01 | Review my mistakes (10) + release gating ([§7](#7-server-authority-d6)) |
 | M4-02 | Transcript rendering + "Play this part" jump to timestamp in the single audio file |
 | M4-03 | My Progress (11) — band over time, accuracy by question type, plain-English advice |
-| M4-04 | Practice at home (12) — library, difficulty filter, attempt counts |
+| M4-04 | Practice at home (12) — library of `kind = practice` sets grouped **by question type**, difficulty filter, attempt counts |
 | M4-05 | Practice mode: per-question instant feedback as a server round-trip (one verdict, never the key) |
 | M4-06 | Profile (13) — plan validity bar, change password, change PIN, **device list + revoke**, log out |
 
@@ -1086,8 +1107,8 @@ Nothing user-visible; everything depends on it. **One task here is irreversible.
 |---|---|
 | M6-01 | Teacher dashboard (14) |
 | M6-02 | Batch view (15) — roster with last band, attempts, expiry pills |
-| M6-03 | Assign a test (16) — 3-step inline flow, live selected count, plain-English summary |
-| M6-04 | Results & release (18) — attempts table, multi-select release |
+| M6-03 | Assign a test (16) — 3-step inline flow, live selected count, **result release choice (right away / on a date / when I release — default)**, plain-English summary |
+| M6-04 | Results & release (18) — attempts table, multi-select release, change a scheduled release or release now |
 | M6-05 | Mark override + note ([§6](#6-database--erd-and-table-design) `answers.overridden_by`) |
 | M6-06 | Class analytics (19) — band distribution, most-missed questions, weakest types |
 
@@ -1200,7 +1221,7 @@ Every rule in [§7](#7-server-authority-d6) has a test here. These are the check
 | OpenNext adapter friction on Next 16 | Build or runtime surprises | Keep business logic in Route Handlers and Server Actions; avoid `@vercel/*` and Node middleware, so a move to Vercel Pro stays a one-day migration |
 | Content/key drift vs. scored attempts | Historical results become unexplainable | `content_version` on `tests` **and** `attempts`; versioned R2 paths |
 | Free-tier limit hit mid-session | Outage during a live test | Supabase usage alert at 70% |
-| Student reuses a mock paper at home | Burns the paper | `tests.usage_policy` (`mock_only` / `practice_ok` / `both`) |
+| Student reuses a mock paper at home | Burns the paper | `tests.kind` — mock, class and practice are separate pools; the practice library only lists `practice` |
 | PIN or password sharing | Cheating | One active session; device binding; concurrent-login flag |
 | Region chosen wrong | Full migration | ⚠️ M0-04 — `ap-south-1`, **cannot be changed after creation** |
 

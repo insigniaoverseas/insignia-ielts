@@ -24,7 +24,7 @@
 | **Last completed** | **M0-04** Supabase project `insignia-ielts` in `ap-south-1`, verified over the Supabase MCP (§6). Earlier: M0-03 + M0-23 (shadcn primitives, gallery), M0-01 (scaffold, lint, auto-deploy). |
 | **Next task** | **M0-06** identity migration + RLS ([`BUILD-STEPS.md`](BUILD-STEPS.md) step 14) — ⚠️ RLS helpers can't go in the `auth` schema as `MVP-1.md` §13 says (§5); resolve that first. Agent drafts the migration, user reviews and runs `db push`. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
 | ~~**Next task**~~ | ~~**M0-05** finish: only `npx supabase db push` left~~ — superseded 2026-09-15: pushed by the user, advisor clean. | No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
-| **Blocked on** | Nothing. Open questions in §7 are non-blocking, but Q2/Q3 should be answered before step 69. |
+| **Blocked on** | Nothing. Q1–Q3 answered 2026-09-15. New Q9 (class-test conditions) and Q10 (one type per practice set) are non-blocking. |
 | **Branch** | `main` |
 
 ---
@@ -40,7 +40,7 @@
 | M0-01 Re-scaffold Next.js 16 + OpenNext | done | goverdhan-gaur, Claude | 2026-09-15 | ✅ Next 16.3.4, React 19, `@opennextjs/cloudflare` 1.20.3; vinext fully removed; no `@vercel/*`; Worker build passes. ✅ Worker renamed → `insignia-test` in all 3 places (`6f4a4b0`). ✅ Workers Builds commands fixed in the dashboard (goverdhan-gaur). ✅ Lint: `eslint .` + native flat config, `@eslint/eslintrc` dropped, `Design files/` ignored — `npm run lint` clean (Claude). Uses `src/app/` — see §4. |
 | M0-02 Tailwind v4 `@theme` tokens + fonts | done | Claude | 2026-09-15 | All tokens from `00 Design System.dc.html` in `src/app/globals.css`; default palette + type scale switched **off** (`initial`) so off-system classes generate nothing. Inter + IBM Plex Mono via `next/font` (self-hosted). Opt-in `data-theme="dark"` (DESIGN + DERIVED values, marked). `cn()` in `src/lib/utils.ts` with tailwind-merge taught the tokens (§5). Verified: tsc, `next build`, compiled CSS, Chrome screenshots at 1280 + 390px. |
 | M0-03 shadcn/ui init + restyle to tokens | done | Claude | 2026-09-15 | button, input (+ `PhoneInput`), card, checkbox, table (+ toolbar, pagination, bulk bar), dialog (+ `ConfirmDialog`), select, sonner, skeleton, badge, label; plus hand-built `filter-chip`. `components.json` hand-written — `init` never run, so `globals.css`/`utils.ts` untouched. shadcn vars aliased onto tokens (§4). API + traps in `src/components/ui/README.md`. Verified: tsc, lint, `next build`, all 60 used classes present in compiled CSS, Chrome screenshots at 1280 + 390px incl. open dialog and toast. |
-| M0-04 ⚠️ Supabase project in `ap-south-1` | done | goverdhan-gaur, Claude | 2026-09-15 | ✅ `insignia-ielts` (`zpqszkwavnjomxjgimni`), region **`ap-south-1`** read back via MCP. First attempt was in `ap-northeast-2` (Seoul) — replaced while still empty (§3). Fresh project: empty `public`, no migrations, 0 users, DB timezone UTC, RLS auto-enable trigger on. ⬜ Usage alert at 70% — dashboard only, not verified. |
+| M0-04 ⚠️ Supabase project in `ap-south-1` | done | goverdhan-gaur, Claude | 2026-09-15 | ✅ `insignia-ielts` (`zpqszkwavnjomxjgimni`), region **`ap-south-1`** read back via MCP. First attempt was in `ap-northeast-2` (Seoul) — replaced while still empty (§3). Fresh project: empty `public`, no migrations, 0 users, DB timezone UTC, RLS auto-enable trigger on. ~~⬜ Usage alert at 70%~~ — skipped at the user's call, 2026-09-15. |
 | M0-05 Supabase CLI + generated types | done | goverdhan-gaur, Claude | 2026-09-15 | ~~Drizzle setup + `db/schema.ts`~~ superseded 2026-09-15 — no ORM (§4). ✅ CLI 2.117.0 as devDependency; `login`, `init`, `link`, `db push` run by the user; `npm run db:types` → `src/lib/supabase/database.types.ts`. ✅ Verified over MCP: migration `20260915090941` recorded, security advisor **clean**, `anon`/`authenticated` can't execute `rls_auto_enable()`, `ensure_rls` still enabled. Clients (`server/client/admin.ts`) are step 21, also tagged M0-05. |
 | M0-06 Migration + RLS: identity tables | todo | | | branches, roles, users, invitations, user_devices, user_sessions |
 | M0-07 Migration + RLS: cohorts & plans | todo | | | |
@@ -65,7 +65,7 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M1-01 Supabase Auth config, signup disabled | todo | | | Leaked-password protection already on (advisor clean 2026-09-15). "Allow new users to sign up" not checked — no MCP tool reads Auth config |
+| M1-01 Supabase Auth config, signup disabled | in_progress | goverdhan-gaur, Claude | 2026-09-15 | ✅ Signup **off** (user, dashboard) — verified: `GET /auth/v1/settings` → `disable_signup: true`; email is the only provider. ✅ Leaked-password protection on. ⬜ Rest of Auth config (password rules, email templates, site URL) with the auth work. ⬜ Align local `supabase/config.toml` `enable_signup`. |
 | M1-02 Invitation server actions | todo | | | create, bulk, revoke, resend |
 | M1-03 Resend + invite email template | todo | | | |
 | M1-04 SPF / DKIM / DMARC | todo | | | Invite in spam = enrolment blocked |
@@ -200,6 +200,7 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-09-15 | — (step 1), M0-04, M1-01 | User answered Q1–Q3; spec rewritten to match (three test pools, per-assignment result release — §4). New Q9, Q10 opened. User turned off public signup in the dashboard — verified via the public `/auth/v1/settings` endpoint: `disable_signup: true`, email the only provider. User chose to skip the 70% usage alert. | `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | goverdhan-gaur, Claude |
 | 2026-09-15 | M0-05 | User ran `npx supabase db push`. Verified: `harden_rls_auto_enable` recorded remotely, security advisor clean. M0-05 closed. Found that `auth` schema is closed to `postgres` — spec §13 needs correcting before M0-06 (§5). | `PROJECT-MEMORY.md` | goverdhan-gaur, Claude |
 | 2026-09-15 | M0-05 | Supabase CLI wired: `supabase` devDependency (2.117.0), `supabase init` output committed (`config.toml`, `supabase/.gitignore` — `.temp/` stays ignored), `db:types` script, first generated `database.types.ts` (empty `public`), `lib/supabase/README.md`. User ran `login`/`init`/`link`. `db push --dry-run` lists only `harden_rls_auto_enable`. tsc + lint clean. | `package.json`, `package-lock.json`, `supabase/{config.toml,.gitignore}`, `src/lib/supabase/{database.types.ts,README.md}` | goverdhan-gaur, Claude |
 | 2026-09-15 | M0-05 | Dropped Drizzle before it was installed: `supabase-js` + generated types + Postgres functions instead (§4). Spec and walkthrough corrected to match. Docs only, no code or dependency change. | `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | goverdhan-gaur (decision), Claude |
@@ -228,6 +229,12 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-15 — Three test pools; result release chosen per assignment  (task: step 1 / Q1–Q3)
+**Chose:** `tests.kind` (`mock`|`class`|`practice`) — each test is in exactly one pool; practice tests carry `practice_question_type`. `assignments.results_release` (`immediate`|`scheduled`|`manual`, default `manual`) + `results_released_at timestamptz`. The release gate is `results_release = 'immediate' OR results_released_at <= now()`, evaluated in Postgres.
+**Because:** the user's answers to Q1–Q3. One timestamp column covers both scheduled and manual release: scheduled sets it in the future, manual sets it to `now()` on click, and "release now" on a scheduled one just moves it. The server clock decides, so there's no cron job and no client clock involved (rule #9).
+**Rejected:** `tests.usage_policy` (`mock_only`|`practice_ok`|`both`) — the pools never overlap, so a policy is unneeded. `assignments.mode` — duplicated `tests.kind`. A `results_released bool` plus a cron job to flip it on schedule — one more moving part that can fail silently.
+**Correction applied:** `MVP-1.md` §1 product line, §3 D5, §6 (`tests`, `assignments`, `attempts`), §7, §11 upload JSON, §12 purge, §14 transcript gate, §15 audio row, §18 M2-18/M4-04/M6-03/M6-04, §20 risk row. `BUILD-STEPS.md` step 1.
 
 ### 2026-09-15 — No ORM: `supabase-js` + generated types + Postgres functions  (task: M0-05)
 **Chose:** every query goes through `@supabase/ssr` / `supabase-js`, typed by `supabase gen types` (`src/lib/supabase/database.types.ts`). Anything needing a transaction (attempt submit) or heavy SQL (teacher analytics) is a Postgres function, written in a migration and called with `.rpc()`. These are `SECURITY INVOKER` unless there's a written reason otherwise. `supabase/migrations/` is the only schema source.
@@ -369,9 +376,11 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 
 | # | Question | Why it matters | Blocking? |
 |---|---|---|---|
-| Q1 | **"Hard" or "Difficult"** as the display label for the third difficulty level? Stored value is `hard` either way. | You said "difficult"; the rendered design system says "Hard". One word, easy to change now. | No — default to "Hard" |
-| Q2 | Mock results — auto-release, or held for the teacher to release? | Changes the default on every assignment. `MVP-1.md` assumes **held for mock, instant for practice**. | No |
-| Q3 | Practice library — reuse mock papers, or a separate pool? | Reusing mock papers at home burns them. `tests.usage_policy` supports either; just needs a default. | No |
+| ~~Q1~~ | ~~"Hard" or "Difficult"?~~ | **Answered 2026-09-15 (goverdhan-gaur): Easy / Medium / Hard.** | ✅ closed |
+| ~~Q2~~ | ~~Mock results — auto-release, or held for the teacher?~~ | **Answered 2026-09-15:** admin or teacher chooses **per assignment** — release right away, automatically on a schedule, or manually. They stay in control and can change it later. Spec: `MVP-1.md` §6 `assignments.results_release`. Default `manual` is Claude's pick (safest) — change it if you'd rather. | ✅ closed |
+| ~~Q3~~ | ~~Practice library — reuse mock papers, or a separate pool?~~ | **Answered 2026-09-15:** three separate pools. **Mock** = full tests. **Class** = full tests, different papers from the mocks. **Practice** = totally different content, organised **by question type**. Spec: `MVP-1.md` §6 `tests.kind`. | ✅ closed |
+| Q9 | Do **class tests** run under full exam conditions like mocks (server timer, audio once, no seek)? | The spec now assumes **yes** — you described them as full tests. If class tests should allow pausing or replay, the player needs a third mode. | No — before M2-15 |
+| Q10 | Is each **practice set one question type**, or can one set mix a few? | The spec now assumes **one type per set** (`tests.practice_question_type`). Mixing would make that an array. | No — before M0-08 |
 | Q4 | Plan validity — purely time-based, or also test-count based? | `test_quota` column exists and is nullable, so either works. Cheap now, awkward later. | No |
 | Q5 | Multiple branches, ever? | `branch_id` is already in the schema, so building it in costs nothing. Confirm it should stay. | No |
 | Q6 | Who enters test content? | 40-question answer keys per test is the real bottleneck, not code. The MCP (M8) and answer-key editor (M5-09) address it, but someone's time still has to be budgeted. | No |
