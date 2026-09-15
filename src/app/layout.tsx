@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter } from "next/font/google";
+import { connection } from "next/server";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -34,7 +35,12 @@ export const viewport: Viewport = {
 	themeColor: "#1d4ed8",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+	// Every page renders per request so it can carry this request's CSP nonce
+	// (src/proxy.ts). A statically prerendered page would have no nonce, and
+	// the strict script policy would block its scripts.
+	await connection();
+
 	return (
 		<html lang="en" className={`${inter.variable} ${plexMono.variable}`}>
 			<head>

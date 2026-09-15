@@ -94,6 +94,8 @@ Restyle to the tokens: student primary buttons **56px**, admin 40px, radius 8px 
 **✅ Done when** a `<Button>` matches the primary button in `00 Design System.dc.html`.
 
 ### 9. ⚡ Security headers + CSP middleware `(M0-13)`
+> ✅ **Headers done 2026-09-15** (user chose the nonce policy): `src/proxy.ts` + `lib/security/headers.ts` + `public/_headers`; every page renders per request. **Verified on the built Worker under local workerd in headless Chrome:** an injected inline `<script>` is blocked (1 CSP violation, exactly that script) while React hydrates; `/` and `/dev/components` load with 0 violations. ⬜ Same check on a non-live `wrangler versions upload` preview (needs the user's OK). ⬜ `lib/security/sanitize.ts`.
+
 `lib/security/headers.ts` — HSTS, **nonce-based CSP with no `unsafe-inline`**, `frame-ancestors 'none'`, `Referrer-Policy`, `Permissions-Policy`. Plus `lib/security/sanitize.ts` wrapping `rehype-sanitize` with a strict allowlist.
 Do this now, not at hardening. Retrofitting a nonce CSP onto a finished app means chasing every inline style you shipped.
 **✅ Done when** response headers show the CSP and a test page with an inline `<script>` is blocked.
