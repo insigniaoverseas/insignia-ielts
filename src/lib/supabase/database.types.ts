@@ -14,7 +14,292 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      branches: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      invitations: {
+        Row: {
+          accepted_at: string | null
+          batch_id: string | null
+          branch_id: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          plan_template: Json | null
+          role_id: string
+          status: string
+          token_hash: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          batch_id?: string | null
+          branch_id: string
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          invited_by: string
+          plan_template?: Json | null
+          role_id: string
+          status?: string
+          token_hash: string
+        }
+        Update: {
+          accepted_at?: string | null
+          batch_id?: string | null
+          branch_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          plan_template?: Json | null
+          role_id?: string
+          status?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          name: string
+          permissions: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          name: string
+          permissions?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          name?: string
+          permissions?: Json
+        }
+        Relationships: []
+      }
+      user_devices: {
+        Row: {
+          created_at: string
+          device_secret_hash: string
+          failed_pin_attempts: number
+          id: string
+          label: string | null
+          last_used_at: string | null
+          locked_until: string | null
+          pin_hash: string
+          revoked_at: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_secret_hash: string
+          failed_pin_attempts?: number
+          id?: string
+          label?: string | null
+          last_used_at?: string | null
+          locked_until?: string | null
+          pin_hash: string
+          revoked_at?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_secret_hash?: string
+          failed_pin_attempts?: number
+          id?: string
+          label?: string | null
+          last_used_at?: string | null
+          locked_until?: string | null
+          pin_hash?: string
+          revoked_at?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_devices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_sessions: {
+        Row: {
+          device_id: string | null
+          id: string
+          ip: unknown
+          issued_at: string
+          last_seen_at: string
+          revoked_at: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          device_id?: string | null
+          id?: string
+          ip?: unknown
+          issued_at?: string
+          last_seen_at?: string
+          revoked_at?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          device_id?: string | null
+          id?: string
+          ip?: unknown
+          issued_at?: string
+          last_seen_at?: string
+          revoked_at?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "user_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          branch_id: string
+          country_code: string | null
+          created_at: string
+          created_by: string | null
+          dob: string | null
+          email: string
+          guardian_consent: boolean
+          guardian_name: string | null
+          guardian_phone: string | null
+          id: string
+          name: string
+          phone: string | null
+          role_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          country_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          dob?: string | null
+          email: string
+          guardian_consent?: boolean
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          id: string
+          name: string
+          phone?: string | null
+          role_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          country_code?: string | null
+          created_at?: string
+          created_by?: string | null
+          dob?: string | null
+          email?: string
+          guardian_consent?: boolean
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          role_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "users_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
