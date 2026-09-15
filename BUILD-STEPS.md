@@ -260,7 +260,7 @@ Password path, plus the PIN fast path **offered only when a known device secret 
 **✅ Done when** an unrecognised device never sees a PIN box.
 
 ### 39. Lockout + rate limiter + Turnstile `(M1-09, M1-10, M1-11)`
-5 failures → 15-minute lock, on **both** password and PIN. Durable Object counter, limiting by IP **and** account. Turnstile on login and accept-invite.
+5 failures → 15-minute lock, on **both** password and PIN. Durable Object counter, limiting by IP **and** account — counts kept in memory, storage written only when a lock is set (free plan: 100,000 DO rows written a day). Turnstile on login and accept-invite.
 ⚠️ **Then loosen Supabase's own limit, because ours now does the job** ([`MVP-1.md` §4](MVP-1.md#free-plans-200-students-at-once)): a lab of 200 behind one IP otherwise hits Supabase Auth's per-IP sign-in limit. Dashboard → Authentication → Rate Limits: raise the sign-in limit, and turn on **IP address forwarding** so the Worker can pass the student's real IP in `Sb-Forwarded-For` (needs the secret key, server-side only).
 **✅ Done when** six wrong attempts lock the account, the sixth request is rate-limited by IP too, and 200 scripted sign-ins from one IP inside 5 minutes all succeed.
 
@@ -289,7 +289,7 @@ The *why not* is the product — screen 04 shows "Opens Monday 9:00 AM", never a
 ### 43. ⚠️ Attempt lifecycle server actions `(M2-07)`
 `start` · `resume` · `autosave` · `submit` · `expire`. Every one re-reads the attempt row and rejects if it isn't `in_progress` or if `now() > expires_at` — then force-submits and scores.
 `start` sets **`expires_at` server-side**. Autosave upserts on `UNIQUE(attempt_id, q_number)` and guards with `revision`.
-Autosave fires **on change** — debounced ~3 s, all changed answers in one request — plus a 30 s heartbeat. Never a fixed 10-second timer: at 200 students that alone would eat most of the Workers free daily request cap ([`MVP-1.md` §4](MVP-1.md#free-plans-200-students-at-once)).
+Autosave fires **on change** — debounced ~3 s, all changed answers in one request — plus a 60 s heartbeat that any save resets. No Durable Object call on this path. Never a fixed 10-second timer: at 200 students that alone would eat most of the Workers free daily request cap ([`MVP-1.md` §4](MVP-1.md#free-plans-200-students-at-once)).
 `submit` scores in `lib/scoring.ts`, then saves marks, band and status in **one** Postgres function (`.rpc()`), so a half-submitted attempt can't exist. `supabase-js` has no multi-statement transactions.
 **✅ Done when** a replayed autosave request is rejected and the prior answer survives.
 
