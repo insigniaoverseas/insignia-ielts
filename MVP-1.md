@@ -104,12 +104,12 @@ A task is done when **all** of these hold:
 
 ### D4 consequence — the one deviation from `PLAN-V2.md` §4
 
-PLAN-V2 puts a `questions` table in Postgres. D4 puts test content in R2, so **there is no `questions` table**. Instead, `answers` rows carry `q_number`, `section_no` and `question_type` **denormalised at scoring time**.
+PLAN-V2 puts a `questions` table in Postgres. D4 puts test content in R2, so **there is no `questions` table**. Instead, `answer_marks` rows carry `q_number`, `section_no` and `question_type` **denormalised at scoring time** (they lived on `answers` until 2026-09-15 — see §6 Assessment).
 
 This is deliberate, and it preserves the thing `TECH-STACK.md` §11 warns you'd lose:
 
-- *"Which question does this batch miss most?"* → `GROUP BY test_id, q_number` on `answers`.
-- *"True/False/Not Given — 41%"* (screen 11) → `GROUP BY question_type` on `answers`.
+- *"Which question does this batch miss most?"* → `GROUP BY test_id, q_number` on `answer_marks` ⨝ `attempts`.
+- *"True/False/Not Given — 41%"* (screen 11) → `GROUP BY question_type` on `answer_marks`.
 - Content edits don't corrupt history, because each attempt records the `content_version` it was scored against.
 
 ### On "foolproof, no cyber threat can occur"
@@ -357,14 +357,18 @@ The per-student "unlock now" override for latecomers and retakes (`PLAN-V2.md` �
 
 ### Assessment
 
-**`attempts`** — `id` · `assignment_id NULL` *(`NULL` only for self-started practice)* · `test_id` · `student_id` · `kind` *(copied from `tests.kind` at start)* · **`content_version`** · `started_at` · **`expires_at`** *(the server clock)* · `submitted_at` · `time_remaining_seconds` · `last_autosave_at` · `audio_downloaded_at` · `audio_started_at` · `audio_completed_at` · `status` (`in_progress`|`submitted`|`expired`|`voided`) · `raw_score` · `band numeric(2,1)` · `section_scores jsonb` · `tab_switches int` · `device_info jsonb` · `created_at`
+**`attempts`** — `id` · `assignment_id NULL` *(`NULL` only for self-started practice)* · `test_id` · `student_id` · `kind` *(copied from `tests.kind` at start)* · **`content_version`** · `started_at` · **`expires_at`** *(the server clock)* · `submitted_at` · `time_remaining_seconds` · `last_autosave_at` · `audio_downloaded_at` · `audio_started_at` · `audio_completed_at` · `status` (`in_progress`|`submitted`|`expired`|`voided`) · `tab_switches int` · `device_info jsonb` · `created_at`
+A trigger sets `kind`, `content_version`, `status`, `started_at` and **`expires_at`** from the test at insert — whatever the caller sends is ignored. It also refuses an assignment for a different test, or one that doesn't target the student. Another trigger enforces the state machine: `expires_at` only grows and only while in progress; identity columns never change. One open attempt per student per test (partial unique index).
 
-**`answers`** — `id` · `attempt_id` · **`q_number`** · **`section_no`** · **`question_type`** *(denormalised at scoring time — D4)* · `given_answer text` · `is_correct bool` · `marks_awarded numeric` · `flagged bool` · **`revision int`** · `overridden_by` · `override_note` · `overridden_at` · `answered_at` · `updated_at`
-`UNIQUE(attempt_id, q_number)` — autosave is an idempotent upsert.
-`revision` gives optimistic concurrency, so a replayed or out-of-order request cannot rewind an answer.
+**`answers`** — **PK (`attempt_id`, `q_number`)** · **`section_no`** · `given_answer text` *(≤ 500 chars)* · `flagged bool` · **`revision int`** · `answered_at` · `updated_at` — only what the student entered.
+The PK makes autosave an idempotent upsert. A trigger rejects any write unless the attempt is `in_progress` and `now() <= expires_at` — **for every role, service role included** — keeps `q_number` within the test, and requires `revision` to rise, so a replayed or out-of-order save is rejected. Students write their own answers through RLS (insert/update policies + column grants), so even buggy server code can't write into someone else's attempt.
+
+**`answer_marks`** — PK (`attempt_id`, `q_number`) · `section_no` · **`question_type`** *(denormalised at scoring time — D4)* · `is_correct bool` · `marks_awarded numeric(3,1)` · `overridden_by` · `override_note` · `overridden_at` · `scored_at` — one row per question, answered or not. Written by the scorer.
+**`attempt_scores`** — `attempt_id` PK · `raw_score` · `band numeric(2,1)` · `section_scores jsonb` · `scored_at`.
+**Why two extra tables (2026-09-15):** RLS hides rows, not columns. Correctness and scores can't sit on rows the student must read mid-test, so they have their own tables whose policies only show a student a row once the attempt is finished and the release gate is open — `answer_marks` additionally needs `allow_review`. Practice: visible at once. Staff in scope always see them.
 
 **`attempt_events`** — `id` · `attempt_id` · `type` (`start`|`resume`|`tab_blur`|`tab_focus`|`paste_blocked`|`audio_error`|`clock_skew`|`cache_purged`|`force_submit`|`extra_time`) · `meta jsonb` · `at`
-Append-only integrity log.
+Append-only integrity log (UPDATE trigger). Written by server code; read only by staff.
 
 ### Cross-cutting
 
@@ -379,12 +383,12 @@ Append-only integrity log.
 
 | Concern | Rule |
 |---|---|
-| **Timer** | `attempts.expires_at` is set server-side at start. Every server response carries `server_now` + `expires_at`; the browser only *renders* a countdown derived from them and re-syncs on each autosave. A client clock change does nothing — expiry is decided by Postgres. |
-| **Attempt state** | A state machine (`in_progress → submitted \| expired \| voided`) enforced in the DB. Every write re-reads the row and rejects if it is not `in_progress`, or if `now() > expires_at` — in which case it force-submits and scores. |
+| **Timer** | `attempts.expires_at` is set **by a database trigger** at start, from the test's duration — no caller can choose it. Every server response carries `server_now` + `expires_at`; the browser only *renders* a countdown derived from them and re-syncs on each autosave. A client clock change does nothing — expiry is decided by Postgres. |
+| **Attempt state** | A state machine (`in_progress → submitted \| expired \| voided`; finished → `voided`) enforced by a DB trigger. Every write re-reads the row and rejects if it is not `in_progress`, or if `now() > expires_at` — in which case it force-submits and scores. |
 | **Answers in flight** | Autosave is a Server Action, sent **when an answer changes** (debounced ~3 s, every changed answer in one request), plus a heartbeat every 60 s (reset by any save) that also re-syncs the clock — never a fixed 10-second timer ([§4 free-plan budget](#free-plans-200-students-at-once)). A crash loses at most the last few seconds. `localStorage` is a crash-recovery convenience **only** — never the source of truth on submit. The server scores what the server stored. Payloads are zod-validated: `q_number` in range, value shaped for the question's type, length-capped. |
-| **Replay / rewind** | Optimistic concurrency via `answers.revision`. An out-of-order or replayed request is rejected, not applied. |
+| **Replay / rewind** | Optimistic concurrency via `answers.revision`, enforced by a DB trigger. An out-of-order or replayed request is rejected (`stale revision`), not applied. |
 | **Answer key** | Lives only at `key.json`, read through the R2 **binding** inside a Server Action. Never signed, never in a response body, never in the client bundle. CI-enforced. |
-| **Correctness before submit** | No endpoint can return `is_correct` for an `in_progress` mock or class attempt — enforced in the route **and** in RLS. Practice mode's instant feedback is a per-question server round-trip returning the verdict for **that one committed answer only**, never the rest of the key. |
+| **Correctness before submit** | No endpoint can return `is_correct` for an `in_progress` mock or class attempt — enforced in the route **and** in RLS: correctness lives in `answer_marks`, which shows a student nothing until the release gate opens. Practice mode's instant feedback is a per-question server round-trip returning the verdict for **that one committed answer only**, never the rest of the key. |
 | **Results & review** | Gated on `attempt.status = 'submitted'` **and** the assignment's release gate ([§6](#assignment) — `immediate`, or `results_released_at <= now()` on the server clock). The transcript is signed only after that gate opens. Only an admin or the batch's teacher can change an assignment's release setting, and every change is audit-logged. |
 | **Progress & stats** | Aggregated in Postgres, delivered server-rendered. No endpoint accepts a client-supplied score, band or time-taken. |
 | **Test content** | Server-rendered via RSC. The browser never holds the full test JSON. |
@@ -733,6 +737,11 @@ private.assigned_to_me(uuid)     → that assignment targets the caller or their
 private.test_assigned_to_me(uuid) → some assignment of that test targets the caller          M0-08
 private.teacher_sees_assignment(uuid) → active teacher who created it or teaches a target    M0-08
 private.assignment_in_my_branch(uuid) → that assignment is in the caller's branch            M0-08
+private.staff_sees_attempt(uuid) → teacher of the student/assignment, admin of the branch, super  M0-09
+private.results_visible(uuid)    → caller's own attempt, and practice or finished + released   M0-09
+private.review_visible(uuid)     → results_visible, and the assignment allows review          M0-09
+private.my_attempt(uuid) / my_open_attempt(uuid) → caller's attempt / and still open, in time  M0-09
+private.has_attempt_on(uuid)     → caller has sat that test (keeps it in their history)       M0-09
 ```
 
 Policies never query another RLS-protected table directly — `batches` ↔ `batch_students` would recurse — they call these helpers instead. **One `SELECT` policy per table**, its conditions OR-ed (Supabase advisor: multiple permissive policies are slower).
@@ -761,7 +770,10 @@ RLS decides *which rows*; grants decide *which tables and columns*. Supabase gra
 | `assignment_targets` | rows pointing at them or their batch | as `assignments` | own branch | all |
 | `assignment_unlocks` | own | as `assignments` | own branch | all |
 | `attempts` | **own only** | own batches | own branch | all |
-| `answers` | **own only, and `is_correct` masked while `in_progress`** | own batches | own branch | all |
+| `answers` | **own only** — read any time; write only while open and in time | own batches | own branch | all |
+| `answer_marks` | **own, only once finished + released + review allowed** (practice: at once) | own batches | own branch | all |
+| `attempt_scores` | **own, only once finished + released** (practice: at once) | own batches | own branch | all |
+| `attempt_events` | none | own batches | own branch | all |
 | `audit_log` | none | none | own branch | all |
 
 **The student row is the one that matters most.** A student-role session must have no route, no query and no policy that can return another user's name, email, attempt, answer, band or plan. Tested independently at both the route layer and the RLS layer — see [§19](#19-verification).

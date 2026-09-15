@@ -146,7 +146,7 @@ One migration per group, from [`MVP-1.md` §6](MVP-1.md#6-database--erd-and-tabl
 | 14 | `identity` | `branches`, `roles`, `users`, `invitations`, `user_devices`, `user_sessions` — plus the `private` schema and the helpers `auth_role`, `auth_branch`, `is_staff`, `same_branch` (brought forward from step 19) |
 | 15 | `cohorts` | `batches`, `batch_teachers`, `batch_students`, `student_plans`, `plan_history` — plus `private.is_teacher_of()` and 4 more helpers, the "teacher reads students in own batches" policy on `users`, the `invitations.batch_id` foreign key, and M0-06's policies folded into one per table |
 | 16 | `content` | `tests`, `band_scales`, `band_scale_rows`, `assignments`, `assignment_targets`, `assignment_unlocks` — plus 4 helpers, `btree_gist` for non-overlapping band rows, and the `r2_*` columns withheld from API roles |
-| 17 | `assessment` | `attempts`, `answers`, `attempt_events` |
+| 17 | `assessment` | `attempts`, `answers`, `attempt_events` — plus `answer_marks` and `attempt_scores` (correctness and scores split out so RLS can gate them), the clock/state-machine/answer triggers, and 6 helpers |
 | 18 | `crosscutting` | `audit_log`, `rate_limits` |
 
 Every table gets `ALTER TABLE … ENABLE ROW LEVEL SECURITY` and **no permissive fallback policy**. Every table also gets `revoke all … from anon, authenticated` and explicit, column-limited grants back ([`MVP-1.md` §13](MVP-1.md#13-row-level-security) "Grants are a gate too").
@@ -290,7 +290,7 @@ The *why not* is the product — screen 04 shows "Opens Monday 9:00 AM", never a
 `start` · `resume` · `autosave` · `submit` · `expire`. Every one re-reads the attempt row and rejects if it isn't `in_progress` or if `now() > expires_at` — then force-submits and scores.
 `start` sets **`expires_at` server-side**. Autosave upserts on `UNIQUE(attempt_id, q_number)` and guards with `revision`.
 Autosave fires **on change** — debounced ~3 s, all changed answers in one request — plus a 60 s heartbeat that any save resets. No Durable Object call on this path. Never a fixed 10-second timer: at 200 students that alone would eat most of the Workers free daily request cap ([`MVP-1.md` §4](MVP-1.md#free-plans-200-students-at-once)).
-`submit` scores in `lib/scoring.ts`, then saves marks, band and status in **one** Postgres function (`.rpc()`), so a half-submitted attempt can't exist. `supabase-js` has no multi-statement transactions.
+`submit` scores in `lib/scoring.ts`, then writes `answer_marks` + `attempt_scores` and sets the status in **one** Postgres function (`.rpc()`), so a half-submitted attempt can't exist. The database already enforces the clock, the state machine, the deadline and `revision` (M0-09 triggers) — the server action checks them too, to give the student a friendly message. `supabase-js` has no multi-statement transactions.
 **✅ Done when** a replayed autosave request is rejected and the prior answer survives.
 
 ### 44. ⚠️ Server-authoritative timer `(M2-08)`
