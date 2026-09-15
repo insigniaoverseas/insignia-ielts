@@ -1,10 +1,15 @@
 # `lib/security`
 
-**One responsibility:** browser-facing defences — response headers now; passage HTML sanitising next (BUILD-STEPS step 9, M0-13).
+**One responsibility:** browser-facing defences — response headers and passage HTML sanitising (BUILD-STEPS step 9, M0-13).
 
 | File | What it is |
 |---|---|
 | `headers.ts` | `generateNonce()`, `contentSecurityPolicy()`, `securityHeaders()`, `STATIC_SECURITY_HEADERS`. Pure; used by `src/proxy.ts` on every page and API response. Tested in `tests/unit/security-headers.test.mjs`. |
+| `sanitize.ts` | `sanitizePassageHtml()` + `PASSAGE_SCHEMA`. Parses passage HTML to a tree, keeps only the allowlist, re-serialises. Use it **on write** (importer, MCP) **and on render** (reading player). ~1 ms for a 15 KB passage. Tested against 29 XSS payloads in `tests/unit/sanitize.test.mjs`. |
+
+## What a passage may contain
+
+`p` (optionally `data-label="A"`…`"ZZ"` for Matching information/headings), `br`, `strong`, `b`, `em`, `i`, `u`, `sub`, `sup`, `h3`–`h5`, `ul`/`ol`/`li`, `blockquote`, and tables (`caption`, `thead`/`tbody`/`tfoot`, `tr`, `th` with `colspan`/`rowspan`/`scope`, `td` with `colspan`/`rowspan`). **Nothing else** — no links, images, ids, classes or inline styles. Scripts, styles, iframes, svg, math and friends are dropped *with their contents*; any other unknown tag is unwrapped to its text. Widening the list is a security change: add the tag to `PASSAGE_SCHEMA` **and** a payload test for it.
 
 ## How the CSP works here
 

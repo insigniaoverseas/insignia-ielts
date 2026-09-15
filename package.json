@@ -29,9 +29,13 @@
     "radix-ui": "^1.6.7",
     "react": "^19.1.7",
     "react-dom": "^19.1.7",
+    "rehype-parse": "9.0.1",
+    "rehype-sanitize": "6.0.0",
+    "rehype-stringify": "10.0.1",
     "server-only": "0.0.1",
     "sonner": "^2.0.8",
-    "tailwind-merge": "^3.7.0"
+    "tailwind-merge": "^3.7.0",
+    "unified": "11.0.5"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",
