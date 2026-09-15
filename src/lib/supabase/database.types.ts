@@ -14,6 +14,255 @@ export type Database = {
   }
   public: {
     Tables: {
+      assignment_targets: {
+        Row: {
+          assignment_id: string
+          batch_id: string | null
+          id: string
+          student_id: string | null
+        }
+        Insert: {
+          assignment_id: string
+          batch_id?: string | null
+          id?: string
+          student_id?: string | null
+        }
+        Update: {
+          assignment_id?: string
+          batch_id?: string | null
+          id?: string
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_targets_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_targets_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_targets_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_unlocks: {
+        Row: {
+          assignment_id: string
+          at: string
+          extra_attempts: number
+          id: string
+          reason: string | null
+          student_id: string
+          unlocked_by: string | null
+          until: string
+        }
+        Insert: {
+          assignment_id: string
+          at?: string
+          extra_attempts?: number
+          id?: string
+          reason?: string | null
+          student_id: string
+          unlocked_by?: string | null
+          until: string
+        }
+        Update: {
+          assignment_id?: string
+          at?: string
+          extra_attempts?: number
+          id?: string
+          reason?: string | null
+          student_id?: string
+          unlocked_by?: string | null
+          until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_unlocks_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_unlocks_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_unlocks_unlocked_by_fkey"
+            columns: ["unlocked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignments: {
+        Row: {
+          allow_review: boolean
+          available_from: string
+          band_scale_id: string | null
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          due_by: string | null
+          id: string
+          max_attempts: number
+          released_by: string | null
+          results_release: string
+          results_released_at: string | null
+          test_id: string
+        }
+        Insert: {
+          allow_review?: boolean
+          available_from?: string
+          band_scale_id?: string | null
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          due_by?: string | null
+          id?: string
+          max_attempts?: number
+          released_by?: string | null
+          results_release?: string
+          results_released_at?: string | null
+          test_id: string
+        }
+        Update: {
+          allow_review?: boolean
+          available_from?: string
+          band_scale_id?: string | null
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          due_by?: string | null
+          id?: string
+          max_attempts?: number
+          released_by?: string | null
+          results_release?: string
+          results_released_at?: string | null
+          test_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_band_scale_id_fkey"
+            columns: ["band_scale_id"]
+            isOneToOne: false
+            referencedRelation: "band_scales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_released_by_fkey"
+            columns: ["released_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_scale_rows: {
+        Row: {
+          band: number
+          raw_max: number
+          raw_min: number
+          scale_id: string
+        }
+        Insert: {
+          band: number
+          raw_max: number
+          raw_min: number
+          scale_id: string
+        }
+        Update: {
+          band?: number
+          raw_max?: number
+          raw_min?: number
+          scale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_scale_rows_scale_id_fkey"
+            columns: ["scale_id"]
+            isOneToOne: false
+            referencedRelation: "band_scales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_scales: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean
+          name: string
+          skill: string
+          variant: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          skill: string
+          variant: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          skill?: string
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_scales_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_students: {
         Row: {
           batch_id: string
@@ -339,6 +588,95 @@ export type Database = {
           {
             foreignKeyName: "student_plans_student_id_fkey"
             columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tests: {
+        Row: {
+          audio_duration_seconds: number | null
+          content_version: number
+          created_at: string
+          created_by: string | null
+          difficulty: string
+          duration_seconds: number
+          id: string
+          kind: string
+          practice_question_type: string | null
+          published_at: string | null
+          r2_assets_prefix: string | null
+          r2_audio_key: string | null
+          r2_content_key: string | null
+          r2_key_key: string | null
+          r2_transcript_key: string | null
+          section_count: number
+          skill: string
+          status: string
+          tags: string[]
+          title: string
+          total_questions: number
+          transfer_seconds: number
+          updated_at: string
+          variant: string
+        }
+        Insert: {
+          audio_duration_seconds?: number | null
+          content_version?: number
+          created_at?: string
+          created_by?: string | null
+          difficulty: string
+          duration_seconds: number
+          id?: string
+          kind: string
+          practice_question_type?: string | null
+          published_at?: string | null
+          r2_assets_prefix?: string | null
+          r2_audio_key?: string | null
+          r2_content_key?: string | null
+          r2_key_key?: string | null
+          r2_transcript_key?: string | null
+          section_count: number
+          skill: string
+          status?: string
+          tags?: string[]
+          title: string
+          total_questions: number
+          transfer_seconds?: number
+          updated_at?: string
+          variant: string
+        }
+        Update: {
+          audio_duration_seconds?: number | null
+          content_version?: number
+          created_at?: string
+          created_by?: string | null
+          difficulty?: string
+          duration_seconds?: number
+          id?: string
+          kind?: string
+          practice_question_type?: string | null
+          published_at?: string | null
+          r2_assets_prefix?: string | null
+          r2_audio_key?: string | null
+          r2_content_key?: string | null
+          r2_key_key?: string | null
+          r2_transcript_key?: string | null
+          section_count?: number
+          skill?: string
+          status?: string
+          tags?: string[]
+          title?: string
+          total_questions?: number
+          transfer_seconds?: number
+          updated_at?: string
+          variant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tests_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
