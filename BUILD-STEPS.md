@@ -124,12 +124,17 @@ GitHub Actions: typecheck · lint · vitest · `npm audit`. Then the one that ma
 
 ## Phase 2 — Database (3–4 days)
 
-### 13. Drizzle + Supabase CLI `(M0-05)`
+### 13. Supabase CLI + generated types `(M0-05)`
 ```bash
-npm i drizzle-orm postgres && npm i -D drizzle-kit
-npx supabase init && npx supabase link --project-ref <ref>
+npm i -D supabase
+npx supabase login                                     # opens the browser
+npx supabase init
+npx supabase link --project-ref zpqszkwavnjomxjgimni   # asks for the DB password — type it, never paste it anywhere
+npx supabase db push                                   # applies the pending 20260915090941_harden_rls_auto_enable.sql
 ```
-**✅ Done when** `npx supabase db pull` connects.
+Add `"db:types": "supabase gen types typescript --linked > src/lib/supabase/database.types.ts"` to `package.json`, and run it after every migration.
+**No ORM** ([`PROJECT-MEMORY.md`](PROJECT-MEMORY.md) §4, 2026-09-15). Queries go through `supabase-js`, typed by the generated file. Anything needing a transaction or heavy SQL is a Postgres function in a migration, called with `.rpc()`.
+**✅ Done when** `db push` succeeds, the Supabase security advisor is clean, and `npm run db:types` writes `src/lib/supabase/database.types.ts`.
 
 ### 14–18. The five migrations `(M0-06 … M0-10)`
 One migration per group, from [`MVP-1.md` §6](MVP-1.md#6-database--erd-and-table-design). ⚠️ **Write the RLS policies in the same file as the tables** — retrofitting RLS onto a live app is miserable.
@@ -143,7 +148,7 @@ One migration per group, from [`MVP-1.md` §6](MVP-1.md#6-database--erd-and-tabl
 | 18 | `crosscutting` | `audit_log`, `rate_limits` |
 
 Every table gets `ALTER TABLE … ENABLE ROW LEVEL SECURITY` and **no permissive fallback policy**.
-**✅ Done when** `npx supabase db push` applies all five and `db/schema.ts` mirrors them.
+**✅ Done when** `npx supabase db push` applies all five and `npm run db:types` has regenerated `database.types.ts` from them.
 
 ### 19. ⚠️ RLS helpers and the default-deny test `(M0-11)`
 Write `auth_role()`, `auth_branch()`, `is_teacher_of()`, `same_branch()`, `is_staff()` as `SECURITY DEFINER`.
@@ -279,6 +284,7 @@ The *why not* is the product — screen 04 shows "Opens Monday 9:00 AM", never a
 ### 43. ⚠️ Attempt lifecycle server actions `(M2-07)`
 `start` · `resume` · `autosave` · `submit` · `expire`. Every one re-reads the attempt row and rejects if it isn't `in_progress` or if `now() > expires_at` — then force-submits and scores.
 `start` sets **`expires_at` server-side**. Autosave upserts on `UNIQUE(attempt_id, q_number)` and guards with `revision`.
+`submit` scores in `lib/scoring.ts`, then saves marks, band and status in **one** Postgres function (`.rpc()`), so a half-submitted attempt can't exist. `supabase-js` has no multi-statement transactions.
 **✅ Done when** a replayed autosave request is rejected and the prior answer survives.
 
 ### 44. ⚠️ Server-authoritative timer `(M2-08)`

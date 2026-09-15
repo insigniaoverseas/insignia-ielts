@@ -22,7 +22,7 @@
 |---|---|
 | **Active milestone** | **M0 — Foundations** |
 | **Last completed** | **M0-04** Supabase project `insignia-ielts` in `ap-south-1`, verified over the Supabase MCP (§6). Earlier: M0-03 + M0-23 (shadcn primitives, gallery), M0-01 (scaffold, lint, auto-deploy). |
-| **Next task** | **M0-05** Drizzle + Supabase CLI ([`BUILD-STEPS.md`](BUILD-STEPS.md) step 13). `supabase link` to `zpqszkwavnjomxjgimni`, then `supabase db push` — which also applies the one pending migration, `20260915090941_harden_rls_auto_enable.sql` (§5). No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
+| **Next task** | **M0-05** Supabase CLI + generated types ([`BUILD-STEPS.md`](BUILD-STEPS.md) step 13) — no Drizzle (§4). `supabase link` to `zpqszkwavnjomxjgimni`, then `supabase db push` — which also applies the one pending migration, `20260915090941_harden_rls_auto_enable.sql` (§5). No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
 | **Blocked on** | Nothing. Open questions in §7 are non-blocking, but Q2/Q3 should be answered before step 69. |
 | **Branch** | `main` |
 
@@ -40,7 +40,7 @@
 | M0-02 Tailwind v4 `@theme` tokens + fonts | done | Claude | 2026-09-15 | All tokens from `00 Design System.dc.html` in `src/app/globals.css`; default palette + type scale switched **off** (`initial`) so off-system classes generate nothing. Inter + IBM Plex Mono via `next/font` (self-hosted). Opt-in `data-theme="dark"` (DESIGN + DERIVED values, marked). `cn()` in `src/lib/utils.ts` with tailwind-merge taught the tokens (§5). Verified: tsc, `next build`, compiled CSS, Chrome screenshots at 1280 + 390px. |
 | M0-03 shadcn/ui init + restyle to tokens | done | Claude | 2026-09-15 | button, input (+ `PhoneInput`), card, checkbox, table (+ toolbar, pagination, bulk bar), dialog (+ `ConfirmDialog`), select, sonner, skeleton, badge, label; plus hand-built `filter-chip`. `components.json` hand-written — `init` never run, so `globals.css`/`utils.ts` untouched. shadcn vars aliased onto tokens (§4). API + traps in `src/components/ui/README.md`. Verified: tsc, lint, `next build`, all 60 used classes present in compiled CSS, Chrome screenshots at 1280 + 390px incl. open dialog and toast. |
 | M0-04 ⚠️ Supabase project in `ap-south-1` | done | goverdhan-gaur, Claude | 2026-09-15 | ✅ `insignia-ielts` (`zpqszkwavnjomxjgimni`), region **`ap-south-1`** read back via MCP. First attempt was in `ap-northeast-2` (Seoul) — replaced while still empty (§3). Fresh project: empty `public`, no migrations, 0 users, DB timezone UTC, RLS auto-enable trigger on. ⬜ Usage alert at 70% — dashboard only, not verified. |
-| M0-05 Drizzle setup + `db/schema.ts` | todo | | | `db push` also applies the pending `harden_rls_auto_enable` migration |
+| M0-05 Supabase CLI + generated types | todo | | | ~~Drizzle setup + `db/schema.ts`~~ superseded 2026-09-15 — no ORM (§4). `db push` also applies the pending `harden_rls_auto_enable` migration |
 | M0-06 Migration + RLS: identity tables | todo | | | branches, roles, users, invitations, user_devices, user_sessions |
 | M0-07 Migration + RLS: cohorts & plans | todo | | | |
 | M0-08 Migration + RLS: content & assignment | todo | | | |
@@ -199,6 +199,7 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-09-15 | M0-05 | Dropped Drizzle before it was installed: `supabase-js` + generated types + Postgres functions instead (§4). Spec and walkthrough corrected to match. Docs only, no code or dependency change. | `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | goverdhan-gaur (decision), Claude |
 | 2026-09-15 | M0-04 | Supabase project created and verified. The first one (`ielts-test`, `fypfpveynadsbbfbuenc`) was in `ap-northeast-2` (Seoul); caught by the MCP cross-check while it was still empty, and replaced with `insignia-ielts` (`zpqszkwavnjomxjgimni`) in `ap-south-1`. Added the repo's first migration: revoke `EXECUTE` on `public.rls_auto_enable()` from `public`/`anon`/`authenticated` (security advisor lints 0028/0029). **Written, not applied** — the remote apply was blocked by the agent permission policy; it goes out with the first `supabase db push` (M0-05). | `supabase/migrations/20260915090941_harden_rls_auto_enable.sql`, `PROJECT-MEMORY.md` | goverdhan-gaur (projects), Claude (verification, migration) |
 | 2026-09-15 | M0-03, M0-23 | shadcn/ui primitives added and restyled to the tokens; shadcn alias layer in `globals.css`; `<Toaster />` mounted in the root layout; gallery gained sections 1, 2–3, 4, 11–12, 13 and lost its "pending" list. Fixed three generator defects: `import { cn } from "cn"` (an unrelated npm package), undeclared `class-variance-authority`/`lucide-react`, and a `next-themes` dependency. Deps: +`radix-ui`, `sonner`, `class-variance-authority`, `lucide-react`, dev `tw-animate-css`. | `components.json`, `src/components/ui/{button,input,card,checkbox,table,dialog,select,sonner,skeleton,badge,label,filter-chip}.tsx`, `src/components/ui/README.md`, `src/app/{globals.css,layout.tsx}`, `src/app/dev/components/*`, `src/lib/utils.ts` | Claude |
 | 2026-09-15 | M0-01 | Lint fixed: `"lint": "eslint ."`, `eslint.config.mjs` imports `eslint-config-next`'s native flat configs, `@eslint/eslintrc` removed, `Design files/**` ignored (prototype code, never built). Auto-deploy confirmed fixed by the user in the dashboard. M0-01 closed. | `package.json`, `eslint.config.mjs` | Claude, goverdhan-gaur |
@@ -224,6 +225,14 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-15 — No ORM: `supabase-js` + generated types + Postgres functions  (task: M0-05)
+**Chose:** every query goes through `@supabase/ssr` / `supabase-js`, typed by `supabase gen types` (`src/lib/supabase/database.types.ts`). Anything needing a transaction (attempt submit) or heavy SQL (teacher analytics) is a Postgres function, written in a migration and called with `.rpc()`. These are `SECURITY INVOKER` unless there's a written reason otherwise. `supabase/migrations/` is the only schema source.
+**Because:** (1) Drizzle connects straight to Postgres as a privileged role, so **RLS does not apply to its queries**. That silently removes one of the two gates non-negotiable #4 depends on, and making Drizzle honour RLS means setting role + JWT claims per transaction, where one omission leaks data. `supabase-js` always carries the user's JWT, so RLS always applies. (2) `db/schema.ts` would duplicate the SQL migrations and drift from them. (3) A TCP Postgres connection from a Worker needs Hyperdrive or the Supabase pooler sized for 40 concurrent students; `supabase-js` is plain HTTPS. (4) Everything Drizzle offered is already covered: types (generated), transactions (Postgres functions), parameterisation (`supabase-js` and `.rpc()` never concatenate).
+**Rejected:** Drizzle ORM (MVP-1 §4 "typed SQL for admin + analytics") — for the reasons above. Kysely or raw `postgres.js` — same direct-connection RLS bypass.
+**Trade-off accepted:** transactional logic lives in SQL (plpgsql), not TypeScript. Scoring stays in `lib/scoring.ts`; the function only persists its results atomically.
+**Correction applied:** `MVP-1.md` §4 (supporting libraries), §8 (SQL-injection control), §15 (repo tree: `src/db/` removed, `lib/supabase/database.types.ts` added), §16 (generated types), §18 (M0-05). `BUILD-STEPS.md` steps 13, 14–18 and 43. `Design files/TECH-STACK.md` still lists Drizzle — it's a source input, superseded here like D9 supersedes its §3.
+**ADR:** to be written at M0-21 — `docs/adr/` doesn't exist yet.
 
 ### 2026-09-15 — shadcn's semantic colours are aliases, not a second palette  (task: M0-03)
 **Chose:** `--primary`, `--border`, `--muted-foreground` … are defined in `globals.css` as `var()` references to our tokens, and every component was *also* rewritten to use the token names directly.
@@ -259,7 +268,7 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Because:** PLAN.md §4 — "audio plays once, straight through, no pause/rewind". Screen 06's prototype shows a play/pause toggle, but the stated rule wins.
 
 ### 2026-09-15 — App code lives under `src/`  (task: M0-01)
-**Chose:** the `src/` layout the OpenNext scaffold generated — `src/app`, `src/components`, `src/lib`, `src/db`. The `@/*` alias resolves to `./src/*`, so imports read `@/lib/scoring`. Tooling that CLIs expect at the root stays there: `supabase/`, `mcp/`, `scripts/`, `docs/`.
+**Chose:** the `src/` layout the OpenNext scaffold generated — `src/app`, `src/components`, `src/lib`, ~~`src/db`~~ (dropped 2026-09-15 with Drizzle — see "No ORM" above). The `@/*` alias resolves to `./src/*`, so imports read `@/lib/scoring`. Tooling that CLIs expect at the root stays there: `supabase/`, `mcp/`, `scripts/`, `docs/`.
 **Because:** it's what the scaffold produced, it's a standard Next.js layout, and it separates app code from config/tooling cleanly.
 **Rejected:** moving everything back to a root `app/` to match the original `MVP-1.md` tree — churn for no benefit.
 **Correction applied:** `MVP-1.md` §15 repo tree updated. Paths elsewhere in `MVP-1.md` written as `lib/…` mean `src/lib/…`.
@@ -366,7 +375,7 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 
 ### 2026-09-15 (third session)
 
-**Done.** M0-04. Cross-checked the user's Supabase project over the MCP. It was in Seoul, so the user recreated it in Mumbai while it was still empty. The new project was verified: `ap-south-1`, empty schema, UTC, RLS auto-enable on, leaked-password protection on. Wrote the repo's first migration, which clears the one remaining advisor warning.
+**Done.** M0-04. Cross-checked the user's Supabase project over the MCP. It was in Seoul, so the user recreated it in Mumbai while it was still empty. The new project was verified: `ap-south-1`, empty schema, UTC, RLS auto-enable on, leaked-password protection on. Wrote the repo's first migration, which clears the one remaining advisor warning. Then, at the user's call, dropped Drizzle: no ORM, just `supabase-js` + generated types + Postgres functions (§4). The spec and walkthrough are corrected.
 
 **Not done.** The migration is **not applied** remotely because the agent's permission policy blocked `apply_migration`. It goes out with the first `supabase db push` at M0-05. No Supabase keys are set anywhere yet (`.dev.vars`, Wrangler secrets); that's M0-14.
 
