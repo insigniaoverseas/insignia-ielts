@@ -23,7 +23,7 @@
 | **Active milestone** | **M0 — Foundations** |
 | **Last completed** | **M0-04** Supabase project `insignia-ielts` in `ap-south-1`, verified over the Supabase MCP (§6). Earlier: M0-03 + M0-23 (shadcn primitives, gallery), M0-01 (scaffold, lint, auto-deploy). |
 | **Next task** | **M0-06** identity migration + RLS ([`BUILD-STEPS.md`](BUILD-STEPS.md) step 14) — ⚠️ RLS helpers can't go in the `auth` schema as `MVP-1.md` §13 says (§5); resolve that first. Agent drafts the migration, user reviews and runs `db push`. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
-| ~~**Next task**~~ | ~~**M0-05** finish: only `npx supabase db push` left~~ — superseded 2026-09-15: pushed by the user, advisor clean. | No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
+| ~~**Next task**~~ | ~~**M0-05** finish: only `npx supabase db push` left~~ — superseded 2026-09-15: pushed by the user, advisor clean. |
 | **Blocked on** | Nothing. Q1–Q3 answered 2026-09-15. Q9 and Q10 confirmed the same day. |
 | **Branch** | `main` |
 
