@@ -1,0 +1,55 @@
+# CI gates (MVP-1 §16, M0-22). Every push to main and every pull request.
+# Deploys are separate: Cloudflare Workers Builds deploys main (BUILD-STEPS step 6).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck, lint, tests, build, bundle guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Permission tests (lib/permissions.ts vs seeded roles)
+        run: npm run test:unit
+
+      - name: Database access-control test (every migration on PGlite)
+        run: npm run test:db
+
+      - name: Policy sweep (dropping any RLS policy must fail the test)
+        run: npm run test:db:sweep
+
+      - name: Build
+        run: npx next build
+
+      - name: Client bundle guard (no scoring, answer key or secret key in browser code)
+        run: npm run check:bundle
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high

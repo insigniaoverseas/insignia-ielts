@@ -14,7 +14,9 @@
     "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/database.types.ts",
     "test:db": "node tests/db/rls.test.mjs",
     "test:db:sweep": "node tests/db/policy-sweep.mjs",
-    "test:unit": "node --test \"tests/unit/**/*.test.mjs\""
+    "test:unit": "node --test \"tests/unit/**/*.test.mjs\"",
+    "typecheck": "tsc --noEmit",
+    "check:bundle": "node scripts/check-client-bundle.mjs"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.3",
