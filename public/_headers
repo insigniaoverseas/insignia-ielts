@@ -2,3 +2,13 @@
 # https://opennext.js.org/cloudflare/caching#static-assets-caching
 /_next/static/*
   Cache-Control: public,max-age=31536000,immutable
+
+# Security headers for files served without running the Worker (JS/CSS chunks,
+# fonts, favicon). Pages and API routes get theirs — including the per-request
+# CSP — from src/proxy.ts. Keep in step with STATIC_SECURITY_HEADERS in
+# src/lib/security/headers.ts.
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
