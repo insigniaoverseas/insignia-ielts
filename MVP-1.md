@@ -372,8 +372,10 @@ Append-only integrity log (UPDATE trigger). Written by server code; read only by
 
 ### Cross-cutting
 
-**`audit_log`** — `id` · `actor_id` · `action` · `entity` · `entity_id` · `meta jsonb` · `at`
-**`rate_limits`** — `key` · `window_start` · `count` — Postgres fallback behind the Durable Object counter.
+**`audit_log`** — `id` · `actor_id` *(no foreign key — the trail must survive a user's erasure)* · **`branch_id`** *(added 2026-09-15 — admins read their branch)* · `action` *(`entity.verb`, e.g. `plan.extend`)* · `entity` · `entity_id` · `meta jsonb` · `at`. Append-only (UPDATE trigger); written only by server code.
+**`rate_limits`** — PK (`key`, `window_start`) · `count` — Postgres fallback behind the Durable Object counter. **No API access at all** — keys contain IP addresses; RLS on with no policy.
+
+**Audit trails keep actor ids without foreign keys.** `plan_history.actor_id` lost its FK in M0-10: its `ON DELETE SET NULL` was an UPDATE the append-only trigger refused, so erasing a staff user who had changed a plan failed.
 
 ---
 
@@ -775,6 +777,7 @@ RLS decides *which rows*; grants decide *which tables and columns*. Supabase gra
 | `attempt_scores` | **own, only once finished + released** (practice: at once) | own batches | own branch | all |
 | `attempt_events` | none | own batches | own branch | all |
 | `audit_log` | none | none | own branch | all |
+| `rate_limits` | none | none | none | none — server code only |
 
 **The student row is the one that matters most.** A student-role session must have no route, no query and no policy that can return another user's name, email, attempt, answer, band or plan. Tested independently at both the route layer and the RLS layer — see [§19](#19-verification).
 

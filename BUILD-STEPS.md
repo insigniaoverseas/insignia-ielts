@@ -147,7 +147,7 @@ One migration per group, from [`MVP-1.md` §6](MVP-1.md#6-database--erd-and-tabl
 | 15 | `cohorts` | `batches`, `batch_teachers`, `batch_students`, `student_plans`, `plan_history` — plus `private.is_teacher_of()` and 4 more helpers, the "teacher reads students in own batches" policy on `users`, the `invitations.batch_id` foreign key, and M0-06's policies folded into one per table |
 | 16 | `content` | `tests`, `band_scales`, `band_scale_rows`, `assignments`, `assignment_targets`, `assignment_unlocks` — plus 4 helpers, `btree_gist` for non-overlapping band rows, and the `r2_*` columns withheld from API roles |
 | 17 | `assessment` | `attempts`, `answers`, `attempt_events` — plus `answer_marks` and `attempt_scores` (correctness and scores split out so RLS can gate them), the clock/state-machine/answer triggers, and 6 helpers |
-| 18 | `crosscutting` | `audit_log`, `rate_limits` |
+| 18 | `crosscutting` | `audit_log` (+`branch_id`, no actor FK, append-only), `rate_limits` (no API access) — plus the `plan_history.actor_id` FK fix |
 
 Every table gets `ALTER TABLE … ENABLE ROW LEVEL SECURITY` and **no permissive fallback policy**. Every table also gets `revoke all … from anon, authenticated` and explicit, column-limited grants back ([`MVP-1.md` §13](MVP-1.md#13-row-level-security) "Grants are a gate too").
 **Workflow:** the agent writes the migration and runs it against a local PGlite harness that mimics Supabase's roles and `auth.uid()` (no Docker needed), plus `db push --dry-run`; the user reviews and runs the real `db push` ([`PROJECT-MEMORY.md`](PROJECT-MEMORY.md) §5).
