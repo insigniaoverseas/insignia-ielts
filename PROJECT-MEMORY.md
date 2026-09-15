@@ -24,7 +24,7 @@
 | **Last completed** | **M0-04** Supabase project `insignia-ielts` in `ap-south-1`, verified over the Supabase MCP (§6). Earlier: M0-03 + M0-23 (shadcn primitives, gallery), M0-01 (scaffold, lint, auto-deploy). |
 | **Next task** | **M0-06** identity migration + RLS ([`BUILD-STEPS.md`](BUILD-STEPS.md) step 14) — ⚠️ RLS helpers can't go in the `auth` schema as `MVP-1.md` §13 says (§5); resolve that first. Agent drafts the migration, user reviews and runs `db push`. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
 | ~~**Next task**~~ | ~~**M0-05** finish: only `npx supabase db push` left~~ — superseded 2026-09-15: pushed by the user, advisor clean. | No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
-| **Blocked on** | Nothing. Q1–Q3 answered 2026-09-15. New Q9 (class-test conditions) and Q10 (one type per practice set) are non-blocking. |
+| **Blocked on** | Nothing. Q1–Q3 answered 2026-09-15. Q9 and Q10 confirmed the same day. |
 | **Branch** | `main` |
 
 ---
@@ -379,8 +379,8 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 | ~~Q1~~ | ~~"Hard" or "Difficult"?~~ | **Answered 2026-09-15 (goverdhan-gaur): Easy / Medium / Hard.** | ✅ closed |
 | ~~Q2~~ | ~~Mock results — auto-release, or held for the teacher?~~ | **Answered 2026-09-15:** admin or teacher chooses **per assignment** — release right away, automatically on a schedule, or manually. They stay in control and can change it later. Spec: `MVP-1.md` §6 `assignments.results_release`. Default `manual` is Claude's pick (safest) — change it if you'd rather. | ✅ closed |
 | ~~Q3~~ | ~~Practice library — reuse mock papers, or a separate pool?~~ | **Answered 2026-09-15:** three separate pools. **Mock** = full tests. **Class** = full tests, different papers from the mocks. **Practice** = totally different content, organised **by question type**. Spec: `MVP-1.md` §6 `tests.kind`. | ✅ closed |
-| Q9 | Do **class tests** run under full exam conditions like mocks (server timer, audio once, no seek)? | The spec now assumes **yes** — you described them as full tests. If class tests should allow pausing or replay, the player needs a third mode. | No — before M2-15 |
-| Q10 | Is each **practice set one question type**, or can one set mix a few? | The spec now assumes **one type per set** (`tests.practice_question_type`). Mixing would make that an array. | No — before M0-08 |
+| ~~Q9~~ | ~~Do class tests run under full exam conditions like mocks?~~ | **Confirmed 2026-09-15 (goverdhan-gaur): yes** — server timer, audio once, no seek. | ✅ closed |
+| ~~Q10~~ | ~~Is each practice set one question type?~~ | **Confirmed 2026-09-15: yes, one type per set** (`tests.practice_question_type`). | ✅ closed |
 | Q4 | Plan validity — purely time-based, or also test-count based? | `test_quota` column exists and is nullable, so either works. Cheap now, awkward later. | No |
 | Q5 | Multiple branches, ever? | `branch_id` is already in the schema, so building it in costs nothing. Confirm it should stay. | No |
 | Q6 | Who enters test content? | 40-question answer keys per test is the real bottleneck, not code. The MCP (M8) and answer-key editor (M5-09) address it, but someone's time still has to be budgeted. | No |
