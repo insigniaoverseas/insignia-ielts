@@ -52,7 +52,7 @@
 | M0-11 RLS helpers + default-deny test | done | Claude, goverdhan-gaur | 2026-09-15 | Helpers shipped with M0-06…09. ✅ `tests/db/rls.test.mjs` (`npm run test:db`): all migrations on PGlite, 229 checks across all 24 tables, ~2 s. ✅ `tests/db/policy-sweep.mjs` (`npm run test:db:sweep`): drops each of 25 policies, **every drop fails the test** — first run caught `band_scales` untested, fixed. `@electric-sql/pglite` 0.5.8 pinned as devDependency (user approved). README in `tests/db/`. Lint clean. |
 | M0-12 R2 private buckets + `lib/r2.ts` signing | todo | | | `key.json` never signable |
 | M0-13 Security headers + nonce CSP + sanitize | todo | | | |
-| M0-14 Wrangler secrets + `.dev.vars.example` | in_progress | Claude, goverdhan-gaur | 2026-09-15 | ✅ `.dev.vars.example` (names only; `.dev.vars` confirmed gitignored). Names: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` (§6). ⬜ User: create the Supabase secret key; fill `.dev.vars`; `wrangler secret put` × 3. ⬜ Resend/Turnstile/Sentry names when those land. |
+| M0-14 Wrangler secrets + `.dev.vars.example` | in_progress | Claude, goverdhan-gaur | 2026-09-15 | ✅ `.dev.vars.example` (names only; `.dev.vars` confirmed gitignored). Names: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` (§6). ✅ User created the secret key, filled `.dev.vars` and ran `wrangler secret put` × 3 — verified without printing values: formats `sb_publishable_`/`sb_secret_`, URL = this project, `wrangler secret list` shows all three, `.dev.vars` untracked. ✅ Live API probe: secret key reads `roles` (5) and `band_scale_rows` (36); publishable key with no session is refused (42501) on `roles`, `users`, `tests.r2_key_key`, `rate_limits`; `private.*` not reachable over HTTP (PGRST202); `rls_auto_enable` refused. ⬜ Resend/Turnstile/Sentry names when those land. |
 | M0-15 `lib/question-types.ts` | todo | | | MVP-1 §10 matrix — single source of truth |
 | M0-16 Upload schema + `docs/test-authoring.md` | todo | | | One worked sample per variant |
 | M0-17 Importer: validate → split → upload | todo | | | The split is what keeps the key server-side |
@@ -202,6 +202,7 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-09-15 | M0-14 | User set `.dev.vars` and the three Wrangler secrets. Verified without printing values, then probed the live PostgREST API: `anon` refused on every table probed, `private` helpers unreachable, secret key works. First API-level (not just SQL) confirmation of the grants. | `PROJECT-MEMORY.md` | goverdhan-gaur, Claude |
 | 2026-09-15 | step 21 (M0-05), M0-14 | Supabase clients: `lib/supabase/server.ts`, `admin.ts`, `env.ts` (TSDoc, `server-only`), no browser client (§4). `.dev.vars.example`. Packages pinned. Verified: a `"use client"` import of `admin.ts` fails `next build` (probe added, built, removed); normal `next build`, tsc and lint pass. Key names renamed to publishable/secret across docs. | `src/lib/supabase/*`, `.dev.vars.example`, `package.json`, `package-lock.json`, `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | Claude |
 | 2026-09-15 | M0-19 | User ran `db push`. Verified live over MCP. Types regenerated (`below_band`, nullable `band`). M0-19 closed. | `src/lib/supabase/database.types.ts`, `PROJECT-MEMORY.md` | goverdhan-gaur, Claude |
 | 2026-09-15 | M0-19 | Reference-data migration written: 5 roles and the institute's three band charts (Listening, Academic Reading, GT Reading — user-supplied images), plus "Below 4" support (`band_scale_rows.band` nullable, `attempt_scores.below_band`). Harness updated (seeded roles/scales) and extended to 240 checks incl. per-scale coverage and chart spot checks; sweep 25/25. **Not yet pushed.** | `supabase/migrations/20260915174541_reference_data.sql`, `tests/db/rls.test.mjs`, `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | goverdhan-gaur (charts, decision), Claude |
@@ -435,9 +436,9 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 
 | Secret name | Used by | Set? |
 |---|---|---|
-| `SUPABASE_URL` | server (`lib/supabase/env.ts`) | ⬜ |
-| `SUPABASE_PUBLISHABLE_KEY` | server — RLS-scoped client (`server.ts`) | ⬜ |
-| `SUPABASE_SECRET_KEY` | **server only**, `admin.ts`, behind `lib/rbac.ts` — bypasses RLS | ⬜ |
+| `SUPABASE_URL` | server (`lib/supabase/env.ts`) | ✅ 2026-09-15 |
+| `SUPABASE_PUBLISHABLE_KEY` | server — RLS-scoped client (`server.ts`) | ✅ 2026-09-15 |
+| `SUPABASE_SECRET_KEY` | **server only**, `admin.ts`, behind `lib/rbac.ts` — bypasses RLS | ✅ 2026-09-15 |
 | ~~`SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`~~ | superseded 2026-09-15 by the publishable/secret key names above — Supabase's current key model; IP forwarding for Auth rate limits (§4) requires a secret key | — |
 | `RESEND_API_KEY` | invite email | ⬜ |
 | `TURNSTILE_SECRET_KEY` | login + accept-invite | ⬜ |
@@ -499,7 +500,7 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 
 **Then.** M0-19 pushed, verified, closed. Step 21 done (clients, no browser client).
 
-**Start with.** Step 22 `lib/rbac.ts` once the user confirms the permission matrix proposed in the chat (seeded into `roles.permissions` by a migration). The user still has to create the secret key and fill `.dev.vars` / Wrangler secrets (M0-14). **Every future migration:** extend `tests/db/rls.test.mjs` (see its README) and run both `test:db` commands before asking the user to push. Q11 answered: Workers Free. Open: whether to commit the PGlite harness as the M0-11 test; the Worker's workers.dev URL (not in the repo, and wrangler can't print it) — needed to measure real CPU per request with `wrangler tail`.
+**Start with.** Step 22 `lib/rbac.ts` once the user confirms the permission matrix proposed in the chat (seeded into `roles.permissions` by a migration). Secrets are set and verified (M0-14). **Every future migration:** extend `tests/db/rls.test.mjs` (see its README) and run both `test:db` commands before asking the user to push. Q11 answered: Workers Free. Open: whether to commit the PGlite harness as the M0-11 test; the Worker's workers.dev URL (not in the repo, and wrangler can't print it) — needed to measure real CPU per request with `wrangler tail`.
 
 ### 2026-09-15 (second session)
 
