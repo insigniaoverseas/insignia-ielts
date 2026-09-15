@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Inter } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 /*
@@ -39,7 +40,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 			<head>
 				<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 			</head>
-			<body>{children}</body>
+			<body>
+				{children}
+				<Toaster />
+			</body>
 		</html>
 	);
 }

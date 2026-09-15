@@ -21,9 +21,9 @@
 | | |
 |---|---|
 | **Active milestone** | **M0 — Foundations** |
-| **Last completed** | M0-01 scaffold swapped from `vinext` to Next.js 16.3.4 + OpenNext (commit `576a7f3`). `opennextjs-cloudflare build` produces `.open-next/worker.js`. |
-| **Next task** | **M0-03** — shadcn/ui init + restyle (user-requested next). Still open from M0-01: the Workers Builds dashboard commands and the lint fix (§5). Then [`BUILD-STEPS.md`](BUILD-STEPS.md) step 2: ⚠️ Supabase in `ap-south-1`. |
-| **Blocked on** | Auto-deploy fails until the dashboard build command is changed — a dashboard setting, no code change. Open questions in §7 are non-blocking. |
+| **Last completed** | **M0-03** shadcn/ui primitives restyled to the tokens, which also closes **M0-23** (gallery complete). **M0-01** closed: lint fixed, and the user fixed the Workers Builds auto-deploy in the dashboard. |
+| **Next task** | **M0-04** ⚠️ Supabase in `ap-south-1` ([`BUILD-STEPS.md`](BUILD-STEPS.md) step 2) — irreversible region, and M0-05…M0-11 wait on it. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
+| **Blocked on** | Nothing. Open questions in §7 are non-blocking, but Q2/Q3 should be answered before step 69. |
 | **Branch** | `main` |
 
 ---
@@ -36,9 +36,9 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M0-01 Re-scaffold Next.js 16 + OpenNext | in_progress | goverdhan-gaur | 2026-09-15 | ✅ Next 16.3.4, React 19, `@opennextjs/cloudflare` 1.20.3; vinext fully removed; no `@vercel/*`; Worker build passes. ✅ Worker renamed `muddy-truth-1a57` → `insignia-test` in all 3 places (`package.json`, `wrangler.jsonc` name, `services[0].service`) — pushed in `6f4a4b0`. ⬜ **Fix Workers Builds commands** in the dashboard (§5) — auto-deploy failing. ⬜ **Fix lint** (§5). Uses `src/app/` — see §4. |
+| M0-01 Re-scaffold Next.js 16 + OpenNext | done | goverdhan-gaur, Claude | 2026-09-15 | ✅ Next 16.3.4, React 19, `@opennextjs/cloudflare` 1.20.3; vinext fully removed; no `@vercel/*`; Worker build passes. ✅ Worker renamed → `insignia-test` in all 3 places (`6f4a4b0`). ✅ Workers Builds commands fixed in the dashboard (goverdhan-gaur). ✅ Lint: `eslint .` + native flat config, `@eslint/eslintrc` dropped, `Design files/` ignored — `npm run lint` clean (Claude). Uses `src/app/` — see §4. |
 | M0-02 Tailwind v4 `@theme` tokens + fonts | done | Claude | 2026-09-15 | All tokens from `00 Design System.dc.html` in `src/app/globals.css`; default palette + type scale switched **off** (`initial`) so off-system classes generate nothing. Inter + IBM Plex Mono via `next/font` (self-hosted). Opt-in `data-theme="dark"` (DESIGN + DERIVED values, marked). `cn()` in `src/lib/utils.ts` with tailwind-merge taught the tokens (§5). Verified: tsc, `next build`, compiled CSS, Chrome screenshots at 1280 + 390px. |
-| M0-03 shadcn/ui init + restyle to tokens | todo | | | **Next.** Map shadcn's semantic vars (`--primary`, `--border`…) onto our tokens; add button, input, card, checkbox, table, dialog, sonner, skeleton, badge; keep `src/lib/utils.ts` (don't let init overwrite it). Gallery lists what's pending. |
+| M0-03 shadcn/ui init + restyle to tokens | done | Claude | 2026-09-15 | button, input (+ `PhoneInput`), card, checkbox, table (+ toolbar, pagination, bulk bar), dialog (+ `ConfirmDialog`), select, sonner, skeleton, badge, label; plus hand-built `filter-chip`. `components.json` hand-written — `init` never run, so `globals.css`/`utils.ts` untouched. shadcn vars aliased onto tokens (§4). API + traps in `src/components/ui/README.md`. Verified: tsc, lint, `next build`, all 60 used classes present in compiled CSS, Chrome screenshots at 1280 + 390px incl. open dialog and toast. |
 | M0-04 ⚠️ Supabase project in `ap-south-1` | todo | | | **Region cannot be changed later** |
 | M0-05 Drizzle setup + `db/schema.ts` | todo | | | |
 | M0-06 Migration + RLS: identity tables | todo | | | branches, roles, users, invitations, user_devices, user_sessions |
@@ -58,7 +58,7 @@
 | M0-20 Port legacy Listening test | todo | | | From `Design files/.../ielts-data.js` |
 | M0-21 `docs/` tree + ADRs 0001–0013 | todo | | | |
 | M0-22 CI gates incl. bundle-grep guard | todo | | | |
-| M0-23 `/dev/components` gallery | in_progress | Claude | 2026-09-15 | Live at `/dev/components`, same section order as the design file, `noindex`. Has everything except the shadcn primitives — those sections land with M0-03. |
+| M0-23 `/dev/components` gallery | done | Claude | 2026-09-15 | Live at `/dev/components`, `noindex`. Sections now match `00 Design System.dc.html` one-for-one (A2–A4, 1–20). Only gap: `image_label` widget, which waits for M2-14 (no design). |
 
 ### M1 — Invites & auth
 
@@ -199,6 +199,8 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-09-15 | M0-03, M0-23 | shadcn/ui primitives added and restyled to the tokens; shadcn alias layer in `globals.css`; `<Toaster />` mounted in the root layout; gallery gained sections 1, 2–3, 4, 11–12, 13 and lost its "pending" list. Fixed three generator defects: `import { cn } from "cn"` (an unrelated npm package), undeclared `class-variance-authority`/`lucide-react`, and a `next-themes` dependency. Deps: +`radix-ui`, `sonner`, `class-variance-authority`, `lucide-react`, dev `tw-animate-css`. | `components.json`, `src/components/ui/{button,input,card,checkbox,table,dialog,select,sonner,skeleton,badge,label,filter-chip}.tsx`, `src/components/ui/README.md`, `src/app/{globals.css,layout.tsx}`, `src/app/dev/components/*`, `src/lib/utils.ts` | Claude |
+| 2026-09-15 | M0-01 | Lint fixed: `"lint": "eslint ."`, `eslint.config.mjs` imports `eslint-config-next`'s native flat configs, `@eslint/eslintrc` removed, `Design files/**` ignored (prototype code, never built). Auto-deploy confirmed fixed by the user in the dashboard. M0-01 closed. | `package.json`, `eslint.config.mjs` | Claude, goverdhan-gaur |
 | 2026-09-15 | M0-02, M0-23 | Design tokens + fonts, plus the design-system components shadcn doesn't provide: status pill, difficulty badge, banner, empty state, stat card, band score + answer line, accuracy bars, band trend chart, student tab bar, staff sidebar, PIN input; player countdown, question navigator, audio player, and 5 of 6 answer widgets (`image_label` waits for M2-14 — no design). Gallery at `/dev/components`. Scaffold home page replaced. Deps: `clsx`, `tailwind-merge`. | `src/app/{globals.css,layout.tsx,page.tsx}`, `src/app/dev/components/*`, `src/components/{ui,player}/*`, `src/lib/utils.ts` | Claude |
 | 2026-09-15 | M0-01 | Cloudflare Workers Builds auto-deploy of `6f4a4b0` failed: *"Could not find compiled Open Next config, did you run the build command?"*. Cause: the dashboard build step runs `npm run build` (= `next build`), which never creates `.open-next/`. Fix is a dashboard setting — see §5. | — | goverdhan-gaur, diagnosed by Claude |
 | 2026-09-15 | M0-01 | Renamed the worker `muddy-truth-1a57` → `insignia-test` in `package.json`, `wrangler.jsonc` `name` and `services[0].service` — all three consistent. Committed and pushed with the doc updates. | `package.json`, `wrangler.jsonc`, docs (commit `6f4a4b0`) | goverdhan-gaur |
@@ -221,6 +223,25 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-15 — shadcn's semantic colours are aliases, not a second palette  (task: M0-03)
+**Chose:** `--primary`, `--border`, `--muted-foreground` … are defined in `globals.css` as `var()` references to our tokens, and every component was *also* rewritten to use the token names directly.
+**Because:** `--color-*: initial` deletes Tailwind's palette, so any shadcn class we missed would compile to nothing — an invisible control. The aliases make the failure mode "slightly wrong shade" instead. Rewriting the components means the aliases are a safety net, not the design.
+**Rejected:** aliases only (restyle by variable) — shadcn's defaults (36px buttons, 14px text, shadowed cards) are wrong in size and shape, not just colour. Rewrite only, no aliases — a missed class fails silently.
+
+### 2026-09-15 — Button and Input sizes are named for audiences  (task: M0-03)
+**Chose:** `size="student"` (56px), `"modal"` (48px), `"admin"` (40px) instead of shadcn's `sm`/`default`/`lg`.
+**Because:** the height is a usability rule (MVP-1 §15, CLAUDE.md design rule), not a taste. `size="student"` makes a 40px button on a student screen visibly wrong in code review.
+**Rejected:** t-shirt sizes — nothing stops `size="sm"` landing on the student side.
+
+### 2026-09-15 — Toaster without `next-themes`, glyphs not icons  (task: M0-03)
+**Chose:** the toast is always dark (`bg-ink`), with ✓ ! ✕ i glyphs; `next-themes` uninstalled.
+**Because:** the design shows the toast dark in both themes, and dark mode here is an opt-in `data-theme` attribute, not a `next-themes` provider. The glyphs match the banners.
+**Rejected:** shadcn's `useTheme()` version — adds a provider and dependency for a theme switch the app doesn't have.
+
+### 2026-09-15 — `components.json` hand-written; `shadcn init` never run  (task: M0-03)
+**Chose:** write `components.json` directly, then `shadcn add`.
+**Because:** `init` rewrites `globals.css` and `src/lib/utils.ts`, both hand-tuned in M0-02. Verified afterwards: neither file was touched by `add`.
 
 ### 2026-09-15 — Design-system components split: custom now, generic primitives from shadcn  (task: M0-02 / M0-03)
 **Chose:** hand-build only what shadcn lacks (timer, navigator, answer widgets, audio, band score, difficulty, pills, banner, charts, nav, PIN). Button, Input, Card, Checkbox, Table, Dialog, Toast, Skeleton, Badge come from shadcn in M0-03, restyled to the tokens. Custom files avoid shadcn's names (`staff-sidebar` not `sidebar`, `band-trend-chart` not `chart`, `banner` not `alert`).
@@ -267,17 +288,23 @@ Things that cost an hour and would cost the next agent the same hour. Add as you
 
 | Area | Constraint | Found |
 |---|---|---|
-| **`next lint` is gone in Next 16** | `npm run lint` currently runs `next lint`, which Next 16 no longer has — it misreads `lint` as a directory name and fails. Change the script to `"lint": "eslint ."`. | M0-01 |
-| **`FlatCompat` breaks with `eslint-config-next` 16** | The scaffolded `eslint.config.mjs` wraps `next/core-web-vitals` in `FlatCompat`, which crashes with *"Converting circular structure to JSON"*. v16 ships native flat configs — import them directly (verified both load as arrays): `import nextVitals from "eslint-config-next/core-web-vitals"`, `import nextTs from "eslint-config-next/typescript"`, then `export default [...nextVitals, ...nextTs, { ignores: [".next/**", ".open-next/**", "cloudflare-env.d.ts"] }]`. Drop the `@eslint/eslintrc` devDependency afterwards. | M0-01 |
+| **`next lint` is gone in Next 16** | `next lint` no longer exists — it misreads `lint` as a directory name and fails. The script is now `"lint": "eslint ."`. **Resolved 2026-09-15.** | M0-01 |
+| **`FlatCompat` breaks with `eslint-config-next` 16** | The scaffolded `eslint.config.mjs` wraps `next/core-web-vitals` in `FlatCompat`, which crashes with *"Converting circular structure to JSON"*. v16 ships native flat configs — import them directly (verified both load as arrays): `import nextVitals from "eslint-config-next/core-web-vitals"`, `import nextTs from "eslint-config-next/typescript"`, then `export default [...nextVitals, ...nextTs, { ignores: [".next/**", ".open-next/**", "cloudflare-env.d.ts"] }]`. Drop the `@eslint/eslintrc` devDependency afterwards. **Resolved 2026-09-15** — also ignores `Design files/**`, whose prototype JS otherwise fails lint with 2 errors. | M0-01 |
 | **`create-cloudflare` assigns a random worker name** | It named the worker `muddy-truth-1a57`. The name appears in **three** places — `package.json`, `wrangler.jsonc` `name`, and `wrangler.jsonc` `services[0].service` (OpenNext's self-reference binding). The last one **must equal the worker name** or caching breaks. Rename all three together, before the first deploy. If it's already been deployed under the random name, the old worker lingers — delete it from the dashboard. **Resolved 2026-09-15** (→ `insignia-test`). `package-lock.json` picked up the new name on the M0-02 `npm install`. One stale copy remains in a comment in `cloudflare-env.d.ts` — clears on the next `npm run cf-typegen`. | M0-01 |
 | **Binding types file renamed** | The OpenNext scaffold generates `cloudflare-env.d.ts` via `npm run cf-typegen`, replacing the vinext-era `worker-configuration.d.ts`. Re-run `cf-typegen` after adding any binding (R2 at M0-12). | M0-01 |
 | **tailwind-merge silently drops our font sizes** | Plain `twMerge("text-body text-ink")` returns `"text-ink"` — it can't tell custom sizes from colours. `cn()` in `src/lib/utils.ts` registers every token family. **Add any new token there too**, or merges will quietly lose classes. | M0-02 |
 | **Off-system classes fail silently** | The default palette/type scale are reset in `globals.css`, so `bg-blue-500` or `text-sm` compile to *nothing* — no error. To check a class exists, grep the built CSS in `.next/static/chunks/*.css`. | M0-02 |
 | **Headless Chrome screenshots** | `#anchor` URLs render blank and `sips --cropOffset` is ignored. To capture part of a long page, wrap it in a scratch HTML `<iframe>` with a negative `margin-top`. | M0-02 |
-| **Workers Builds needs OpenNext's own build command** | Cloudflare's Git auto-deploy defaults its build step to `npm run build`, which here is plain `next build` — it produces `.next/` but not `.open-next/`. The deploy step then fails with *"Could not find compiled Open Next config, did you run the build command?"* because it requires `.open-next/.build/open-next.config.edge.mjs`, which **only** `opennextjs-cloudflare build` creates. **Fix (dashboard → the Worker → Settings → Builds → Build configuration):** Build command `npx opennextjs-cloudflare build` · Deploy command `npx opennextjs-cloudflare deploy`. | M0-01 |
+| **Workers Builds needs OpenNext's own build command** | Cloudflare's Git auto-deploy defaults its build step to `npm run build`, which here is plain `next build` — it produces `.next/` but not `.open-next/`. The deploy step then fails with *"Could not find compiled Open Next config, did you run the build command?"* because it requires `.open-next/.build/open-next.config.edge.mjs`, which **only** `opennextjs-cloudflare build` creates. **Fix (dashboard → the Worker → Settings → Builds → Build configuration):** Build command `npx opennextjs-cloudflare build` · Deploy command `npx opennextjs-cloudflare deploy`. **Resolved 2026-09-15** by the user in the dashboard. | M0-01 |
 | **⚠️ Never set `"build": "opennextjs-cloudflare build"`** | It's the obvious-looking fix and it's wrong. `opennextjs-cloudflare build` internally runs `npm run build` to do the Next.js compile (`@opennextjs/aws/dist/build/buildNextApp.js`), so pointing the `build` script at it recurses forever. Keep `"build": "next build"`; put the OpenNext command in the dashboard. | M0-01 |
 | **Workers Builds: config name must match the connected Worker** | Workers Builds deploys to the Worker the repo is connected to in the dashboard, and the `name` in `wrangler.jsonc` must match it. The repo now says `insignia-test`. If the dashboard Worker is still `muddy-truth-1a57` (the name when Git was first connected), the build will fail on a name mismatch *after* the command fix — rename the Worker in the dashboard to `insignia-test`, or connect the repo to a new `insignia-test` Worker and delete the old one. *Not verified from here — the Cloudflare connector wasn't connected this session.* | M0-01 |
 | **`npm run start` doesn't exercise the Worker** | It runs plain `next start` on Node. To test on the actual Cloudflare runtime locally, use `npm run preview`. | M0-01 |
+| **`shadcn add` imported `cn` from an npm package called `cn`** | With a hand-written `components.json`, it generated `import { cn } from "cn"` and installed the unrelated `cn@0.3.0` — silently bypassing our token-aware `cn()`. It also used `class-variance-authority` and `lucide-react` without declaring them (they resolved transitively). **After any `shadcn add`:** `grep -rn 'from "cn"' src/`, and check `package.json` for what the new file imports. | M0-03 |
+| **`outline-none` deletes the focus ring** | In Tailwind v4 `outline-none` is `outline-style: none` in the utilities layer, which beats the global `:focus-visible` rule in the base layer. shadcn puts it on every control. Never use it on a focusable control; the global rule draws the ring. | M0-03 |
+| **A bare `border` draws near-black** | Tailwind v4's default border colour is `currentColor`. Always pair `border` with `border-line` (or another token). | M0-03 |
+| **Don't `shadcn add --overwrite` an existing primitive** | It restores shadcn's defaults over the restyle. See `src/components/ui/README.md`. | M0-03 |
+| **`next dev` writes to `CLAUDE.md`** | Next 16 appends a `<!-- BEGIN:nextjs-agent-rules -->` block to `CLAUDE.md` whenever it detects an AI agent running `next dev` (`node_modules/next/dist/server/lib/generate-agent-files.js`, no opt-out). It will show up as an uncommitted change after any agent session that ran the dev server. It was reverted this session pending the user's call — commit it once to stop the churn, or keep reverting. | M0-03 |
+| **Screenshots: use the CDP helper, not iframe offsets** | Guessing iframe offsets from a scaled overview is unreliable (the scaled render uses a different viewport width). Driving Chrome over `--remote-debugging-port` with `Runtime.evaluate` → `getBoundingClientRect` → `Page.captureScreenshot` with a `clip` captures any section, and can click first to open dialogs and toasts. Node 22+ has `WebSocket` built in, so it needs no dependencies. | M0-03 |
 
 ---
 
@@ -331,6 +358,14 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 ---
 
 ## 8. Session handoff notes
+
+### 2026-09-15 (second session)
+
+**Done.** M0-01 closed (lint fixed; the user fixed auto-deploy). M0-03 done: all shadcn primitives restyled to the tokens. That completes the M0-23 gallery. Every new section was checked by screenshot at 1280 and 390px, including an open dialog and a toast. Three bugs caught on screen before commit: inputs with black borders, a grey loading button, and a "select all" showing ✓ for a partial selection. One caught in code: `outline-none` killing the focus ring.
+
+**Left for the user.** (1) `next dev` appended a Next.js agent-rules block to `CLAUDE.md`; it was reverted, not committed — see §5. (2) An untracked `.mcp.json` (a Supabase MCP server entry) and a `.gitignore` line ignoring it appeared mid-session. Origin unclear — nothing in this work writes either. Neither was committed.
+
+**Start with.** M0-04 — the Supabase project in `ap-south-1`. It's a dashboard action for the user, and the region is permanent.
 
 ### 2026-09-15
 

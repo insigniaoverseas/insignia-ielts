@@ -10,7 +10,14 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusPill } from "@/components/ui/status-pill";
 import { StudentTabBar } from "@/components/ui/student-tab-bar";
 import { Countdown } from "@/components/player/countdown";
-import { AudioDemo, NavigatorDemo, PinDemo, WidgetsDemo } from "./demos";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { Input, PhoneInput } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AudioDemo, DialogDemo, NavigatorDemo, PinDemo, TableDemo, ToastDemo, WidgetsDemo } from "./demos";
 
 /*
  * /dev/components — the design system, live (MVP-1 D13, task M0-23).
@@ -67,19 +74,6 @@ const TYPE_SCALE: { spec: string; className: string; sample: string }[] = [
 	{ spec: "mono 16/24 500", className: "font-mono font-medium", sample: "28:14 · +91 98200 11234" },
 ];
 
-const PENDING_M003 = [
-	"Buttons — primary 56px (student) / 40px (admin), secondary, ghost, danger; default, hover, focus, disabled, loading",
-	"Text, email and phone inputs (+91 prefix chip) with label-above, hint and error",
-	"Card",
-	"Checkbox",
-	"Data table — sticky header, multi-select, sort, pagination, sticky bulk-action bar",
-	"Search bar and filter chips",
-	"Modal / confirm dialog — destructive action is always the secondary-styled one",
-	"Toast",
-	"Skeleton component (the shimmer utility already exists — see Loading below)",
-	"Tag / badge (the Listening · Mock test chips)",
-];
-
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
 	return (
 		<section id={id} aria-labelledby={`${id}-title`} className="flex flex-col gap-6">
@@ -108,8 +102,8 @@ export default function DesignSystemPage() {
 					able to use it without being told how. One obvious action per screen, words over icons, nothing below 16px.
 				</p>
 				<Banner tone="info">
-					This page is the running app&apos;s version of <code>00 Design System.dc.html</code>. Generic primitives
-					(buttons, inputs, table, dialog, toast) arrive with shadcn/ui in M0-03 — listed at the bottom.
+					This page is the running app&apos;s version of <code>00 Design System.dc.html</code>, in the same section
+					order. Generic primitives (button, input, card, table, dialog, toast) are shadcn/ui restyled to the tokens.
 				</Banner>
 			</header>
 
@@ -214,12 +208,99 @@ export default function DesignSystemPage() {
 				</div>
 			</Section>
 
-			<Section id="pin" title="2 · PIN input">
-				<PinDemo />
+			<Section id="buttons" title="1 · Buttons">
+				<div className={card}>
+					<span className={caption}>Primary — student, 56px</span>
+					<div className="flex flex-wrap items-start gap-4">
+						{(
+							[
+								["default", {}],
+								["hover", { className: "bg-brand-hover" }],
+								["focus ring", { className: "outline-2 outline-offset-2 outline-brand outline-solid" }],
+								["disabled", { disabled: true }],
+								["loading", { loading: true }],
+							] as const
+						).map(([label, props]) => (
+							<div key={label} className="flex flex-col items-center gap-2">
+								<Button size="student" {...props}>
+									{label === "loading" ? "Starting…" : "Start Test"}
+								</Button>
+								<span className={caption}>{label}</span>
+							</div>
+						))}
+					</div>
+					<span className={caption}>Secondary · Ghost · Danger — admin, 40px</span>
+					<div className="flex flex-wrap gap-4">
+						<Button variant="secondary">Secondary</Button>
+						<Button variant="ghost">Ghost</Button>
+						<Button variant="danger">Deactivate</Button>
+						<Button variant="secondary" className="gap-2">
+							<span aria-hidden="true">+</span>Add student
+						</Button>
+					</div>
+					<span className={caption}>Full width on mobile</span>
+					<Button size="student" className="w-full sm:max-w-sm">
+						I&apos;m ready — Start
+					</Button>
+				</div>
 			</Section>
 
-			<Section id="pills" title="5 · Status pills and difficulty">
+			<Section id="inputs" title="2–3 · Inputs, PIN and phone">
 				<div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-6">
+					<div className={card}>
+						<div className="flex flex-col gap-2">
+							<Label htmlFor="ds-name">Your name</Label>
+							<Input id="ds-name" defaultValue="Priya Sharma" />
+						</div>
+						<div className="flex flex-col gap-2">
+							<Label htmlFor="ds-empty">Your name</Label>
+							<Input id="ds-empty" placeholder="Type here" />
+							<span className={caption}>placeholder — click it to see the focus ring</span>
+						</div>
+						<div className="flex flex-col gap-2">
+							<Label htmlFor="ds-error">Your name</Label>
+							<Input id="ds-error" aria-invalid aria-describedby="ds-error-msg" />
+							<span id="ds-error-msg" className="flex items-center gap-2 text-danger">
+								<span aria-hidden="true">✕</span>Please enter your name.
+							</span>
+						</div>
+						<div className="group flex flex-col gap-2" data-disabled="true">
+							<Label htmlFor="ds-disabled">Batch</Label>
+							<Input id="ds-disabled" defaultValue="Andheri — Morning" disabled />
+						</div>
+						<div className="flex flex-col gap-2">
+							<Label htmlFor="ds-phone">Phone number</Label>
+							<PhoneInput id="ds-phone" defaultValue="98200 11234" />
+						</div>
+						<div className="flex flex-col gap-2">
+							<Label htmlFor="ds-select">Batch</Label>
+							<Select defaultValue="andheri-am">
+								<SelectTrigger id="ds-select">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="andheri-am">Andheri — Morning</SelectItem>
+									<SelectItem value="andheri-pm">Andheri — Evening</SelectItem>
+									<SelectItem value="bandra-pm">Bandra — Evening</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
+					<PinDemo />
+				</div>
+			</Section>
+
+			<Section id="pills" title="4–5 · Card, status pills and difficulty">
+				<div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-6">
+					<Card>
+						<div className="flex flex-wrap gap-2">
+							<Badge variant="brand">Listening</Badge>
+							<Badge>Mock test</Badge>
+						</div>
+						<CardTitle>Listening Mock Test 2</CardTitle>
+						<CardDescription>40 questions · 30 minutes · Closes today at 6:00 PM</CardDescription>
+						<Button size="student">Start Test</Button>
+					</Card>
 					<div className={card}>
 						<h3 className="m-0 text-h3">Status pills</h3>
 						<div className="flex flex-wrap gap-3">
@@ -291,7 +372,18 @@ export default function DesignSystemPage() {
 				</div>
 			</Section>
 
-			<Section id="feedback" title="15–17 · Banners, empty state, loading">
+			<Section id="table" title="11–12 · Data table, search and filter chips">
+				<TableDemo />
+				<p className="m-0 text-small text-ink-2">
+					Staff only. Tick rows to see the bulk-action bar; it always states how many rows it will change.
+				</p>
+			</Section>
+
+			<Section id="feedback" title="13–17 · Modal, toast, banners, empty state, loading">
+				<div className="grid grid-cols-[repeat(auto-fit,minmax(min(340px,100%),1fr))] gap-6">
+					<DialogDemo />
+					<ToastDemo />
+				</div>
 				<div className="grid grid-cols-[repeat(auto-fit,minmax(min(340px,100%),1fr))] gap-6">
 					<div className="flex flex-col gap-4">
 						<Banner tone="info">Your next test opens on Monday at 9:00 AM.</Banner>
@@ -303,20 +395,16 @@ export default function DesignSystemPage() {
 					<EmptyState
 						icon="📄"
 						title="No tests for you right now"
-						action={
-							<span className="text-small text-ink-3">
-								[Practice at Home button — arrives with Button in M0-03]
-							</span>
-						}
+						action={<Button size="student">Practice at Home</Button>}
 					>
 						Your teacher will add one soon. Until then you can practise on your own.
 					</EmptyState>
 					<div className={card}>
 						<span className={caption}>loading — skeleton, never a spinner</span>
-						<div className="skeleton-shimmer h-6 w-3/5 rounded-control" />
-						<div className="skeleton-shimmer h-4 w-[90%] rounded-control" />
-						<div className="skeleton-shimmer h-4 w-3/4 rounded-control" />
-						<div className="skeleton-shimmer h-primary rounded-control" />
+						<Skeleton className="h-6 w-3/5" />
+						<Skeleton className="h-4 w-[90%]" />
+						<Skeleton className="h-4 w-3/4" />
+						<Skeleton className="h-primary" />
 					</div>
 				</div>
 			</Section>
@@ -404,20 +492,6 @@ export default function DesignSystemPage() {
 							]}
 						/>
 					</div>
-				</div>
-			</Section>
-
-			<Section id="pending" title="Arriving in M0-03 — shadcn/ui primitives">
-				<div className={card}>
-					<p className="m-0 text-ink-2">
-						These design-system components are generic primitives, so they come from shadcn/ui restyled to the tokens
-						above, rather than being hand-built twice.
-					</p>
-					<ul className="m-0 flex flex-col gap-2 pl-6">
-						{PENDING_M003.map((p) => (
-							<li key={p}>{p}</li>
-						))}
-					</ul>
 				</div>
 			</Section>
 		</main>

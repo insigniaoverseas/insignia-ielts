@@ -47,7 +47,7 @@ Resend (invite email — step 40), Sentry, Cloudflare Turnstile. Record names in
 ## Phase 1 — Skeleton (2–3 days)
 
 ### 5. Re-scaffold onto Next.js 16 + OpenNext `(M0-01)`
-> ✅ **Done 2026-09-15** (commit `576a7f3`) — Next 16.3.4 + `@opennextjs/cloudflare` 1.20.3, app code under `src/`. The lint script still needs fixing; see `PROJECT-MEMORY.md` §5. Instructions kept below for reference.
+> ✅ **Done 2026-09-15** (commit `576a7f3`) — Next 16.3.4 + `@opennextjs/cloudflare` 1.20.3, app code under `src/`. Lint fixed and auto-deploy working the same day. Instructions kept below for reference.
 
 The repo held a `vinext` scaffold. Scaffold fresh to a sibling directory, then move the app files across — keep `.git`, `Design files/`, `MVP-1.md`, `PROJECT-MEMORY.md`, `CLAUDE.md`, `BUILD-STEPS.md`.
 
@@ -80,6 +80,8 @@ Paste the `@theme` block from [`MVP-1.md` §15](MVP-1.md#15-repo-structure-and-d
 **✅ Done when** a `bg-brand text-surface` div renders `#1D4ED8`.
 
 ### 8. shadcn/ui init + restyle `(M0-03)`
+> ✅ **Done 2026-09-15.** `init` was deliberately *not* run — `components.json` is hand-written so it can't overwrite `globals.css` or `src/lib/utils.ts`. The component API and three editing traps are in `src/components/ui/README.md`. Commands kept for reference.
+
 ```bash
 npx shadcn@latest init
 npx shadcn@latest add button input card dialog table skeleton sonner select checkbox

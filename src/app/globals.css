@@ -14,6 +14,8 @@
  */
 
 @import "tailwindcss";
+/* The enter/exit fades on Dialog and Select (`animate-in`, `fade-in-0` …). */
+@import "tw-animate-css";
 
 /* ---------------------------------------------------------------------------
  * Raw colour values. Components never read these directly — they use the
@@ -49,6 +51,39 @@
 	--skeleton: #eef0f3; /* loading shimmer */
 	--night: #0e1a34; /* Listening player audio band, modal backdrop (screen 06) */
 	--success-bright: #4ade80; /* ✓ on a dark toast */
+
+/* ---------------------------------------------------------------------------
+ * shadcn/ui alias layer (M0-03).
+ *
+ * shadcn's components are written against a fixed set of semantic names
+ * (--primary, --border, --muted-foreground …). Because `--color-*: initial`
+ * above deletes the default palette, any shadcn class we failed to restyle
+ * would compile to *nothing* and render invisibly. These aliases point every
+ * one of those names at a token we already own, so the failure mode is
+ * "slightly wrong shade", never "invisible control".
+ *
+ * ⚠️ Application code must not use these. Write `bg-brand`, not `bg-primary`.
+ * They exist only so vendored shadcn internals stay visible.
+ * ------------------------------------------------------------------------- */
+	--background: var(--bg);
+	--foreground: var(--ink);
+	--card: var(--surface);
+	--card-foreground: var(--ink);
+	--popover: var(--surface);
+	--popover-foreground: var(--ink);
+	--primary: var(--brand);
+	--primary-foreground: #ffffff;
+	--secondary: var(--surface);
+	--secondary-foreground: var(--ink);
+	--muted: var(--bg);
+	--muted-foreground: var(--ink-2);
+	--accent: var(--brand-soft);
+	--accent-foreground: var(--brand);
+	--destructive: var(--danger);
+	--destructive-foreground: #ffffff;
+	--border: var(--line);
+	--input: var(--line);
+	--ring: var(--brand);
 }
 
 /*
@@ -82,6 +117,10 @@
 	--surface: #151b28; /* DESIGN */
 	--bg: #0b1120; /* DESIGN */
 	--skeleton: #1f2937; /* DERIVED */
+	/* shadcn aliases follow the tokens above automatically; only the two
+	   hard-coded foregrounds need swapping. */
+	--primary-foreground: #0b1120; /* DERIVED */
+	--destructive-foreground: #0b1120; /* DERIVED */
 	color-scheme: dark;
 }
 
@@ -115,6 +154,27 @@
 	--color-bg: var(--bg);
 	--color-skeleton: var(--skeleton);
 	--color-night: var(--night);
+
+	/* shadcn/ui aliases — see the note in :root. Not for application code. */
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
 
 	/* A3 · One family: Inter. IBM Plex Mono for timers, scores, phone numbers.
 	   The --font-inter / --font-plex-mono variables are set by next/font in layout.tsx. */

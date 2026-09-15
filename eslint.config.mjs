@@ -1,14 +1,27 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-	baseDirectory: __dirname,
-});
-
-const eslintConfig = [...compat.extends("next/core-web-vitals", "next/typescript")];
+/**
+ * ESLint flat config.
+ *
+ * `eslint-config-next` 16 ships native flat configs — importing them directly is
+ * required. Wrapping them in `FlatCompat` throws "Converting circular structure
+ * to JSON". See PROJECT-MEMORY.md §5.
+ *
+ * `Design files/` is the reference prototype, not shipped code — it is read for
+ * its design and its data, never built, so it is not linted.
+ */
+const eslintConfig = [
+	...nextVitals,
+	...nextTs,
+	{
+		ignores: [
+			".next/**",
+			".open-next/**",
+			"cloudflare-env.d.ts",
+			"Design files/**",
+		],
+	},
+];
 
 export default eslintConfig;

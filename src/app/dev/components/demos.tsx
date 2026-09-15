@@ -15,6 +15,25 @@ import { ChooseN } from "@/components/player/widgets/checkbox-n";
 import { SegmentedChoice, YNNG } from "@/components/player/widgets/segmented-3";
 import { MatchingSelect } from "@/components/player/widgets/dropdown-bank";
 import { GapInput, TextAnswer } from "@/components/player/widgets/text-gap";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmDialog } from "@/components/ui/dialog";
+import { FilterChip } from "@/components/ui/filter-chip";
+import { Input } from "@/components/ui/input";
+import { StatusPill } from "@/components/ui/status-pill";
+import {
+	Table,
+	TableBody,
+	TableBulkActions,
+	TableCard,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TablePagination,
+	TableRow,
+	TableToolbar,
+} from "@/components/ui/table";
 
 const card = "flex flex-col gap-4 rounded-card border border-line bg-surface p-6";
 const caption = "font-mono text-small text-ink-3";
@@ -233,6 +252,172 @@ export function AudioDemo() {
 					speed={speed}
 					onSpeedChange={setSpeed}
 				/>
+			</div>
+		</div>
+	);
+}
+
+const STUDENTS = [
+	{ id: "s1", name: "Priya Sharma", batch: "Andheri — Morning", band: "6.5", expiry: "In 5 days", expiring: true },
+	{ id: "s2", name: "Rahul Mehta", batch: "Andheri — Morning", band: "5.5", expiry: "14 Jan 2027", expiring: false },
+	{ id: "s3", name: "Aditi Rao", batch: "Bandra — Evening", band: "7.0", expiry: "2 Mar 2027", expiring: false },
+];
+const FILTERS = ["All batches", "Active", "Expiring < 7 days"] as const;
+
+export function TableDemo() {
+	const [selected, setSelected] = useState<Set<string>>(new Set(["s1"]));
+	const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All batches");
+	const all = selected.size === STUDENTS.length;
+	const some = selected.size > 0 && !all;
+
+	const toggle = (id: string) =>
+		setSelected((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
+
+	return (
+		<TableCard>
+			<TableToolbar>
+				<Input
+					size="admin"
+					type="search"
+					placeholder="Search students"
+					aria-label="Search students"
+					className="min-w-50 flex-1"
+				/>
+				<div className="flex flex-wrap gap-2" role="group" aria-label="Filter">
+					{FILTERS.map((f) => (
+						<FilterChip key={f} pressed={filter === f} onClick={() => setFilter(f)}>
+							{f}
+						</FilterChip>
+					))}
+				</div>
+			</TableToolbar>
+			<Table>
+				<TableHeader>
+					<TableRow className="border-t-0 hover:bg-transparent">
+						<TableHead>
+							<Checkbox
+								aria-label="Select all students"
+								checked={all ? true : some ? "indeterminate" : false}
+								onCheckedChange={() => setSelected(all ? new Set() : new Set(STUDENTS.map((s) => s.id)))}
+							/>
+						</TableHead>
+						<TableHead sorted="desc">Student</TableHead>
+						<TableHead>Batch</TableHead>
+						<TableHead>Last band</TableHead>
+						<TableHead>Plan expiry</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{STUDENTS.map((s) => (
+						<TableRow key={s.id} selected={selected.has(s.id)}>
+							<TableCell>
+								<Checkbox
+									aria-label={`Select ${s.name}`}
+									checked={selected.has(s.id)}
+									onCheckedChange={() => toggle(s.id)}
+								/>
+							</TableCell>
+							<TableCell className="font-semibold">{s.name}</TableCell>
+							<TableCell className="text-ink-2">{s.batch}</TableCell>
+							<TableCell className="font-mono tabular-nums">{s.band}</TableCell>
+							<TableCell className={s.expiring ? "" : "text-ink-2"}>
+								{s.expiring ? <StatusPill status="expiring" label={s.expiry} size="sm" /> : s.expiry}
+							</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
+			</Table>
+			<TablePagination>
+				<span>1–3 of 248</span>
+				<div className="flex gap-2">
+					<Button variant="secondary" className="px-4">
+						Previous
+					</Button>
+					<Button variant="secondary" className="px-4">
+						Next
+					</Button>
+				</div>
+			</TablePagination>
+			{selected.size > 0 ? (
+				<TableBulkActions>
+					<span className="font-semibold">
+						{selected.size} {selected.size === 1 ? "student" : "students"} selected
+					</span>
+					<div className="flex flex-wrap gap-2">
+						<Button variant="inverse" className="px-4">
+							Extend plan
+						</Button>
+						<Button variant="inverse-secondary" className="px-4">
+							Move to batch
+						</Button>
+						<Button variant="inverse-secondary" className="px-4">
+							Deactivate
+						</Button>
+					</div>
+				</TableBulkActions>
+			) : null}
+		</TableCard>
+	);
+}
+
+export function DialogDemo() {
+	const [extendOpen, setExtendOpen] = useState(false);
+	const [submitOpen, setSubmitOpen] = useState(false);
+	return (
+		<div className={card}>
+			<span className={caption}>modal — the destructive choice is the secondary-styled one</span>
+			<div className="flex flex-wrap gap-3">
+				<Button variant="secondary" onClick={() => setExtendOpen(true)}>
+					Open: extend plans
+				</Button>
+				<Button variant="secondary" onClick={() => setSubmitOpen(true)}>
+					Open: submit test
+				</Button>
+			</div>
+			<ConfirmDialog
+				open={extendOpen}
+				onOpenChange={setExtendOpen}
+				title="Extend 28 students by 3 months?"
+				description="Their new expiry date will be 12 Mar 2027. You can undo this from the audit log."
+				confirmLabel="Yes, extend"
+				onConfirm={() => {
+					setExtendOpen(false);
+					toast.success("28 students extended to 12 Mar 2027.");
+				}}
+			/>
+			<ConfirmDialog
+				open={submitOpen}
+				onOpenChange={setSubmitOpen}
+				title="Submit your answers?"
+				description="You have 3 questions with no answer. Once you submit, you cannot change your answers."
+				confirmLabel="Yes, submit"
+				cancelLabel="Keep working"
+				destructive
+				onConfirm={() => {
+					setSubmitOpen(false);
+					toast.success("Your answers have been sent.");
+				}}
+			/>
+		</div>
+	);
+}
+
+export function ToastDemo() {
+	return (
+		<div className={card}>
+			<span className={caption}>toast — confirms something that already happened</span>
+			<div className="flex flex-wrap gap-3">
+				<Button variant="secondary" onClick={() => toast.success("Results released to 42 students.")}>
+					Show success toast
+				</Button>
+				<Button variant="secondary" onClick={() => toast.error("Could not send the invitation. Try again.")}>
+					Show error toast
+				</Button>
 			</div>
 		</div>
 	);
