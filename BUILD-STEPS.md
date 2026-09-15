@@ -144,7 +144,7 @@ One migration per group, from [`MVP-1.md` §6](MVP-1.md#6-database--erd-and-tabl
 | Step | Migration | Tables |
 |---|---|---|
 | 14 | `identity` | `branches`, `roles`, `users`, `invitations`, `user_devices`, `user_sessions` — plus the `private` schema and the helpers `auth_role`, `auth_branch`, `is_staff`, `same_branch` (brought forward from step 19) |
-| 15 | `cohorts` | `batches`, `batch_teachers`, `batch_students`, `student_plans`, `plan_history` — plus `private.is_teacher_of()`, the "teacher reads students in own batches" policy on `users`, and the `invitations.batch_id` foreign key |
+| 15 | `cohorts` | `batches`, `batch_teachers`, `batch_students`, `student_plans`, `plan_history` — plus `private.is_teacher_of()` and 4 more helpers, the "teacher reads students in own batches" policy on `users`, the `invitations.batch_id` foreign key, and M0-06's policies folded into one per table |
 | 16 | `content` | `tests`, `band_scales`, `band_scale_rows`, `assignments`, `assignment_targets`, `assignment_unlocks` |
 | 17 | `assessment` | `attempts`, `answers`, `attempt_events` |
 | 18 | `crosscutting` | `audit_log`, `rate_limits` |

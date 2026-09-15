@@ -305,9 +305,10 @@ Enforces **one active session per student** — kills PIN/password sharing and d
 
 **`student_plans`** — `id` · `student_id` · `plan_name` · `starts_on` · `expires_on` · `test_quota int NULL` · `tests_used int DEFAULT 0` · `status` (`active`|`expired`|`suspended`) · `created_by` · `notes` · `created_at`
 `test_quota` is nullable so the time-vs-quota question (`PLAN-V2.md` §7.3) stays cheap to resolve later.
+**At most one `active` plan per student** (partial unique index). `notes` is visible to the student — `PROJECT-MEMORY.md` §7 Q12.
 
 **`plan_history`** — `id` · `plan_id` · `action` (`create`|`extend`|`suspend`|`resume`) · `old_expiry` · `new_expiry` · `reason` · `actor_id` · `at`
-The audit trail required by `PLAN-V2.md` §1.2 A4.
+The audit trail required by `PLAN-V2.md` §1.2 A4. **Append-only**: a trigger refuses every `UPDATE`; rows go only when their plan is deleted (DPDP erasure).
 
 ### Cohorts
 
@@ -721,8 +722,14 @@ private.auth_role()           → the caller's role key                         
 private.auth_branch()         → the caller's branch_id                         M0-06
 private.is_staff()            → role in (super_admin, admin, teacher, invigilator)  M0-06
 private.same_branch(uuid)     → true if that user is in the caller's branch    M0-06
-private.is_teacher_of(uuid)   → true if the caller teaches a batch containing that student   M0-07
+private.is_teacher_of(uuid)   → caller is an active teacher of a batch that student is *currently* in   M0-07
+private.teaches_batch(uuid)   → caller is an active teacher of that batch                   M0-07
+private.in_batch(uuid)        → caller is currently a student in that batch                 M0-07
+private.batch_in_my_branch(uuid) → that batch is in the caller's branch                     M0-07
+private.plan_in_my_branch(uuid)  → that plan belongs to a student in the caller's branch    M0-07
 ```
+
+Policies never query another RLS-protected table directly — `batches` ↔ `batch_students` would recurse — they call these helpers instead. **One `SELECT` policy per table**, its conditions OR-ed (Supabase advisor: multiple permissive policies are slower).
 
 ### Grants are a gate too
 
@@ -736,9 +743,12 @@ RLS decides *which rows*; grants decide *which tables and columns*. Supabase gra
 
 | Table | Student | Teacher | Admin | Super admin |
 |---|---|---|---|---|
-| `users` | own row only | students in own batches *(M0-07 — own row only until then)* | own branch | all |
+| `users` | own row only | students *currently* in own batches | own branch | all |
 | `student_plans` | own | own batches (read) | own branch | all |
+| `plan_history` | none | none | own branch | all |
 | `batches` | own membership | assigned batches | own branch | all |
+| `batch_students` | own rows only — never classmates | own batches | own branch | all |
+| `batch_teachers` | none | own + co-teachers | own branch | all |
 | `tests` | published, via assignment only | own + published | own branch | all |
 | `assignments` | those targeting them | own batches | own branch | all |
 | `attempts` | **own only** | own batches | own branch | all |
