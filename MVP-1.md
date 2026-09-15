@@ -322,6 +322,8 @@ The audit trail required by `PLAN-V2.md` §1.2 A4. **Append-only**: a trigger re
 
 **No child `questions` table** — see the D4 consequence note in [§3](#3-decision-log).
 
+The `r2_*` path columns are **never granted to API roles** — only server code (service role) reads them, so no caller can learn where `key.json` lives. A `published` test must have its content and key paths, plus audio for Listening (DB `CHECK`). `practice_question_type` is a key from `lib/question-types.ts`, validated by the importer, not duplicated in the database.
+
 **Three separate pools — a test belongs to exactly one `kind`** (decided 2026-09-15, `PROJECT-MEMORY.md` §7 Q3):
 
 | `kind` | What it is | Conditions | Results |
@@ -332,13 +334,13 @@ The audit trail required by `PLAN-V2.md` §1.2 A4. **Append-only**: a trigger re
 
 Because the pools never overlap, a student can't meet a mock paper at home — the old `usage_policy` column is gone.
 
-**`band_scales`** — `id` · `skill` · `name` · `is_default bool` · `created_by` · `created_at`
-**`band_scale_rows`** — `scale_id` · `raw_min` · `raw_max` · `band numeric(2,1)`
+**`band_scales`** — `id` · `skill` · **`variant`** *(Academic and General Training reading use different ladders — added 2026-09-15)* · `name` · `is_default bool` *(one default per skill + variant)* · `created_by` · `created_at`
+**`band_scale_rows`** — `scale_id` · `raw_min` · `raw_max` · `band numeric(2,1)` *(half-bands only; ranges in one scale may not overlap — `btree_gist` exclusion constraint)*
 Editable in admin, **never hardcoded** — official conversions vary by paper (`PLAN.md` §4). Seed with the Listening ladder in [§18 M0-19](#m0--foundations--2-weeks), then verify against a current Cambridge book before go-live.
 
 ### Assignment
 
-**`assignments`** — `id` · `test_id` *(its `kind` is the assignment's mode)* · `available_from` · `due_by` · `max_attempts` · `allow_review bool` · **`results_release`** (`immediate`|`scheduled`|`manual`) · **`results_released_at timestamptz NULL`** · `released_by` · `band_scale_id` · `created_by` · `created_at`
+**`assignments`** — `id` · `test_id` *(its `kind` is the assignment's mode)* · **`branch_id`** *(added 2026-09-15 — admins see their branch's assignments)* · `available_from` · `due_by` · `max_attempts` · `allow_review bool` · **`results_release`** (`immediate`|`scheduled`|`manual`) · **`results_released_at timestamptz NULL`** · `released_by` · `band_scale_id` · `created_by` · `created_at`
 
 **Result release is chosen per assignment by the admin or the batch's teacher** (Q2) — and can be changed later, e.g. "release now" on a scheduled one:
 
@@ -349,8 +351,8 @@ Editable in admin, **never hardcoded** — official conversions vary by paper (`
 | `manual` *(default)* | when a teacher or admin presses Release | `NULL` until pressed, then `now()` |
 
 The gate is one Postgres expression, evaluated against the **server** clock: `results_release = 'immediate' OR (results_released_at IS NOT NULL AND results_released_at <= now())`. No cron job is needed for scheduled release. Practice attempts ignore this — their feedback is always instant.
-**`assignment_targets`** — `id` · `assignment_id` · `target_type` (`batch`|`student`) · `target_id`
-**`assignment_unlocks`** — `id` · `assignment_id` · `student_id` · `unlocked_by` · `until` · `reason` · `at`
+**`assignment_targets`** — `id` · `assignment_id` · **`batch_id` | `student_id`** — exactly one set per row, both real foreign keys *(replaces a polymorphic `target_type`/`target_id`, 2026-09-15)*
+**`assignment_unlocks`** — `id` · `assignment_id` · `student_id` · `unlocked_by` · `until` · **`extra_attempts`** *(what a retake unlock grants — added 2026-09-15)* · `reason` · `at`
 The per-student "unlock now" override for latecomers and retakes (`PLAN-V2.md` §1.3 T2).
 
 ### Assessment
@@ -727,6 +729,10 @@ private.teaches_batch(uuid)   → caller is an active teacher of that batch     
 private.in_batch(uuid)        → caller is currently a student in that batch                 M0-07
 private.batch_in_my_branch(uuid) → that batch is in the caller's branch                     M0-07
 private.plan_in_my_branch(uuid)  → that plan belongs to a student in the caller's branch    M0-07
+private.assigned_to_me(uuid)     → that assignment targets the caller or their current batch  M0-08
+private.test_assigned_to_me(uuid) → some assignment of that test targets the caller          M0-08
+private.teacher_sees_assignment(uuid) → active teacher who created it or teaches a target    M0-08
+private.assignment_in_my_branch(uuid) → that assignment is in the caller's branch            M0-08
 ```
 
 Policies never query another RLS-protected table directly — `batches` ↔ `batch_students` would recurse — they call these helpers instead. **One `SELECT` policy per table**, its conditions OR-ed (Supabase advisor: multiple permissive policies are slower).
@@ -749,8 +755,11 @@ RLS decides *which rows*; grants decide *which tables and columns*. Supabase gra
 | `batches` | own membership | assigned batches | own branch | all |
 | `batch_students` | own rows only — never classmates | own batches | own branch | all |
 | `batch_teachers` | none | own + co-teachers | own branch | all |
-| `tests` | published, via assignment only | own + published | own branch | all |
-| `assignments` | those targeting them | own batches | own branch | all |
+| `tests` | published practice sets; mock/class only when assigned (still visible once archived) | own + published | **all** — the library is shared across branches | all |
+| `band_scales`, `band_scale_rows` | none — students see only their band | read | read | all |
+| `assignments` | those targeting them | created, or targeting own batches/students | own branch | all |
+| `assignment_targets` | rows pointing at them or their batch | as `assignments` | own branch | all |
+| `assignment_unlocks` | own | as `assignments` | own branch | all |
 | `attempts` | **own only** | own batches | own branch | all |
 | `answers` | **own only, and `is_correct` masked while `in_progress`** | own batches | own branch | all |
 | `audit_log` | none | none | own branch | all |
