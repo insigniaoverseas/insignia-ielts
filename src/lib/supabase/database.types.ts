@@ -14,6 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
+      batch_students: {
+        Row: {
+          batch_id: string
+          joined_at: string
+          left_at: string | null
+          student_id: string
+        }
+        Insert: {
+          batch_id: string
+          joined_at?: string
+          left_at?: string | null
+          student_id: string
+        }
+        Update: {
+          batch_id?: string
+          joined_at?: string
+          left_at?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_students_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_students_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batch_teachers: {
+        Row: {
+          batch_id: string
+          created_at: string
+          teacher_id: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          teacher_id: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_teachers_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_teachers_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batches: {
+        Row: {
+          branch_id: string
+          created_at: string
+          ends_on: string | null
+          id: string
+          name: string
+          starts_on: string
+          status: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          ends_on?: string | null
+          id?: string
+          name: string
+          starts_on: string
+          status?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          ends_on?: string | null
+          id?: string
+          name?: string
+          starts_on?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           address: string | null
@@ -80,6 +187,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "invitations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "invitations_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
@@ -98,6 +212,54 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_history: {
+        Row: {
+          action: string
+          actor_id: string | null
+          at: string
+          id: string
+          new_expiry: string | null
+          old_expiry: string | null
+          plan_id: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          at?: string
+          id?: string
+          new_expiry?: string | null
+          old_expiry?: string | null
+          plan_id: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          at?: string
+          id?: string
+          new_expiry?: string | null
+          old_expiry?: string | null
+          plan_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_history_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_history_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "student_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -125,6 +287,63 @@ export type Database = {
           permissions?: Json
         }
         Relationships: []
+      }
+      student_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_on: string
+          id: string
+          notes: string | null
+          plan_name: string
+          starts_on: string
+          status: string
+          student_id: string
+          test_quota: number | null
+          tests_used: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_on: string
+          id?: string
+          notes?: string | null
+          plan_name: string
+          starts_on: string
+          status?: string
+          student_id: string
+          test_quota?: number | null
+          tests_used?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_on?: string
+          id?: string
+          notes?: string | null
+          plan_name?: string
+          starts_on?: string
+          status?: string
+          student_id?: string
+          test_quota?: number | null
+          tests_used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_plans_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_devices: {
         Row: {
