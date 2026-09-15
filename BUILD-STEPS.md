@@ -154,6 +154,8 @@ Every table gets `ALTER TABLE … ENABLE ROW LEVEL SECURITY` and **no permissive
 **✅ Done when** `npx supabase db push` applies all five and `npm run db:types` has regenerated `database.types.ts` from them.
 
 ### 19. ⚠️ RLS helpers and the default-deny test `(M0-11)`
+> ✅ **Done 2026-09-15.** `tests/db/rls.test.mjs` (`npm run test:db`, 229 checks, ~2 s) covers all **24** tables; `tests/db/policy-sweep.mjs` (`npm run test:db:sweep`) drops each of the 25 policies in turn and every drop fails the test. The sweep caught one untested policy (`band_scales`) on its first run. No Docker needed — PGlite.
+
 The helpers now ship with the tables that need them (steps 14–15), as `SECURITY DEFINER` functions in the `private` schema — not `auth`, which Supabase has locked. ~~Write `auth_role()`, `auth_branch()`, `is_teacher_of()`, `same_branch()`, `is_staff()`~~ superseded 2026-09-15.
 
 Then the test that is the actual deliverable: **for every table, a query as a student role returns nothing unless a policy explicitly allows it.** A table you forget to police must return zero rows, not every row.

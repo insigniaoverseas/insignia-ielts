@@ -848,6 +848,7 @@ insignia-ielts/
 │     ├─ rbac.ts
 │     └─ r2.ts
 ├─ supabase/migrations/              schema + RLS + functions, always together — the only schema source
+├─ tests/db/                         access-control test on PGlite + policy sweep (M0-11)
 ├─ mcp/                              authoring MCP server            (D11)
 ├─ scripts/
 │  ├─ import-test.ts
@@ -975,9 +976,10 @@ docs/
 
 | Layer | Covers |
 |---|---|
+| **DB access control** (`npm run test:db`, `test:db:sweep`) | Every migration on PGlite, probed as each role: RLS, column grants, triggers (clock, state machine, deadline, revision), append-only tables. The sweep drops each policy in turn and requires a failure. `tests/db/README.md`. |
 | **Vitest** | `lib/scoring.ts` — normalisation, accepted variants, word limits, hyphens, plurals, band lookup. `lib/question-types.ts` — the variant gating matrix. |
 | **Playwright** | The three annotated flows in `DESIGN-PROMPT.md` Part D: student completes a mock · teacher assigns and releases · admin invites and extends plans. Plus the [§19](#19-verification) security checks. |
-| **CI gates** | typecheck · lint · vitest · `npm audit` · **bundle grep that fails the build if scoring logic or an R2 key path reaches the client**. |
+| **CI gates** | typecheck · lint · vitest · `test:db` + `test:db:sweep` · `npm audit` · **bundle grep that fails the build if scoring logic or an R2 key path reaches the client**. |
 
 ---
 
