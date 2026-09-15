@@ -21,8 +21,8 @@
 | | |
 |---|---|
 | **Active milestone** | **M0 — Foundations** |
-| **Last completed** | **M0-03** shadcn/ui primitives restyled to the tokens, which also closes **M0-23** (gallery complete). **M0-01** closed: lint fixed, and the user fixed the Workers Builds auto-deploy in the dashboard. |
-| **Next task** | **M0-04** ⚠️ Supabase in `ap-south-1` ([`BUILD-STEPS.md`](BUILD-STEPS.md) step 2) — irreversible region, and M0-05…M0-11 wait on it. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
+| **Last completed** | **M0-04** Supabase project `insignia-ielts` in `ap-south-1`, verified over the Supabase MCP (§6). Earlier: M0-03 + M0-23 (shadcn primitives, gallery), M0-01 (scaffold, lint, auto-deploy). |
+| **Next task** | **M0-05** Drizzle + Supabase CLI ([`BUILD-STEPS.md`](BUILD-STEPS.md) step 13). `supabase link` to `zpqszkwavnjomxjgimni`, then `supabase db push` — which also applies the one pending migration, `20260915090941_harden_rls_auto_enable.sql` (§5). No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
 | **Blocked on** | Nothing. Open questions in §7 are non-blocking, but Q2/Q3 should be answered before step 69. |
 | **Branch** | `main` |
 
@@ -39,8 +39,8 @@
 | M0-01 Re-scaffold Next.js 16 + OpenNext | done | goverdhan-gaur, Claude | 2026-09-15 | ✅ Next 16.3.4, React 19, `@opennextjs/cloudflare` 1.20.3; vinext fully removed; no `@vercel/*`; Worker build passes. ✅ Worker renamed → `insignia-test` in all 3 places (`6f4a4b0`). ✅ Workers Builds commands fixed in the dashboard (goverdhan-gaur). ✅ Lint: `eslint .` + native flat config, `@eslint/eslintrc` dropped, `Design files/` ignored — `npm run lint` clean (Claude). Uses `src/app/` — see §4. |
 | M0-02 Tailwind v4 `@theme` tokens + fonts | done | Claude | 2026-09-15 | All tokens from `00 Design System.dc.html` in `src/app/globals.css`; default palette + type scale switched **off** (`initial`) so off-system classes generate nothing. Inter + IBM Plex Mono via `next/font` (self-hosted). Opt-in `data-theme="dark"` (DESIGN + DERIVED values, marked). `cn()` in `src/lib/utils.ts` with tailwind-merge taught the tokens (§5). Verified: tsc, `next build`, compiled CSS, Chrome screenshots at 1280 + 390px. |
 | M0-03 shadcn/ui init + restyle to tokens | done | Claude | 2026-09-15 | button, input (+ `PhoneInput`), card, checkbox, table (+ toolbar, pagination, bulk bar), dialog (+ `ConfirmDialog`), select, sonner, skeleton, badge, label; plus hand-built `filter-chip`. `components.json` hand-written — `init` never run, so `globals.css`/`utils.ts` untouched. shadcn vars aliased onto tokens (§4). API + traps in `src/components/ui/README.md`. Verified: tsc, lint, `next build`, all 60 used classes present in compiled CSS, Chrome screenshots at 1280 + 390px incl. open dialog and toast. |
-| M0-04 ⚠️ Supabase project in `ap-south-1` | todo | | | **Region cannot be changed later** |
-| M0-05 Drizzle setup + `db/schema.ts` | todo | | | |
+| M0-04 ⚠️ Supabase project in `ap-south-1` | done | goverdhan-gaur, Claude | 2026-09-15 | ✅ `insignia-ielts` (`zpqszkwavnjomxjgimni`), region **`ap-south-1`** read back via MCP. First attempt was in `ap-northeast-2` (Seoul) — replaced while still empty (§3). Fresh project: empty `public`, no migrations, 0 users, DB timezone UTC, RLS auto-enable trigger on. ⬜ Usage alert at 70% — dashboard only, not verified. |
+| M0-05 Drizzle setup + `db/schema.ts` | todo | | | `db push` also applies the pending `harden_rls_auto_enable` migration |
 | M0-06 Migration + RLS: identity tables | todo | | | branches, roles, users, invitations, user_devices, user_sessions |
 | M0-07 Migration + RLS: cohorts & plans | todo | | | |
 | M0-08 Migration + RLS: content & assignment | todo | | | |
@@ -64,7 +64,7 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M1-01 Supabase Auth config, signup disabled | todo | | | |
+| M1-01 Supabase Auth config, signup disabled | todo | | | Leaked-password protection already on (advisor clean 2026-09-15). "Allow new users to sign up" not checked — no MCP tool reads Auth config |
 | M1-02 Invitation server actions | todo | | | create, bulk, revoke, resend |
 | M1-03 Resend + invite email template | todo | | | |
 | M1-04 SPF / DKIM / DMARC | todo | | | Invite in spam = enrolment blocked |
@@ -199,6 +199,7 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-09-15 | M0-04 | Supabase project created and verified. The first one (`ielts-test`, `fypfpveynadsbbfbuenc`) was in `ap-northeast-2` (Seoul); caught by the MCP cross-check while it was still empty, and replaced with `insignia-ielts` (`zpqszkwavnjomxjgimni`) in `ap-south-1`. Added the repo's first migration: revoke `EXECUTE` on `public.rls_auto_enable()` from `public`/`anon`/`authenticated` (security advisor lints 0028/0029). **Written, not applied** — the remote apply was blocked by the agent permission policy; it goes out with the first `supabase db push` (M0-05). | `supabase/migrations/20260915090941_harden_rls_auto_enable.sql`, `PROJECT-MEMORY.md` | goverdhan-gaur (projects), Claude (verification, migration) |
 | 2026-09-15 | M0-03, M0-23 | shadcn/ui primitives added and restyled to the tokens; shadcn alias layer in `globals.css`; `<Toaster />` mounted in the root layout; gallery gained sections 1, 2–3, 4, 11–12, 13 and lost its "pending" list. Fixed three generator defects: `import { cn } from "cn"` (an unrelated npm package), undeclared `class-variance-authority`/`lucide-react`, and a `next-themes` dependency. Deps: +`radix-ui`, `sonner`, `class-variance-authority`, `lucide-react`, dev `tw-animate-css`. | `components.json`, `src/components/ui/{button,input,card,checkbox,table,dialog,select,sonner,skeleton,badge,label,filter-chip}.tsx`, `src/components/ui/README.md`, `src/app/{globals.css,layout.tsx}`, `src/app/dev/components/*`, `src/lib/utils.ts` | Claude |
 | 2026-09-15 | M0-01 | Lint fixed: `"lint": "eslint ."`, `eslint.config.mjs` imports `eslint-config-next`'s native flat configs, `@eslint/eslintrc` removed, `Design files/**` ignored (prototype code, never built). Auto-deploy confirmed fixed by the user in the dashboard. M0-01 closed. | `package.json`, `eslint.config.mjs` | Claude, goverdhan-gaur |
 | 2026-09-15 | M0-02, M0-23 | Design tokens + fonts, plus the design-system components shadcn doesn't provide: status pill, difficulty badge, banner, empty state, stat card, band score + answer line, accuracy bars, band trend chart, student tab bar, staff sidebar, PIN input; player countdown, question navigator, audio player, and 5 of 6 answer widgets (`image_label` waits for M2-14 — no design). Gallery at `/dev/components`. Scaffold home page replaced. Deps: `clsx`, `tailwind-merge`. | `src/app/{globals.css,layout.tsx,page.tsx}`, `src/app/dev/components/*`, `src/components/{ui,player}/*`, `src/lib/utils.ts` | Claude |
@@ -304,6 +305,9 @@ Things that cost an hour and would cost the next agent the same hour. Add as you
 | **A bare `border` draws near-black** | Tailwind v4's default border colour is `currentColor`. Always pair `border` with `border-line` (or another token). | M0-03 |
 | **Don't `shadcn add --overwrite` an existing primitive** | It restores shadcn's defaults over the restyle. See `src/components/ui/README.md`. | M0-03 |
 | **`next dev` writes to `CLAUDE.md`** | Next 16 appends a `<!-- BEGIN:nextjs-agent-rules -->` block to `CLAUDE.md` whenever it detects an AI agent running `next dev` (`node_modules/next/dist/server/lib/generate-agent-files.js`, no opt-out). It will show up as an uncommitted change after any agent session that ran the dev server. It was reverted this session pending the user's call — commit it once to stop the churn, or keep reverting. | M0-03 |
+| **Check the Supabase region by reading it back** | The first project landed in `ap-northeast-2` (Seoul) despite the plan saying Mumbai — the dashboard's region picker is easy to get wrong. `list_projects` over the Supabase MCP returns `region`; read it, don't assume. **Resolved 2026-09-15** (recreated in `ap-south-1`). | M0-04 |
+| **`public.rls_auto_enable()` comes with the project** | Enabling "auto-enable RLS" at creation installs an `ensure_rls` event trigger → `public.rls_auto_enable()` (`SECURITY DEFINER`, owner `postgres`). It turns RLS on for every `CREATE TABLE` in `public` — **it adds no policies**, so a table with no policy is simply unreadable through the API, which is the default-deny we want. The function being `EXECUTE`-able by `anon`/`authenticated` trips advisor lints 0028/0029; `20260915090941_harden_rls_auto_enable.sql` revokes it. Until that migration is pushed, the advisor keeps showing both warnings. Don't drop the function or trigger. | M0-04 |
+| **Supabase MCP is wired in `.mcp.json`** | The untracked `.mcp.json` noted in the second-session handoff is the user's Supabase MCP config (gitignored, holds no secret). It can list projects, read schema/advisors and run read-only SQL. The agent permission policy blocks `apply_migration` and reads of `auth.users` rows — schema changes go through migration files + `supabase db push`. | M0-04 |
 | **Screenshots: use the CDP helper, not iframe offsets** | Guessing iframe offsets from a scaled overview is unreliable (the scaled render uses a different viewport width). Driving Chrome over `--remote-debugging-port` with `Runtime.evaluate` → `getBoundingClientRect` → `Page.captureScreenshot` with a `clip` captures any section, and can click first to open dialogs and toasts. Node 22+ has `WebSocket` built in, so it needs no dependencies. | M0-03 |
 
 ---
@@ -315,7 +319,8 @@ Things that cost an hour and would cost the next agent the same hour. Add as you
 | Resource | Identifier | Where | Status |
 |---|---|---|---|
 | Git repo | `insignia-ielts`, branch `main` | local + origin | ✅ exists |
-| Supabase project | *TBD* — must be **`ap-south-1`** | supabase.com dashboard | ⬜ M0-04 |
+| Supabase project | `insignia-ielts` · ref `zpqszkwavnjomxjgimni` · **`ap-south-1`** · Postgres 17 | supabase.com dashboard | ✅ M0-04 |
+| ~~Supabase project~~ | ~~`ielts-test` · `fypfpveynadsbbfbuenc` · `ap-northeast-2`~~ | — | ~~superseded~~ wrong region, removed 2026-09-15 |
 | R2 bucket — content | *TBD* | Cloudflare dashboard | ⬜ M0-12 |
 | R2 bucket — audio | *TBD* | Cloudflare dashboard | ⬜ M0-12 |
 | Worker | `insignia-test` | `wrangler.jsonc`, `package.json` | ✅ named |
@@ -358,6 +363,16 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 ---
 
 ## 8. Session handoff notes
+
+### 2026-09-15 (third session)
+
+**Done.** M0-04. Cross-checked the user's Supabase project over the MCP. It was in Seoul, so the user recreated it in Mumbai while it was still empty. The new project was verified: `ap-south-1`, empty schema, UTC, RLS auto-enable on, leaked-password protection on. Wrote the repo's first migration, which clears the one remaining advisor warning.
+
+**Not done.** The migration is **not applied** remotely because the agent's permission policy blocked `apply_migration`. It goes out with the first `supabase db push` at M0-05. No Supabase keys are set anywhere yet (`.dev.vars`, Wrangler secrets); that's M0-14.
+
+**Left for the user (dashboard only).** (1) Authentication → Sign In / Providers → switch **off** "Allow new users to sign up" (rule #7, M1-01). (2) Usage alert at 70% (step 2). Neither can be read over the MCP.
+
+**Start with.** M0-05 (step 13): `supabase init` → `supabase link --project-ref zpqszkwavnjomxjgimni` → `supabase db push`, then run the security advisor and confirm it's clean.
 
 ### 2026-09-15 (second session)
 
