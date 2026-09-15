@@ -14,6 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
+      answer_marks: {
+        Row: {
+          attempt_id: string
+          is_correct: boolean
+          marks_awarded: number
+          overridden_at: string | null
+          overridden_by: string | null
+          override_note: string | null
+          q_number: number
+          question_type: string
+          scored_at: string
+          section_no: number
+        }
+        Insert: {
+          attempt_id: string
+          is_correct: boolean
+          marks_awarded?: number
+          overridden_at?: string | null
+          overridden_by?: string | null
+          override_note?: string | null
+          q_number: number
+          question_type: string
+          scored_at?: string
+          section_no: number
+        }
+        Update: {
+          attempt_id?: string
+          is_correct?: boolean
+          marks_awarded?: number
+          overridden_at?: string | null
+          overridden_by?: string | null
+          override_note?: string | null
+          q_number?: number
+          question_type?: string
+          scored_at?: string
+          section_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answer_marks_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "answer_marks_overridden_by_fkey"
+            columns: ["overridden_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      answers: {
+        Row: {
+          answered_at: string
+          attempt_id: string
+          flagged: boolean
+          given_answer: string | null
+          q_number: number
+          revision: number
+          section_no: number
+          updated_at: string
+        }
+        Insert: {
+          answered_at?: string
+          attempt_id: string
+          flagged?: boolean
+          given_answer?: string | null
+          q_number: number
+          revision?: number
+          section_no: number
+          updated_at?: string
+        }
+        Update: {
+          answered_at?: string
+          attempt_id?: string
+          flagged?: boolean
+          given_answer?: string | null
+          q_number?: number
+          revision?: number
+          section_no?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_targets: {
         Row: {
           assignment_id: string
@@ -189,6 +284,155 @@ export type Database = {
           },
           {
             foreignKeyName: "assignments_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attempt_events: {
+        Row: {
+          at: string
+          attempt_id: string
+          id: string
+          meta: Json
+          type: string
+        }
+        Insert: {
+          at?: string
+          attempt_id: string
+          id?: string
+          meta?: Json
+          type: string
+        }
+        Update: {
+          at?: string
+          attempt_id?: string
+          id?: string
+          meta?: Json
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attempt_events_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attempt_scores: {
+        Row: {
+          attempt_id: string
+          band: number
+          raw_score: number
+          scored_at: string
+          section_scores: Json
+        }
+        Insert: {
+          attempt_id: string
+          band: number
+          raw_score: number
+          scored_at?: string
+          section_scores?: Json
+        }
+        Update: {
+          attempt_id?: string
+          band?: number
+          raw_score?: number
+          scored_at?: string
+          section_scores?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attempt_scores_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: true
+            referencedRelation: "attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attempts: {
+        Row: {
+          assignment_id: string | null
+          audio_completed_at: string | null
+          audio_downloaded_at: string | null
+          audio_started_at: string | null
+          content_version: number
+          created_at: string
+          device_info: Json | null
+          expires_at: string
+          id: string
+          kind: string
+          last_autosave_at: string | null
+          started_at: string
+          status: string
+          student_id: string
+          submitted_at: string | null
+          tab_switches: number
+          test_id: string
+          time_remaining_seconds: number | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          audio_completed_at?: string | null
+          audio_downloaded_at?: string | null
+          audio_started_at?: string | null
+          content_version: number
+          created_at?: string
+          device_info?: Json | null
+          expires_at: string
+          id?: string
+          kind: string
+          last_autosave_at?: string | null
+          started_at?: string
+          status?: string
+          student_id: string
+          submitted_at?: string | null
+          tab_switches?: number
+          test_id: string
+          time_remaining_seconds?: number | null
+        }
+        Update: {
+          assignment_id?: string | null
+          audio_completed_at?: string | null
+          audio_downloaded_at?: string | null
+          audio_started_at?: string | null
+          content_version?: number
+          created_at?: string
+          device_info?: Json | null
+          expires_at?: string
+          id?: string
+          kind?: string
+          last_autosave_at?: string | null
+          started_at?: string
+          status?: string
+          student_id?: string
+          submitted_at?: string | null
+          tab_switches?: number
+          test_id?: string
+          time_remaining_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attempts_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attempts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attempts_test_id_fkey"
             columns: ["test_id"]
             isOneToOne: false
             referencedRelation: "tests"
