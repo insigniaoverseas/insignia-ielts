@@ -113,7 +113,7 @@ Create the seven files listed in [`MVP-1.md` §16](MVP-1.md#16-documentation-and
 **✅ Done when** `docs/` matches §16 and thirteen ADRs exist.
 
 ### 12. CI gates `(M0-22)`
-> ✅ **Written 2026-09-15:** `.github/workflows/ci.yml` — `npm ci`, `typecheck`, `lint`, `test:unit`, `test:db`, `test:db:sweep`, `next build`, `check:bundle` (`scripts/check-client-bundle.mjs`, replaces the grep below), `npm audit --audit-level=high`. Every step passes locally; the guard was proven with a throwaway client component leaking a `key.json` path. ⬜ First green run on GitHub.
+> ✅ **Written 2026-09-15:** `.github/workflows/ci.yml` — `npm ci`, `typecheck`, `lint`, `test:unit`, `test:db`, `test:db:sweep`, `next build`, `check:bundle` (`scripts/check-client-bundle.mjs`, replaces the grep below), `npm audit --audit-level=high`. Every step passes locally; the guard was proven with a throwaway client component leaking a `key.json` path. ✅ First GitHub run green 2026-09-15 (all 12 steps, 2m27s).
 
 GitHub Actions: typecheck · lint · vitest · `npm audit`. Then the one that matters:
 
