@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Banner } from "@/components/ui/banner";
+import Link from "next/link";
+
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -24,9 +26,9 @@ export const metadata: Metadata = { title: "Sign in" };
 export default async function LoginPage({
 	searchParams,
 }: {
-	searchParams: Promise<{ next?: string; ended?: string }>;
+	searchParams: Promise<{ next?: string; ended?: string; reset?: string }>;
 }) {
-	const { next, ended } = await searchParams;
+	const { next, ended, reset } = await searchParams;
 
 	return (
 		<>
@@ -52,12 +54,28 @@ export default async function LoginPage({
 				</Banner>
 			)}
 
+			{/* Arrived from a completed reset. Confirms the change landed, because
+			    the reset deliberately does not sign them in — every session was
+			    just revoked, including an intruder's. */}
+			{reset && (
+				<Banner tone="success">
+					Your password has been changed, and you&rsquo;ve been signed out everywhere else. Sign in with your
+					new one.
+				</Banner>
+			)}
+
 			<LoginForm next={next} />
 
-			{/* No signup link — accounts are created by invitation only. */}
+			{/* No signup link — accounts are created by invitation only. The
+			    reset link is new (M1-15): §9 originally sent everyone to their
+			    teacher, which left the Owner with no way back at all. */}
 			<p className="m-0 text-center text-ink-2">
-				Forgotten your password? <strong className="font-semibold text-ink">Ask your teacher</strong> — they can
-				send you a new invitation.
+				<Link href="/forgot" className="font-semibold text-ink underline">
+					Forgotten your password?
+				</Link>
+				<span className="mt-1 block">
+					Still stuck? Ask your teacher — they can send you a new invitation.
+				</span>
 			</p>
 		</>
 	);

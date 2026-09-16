@@ -645,6 +645,67 @@ for (const [fn, sig] of [["accept_invitation", "text, uuid"], ["bump_rate_limit"
 ok("invitations.token_hash is still not readable through the API",
   denied(await as("authenticated", "admin1", `select token_hash from public.invitations limit 1`)));
 
+console.log("\nM1-15 password reset");
+{
+  const uid = id.studentA;
+  const mk = async (hash, opts = {}) => {
+    const created = opts.created ?? "now()";
+    const expires = opts.expires ?? "now() + interval '1 hour'";
+    await db.exec(`insert into public.password_resets (user_id, token_hash, created_at, expires_at, used_at)
+      values ('${uid}', '${hash}', ${created}, ${expires}, ${opts.used ?? "null"});`);
+  };
+
+  await mk("pr-live");
+  const found = await one(`select * from public.find_password_reset('pr-live')`);
+  ok("a live token resolves to its owner", found.user_id === uid && found.expired === false && found.used === false, JSON.stringify(found));
+
+  // Give the student two live sessions, so "revokes all of them" means something.
+  await db.exec(`insert into public.user_sessions (user_id) values ('${uid}'), ('${uid}');`);
+  const before = (await one(`select count(*)::int c from public.user_sessions where user_id = '${uid}' and revoked_at is null`)).c;
+  ok("the student has live sessions before the reset", before >= 2, String(before));
+
+  // A second, still-unused token — completing one must invalidate the other.
+  await mk("pr-second");
+
+  const owner = (await one(`select public.complete_password_reset('pr-live') u`)).u;
+  ok("completing returns the owner", owner === uid, String(owner));
+  ok("the token is marked used", (await one(`select count(*)::int c from public.password_resets where token_hash = 'pr-live' and used_at is not null`)).c === 1);
+  ok("**every** session is revoked (an intruder must not survive a reset)",
+    (await one(`select count(*)::int c from public.user_sessions where user_id = '${uid}' and revoked_at is null`)).c === 0);
+  ok("the user's other reset tokens are invalidated too",
+    (await one(`select count(*)::int c from public.password_resets where token_hash = 'pr-second' and used_at is not null`)).c === 1);
+
+  let reuse = null;
+  try { await db.query(`select public.complete_password_reset('pr-live')`); } catch (e) { reuse = e.message; }
+  ok("a spent token cannot be reused", /unusable_token/.test(reuse ?? ""), reuse ?? "it was reused");
+
+  // Expired: the constraint refuses a back-dated expiry, so age the creation too.
+  await mk("pr-stale", { created: "now() - interval '2 days'", expires: "now() - interval '1 day'" });
+  const stale = await one(`select * from public.find_password_reset('pr-stale')`);
+  ok("an expired token reports expired, not missing", stale.expired === true && stale.used === false, JSON.stringify(stale));
+  let staleUse = null;
+  try { await db.query(`select public.complete_password_reset('pr-stale')`); } catch (e) { staleUse = e.message; }
+  ok("an expired token cannot be completed", /unusable_token/.test(staleUse ?? ""), staleUse ?? "it was accepted");
+
+  ok("an unknown token returns no row", (await db.query(`select * from public.find_password_reset('pr-nope')`)).rows.length === 0);
+
+  // The token hash must be unreachable through the API, unlike an invitation's
+  // details which admins legitimately read.
+  for (const who of ["studentA", "admin1", "superAdmin"]) {
+    const r = await as("authenticated", who, `select token_hash from public.password_resets limit 1`);
+    ok(`${who} cannot read password_resets through the API`, !!r.error, JSON.stringify(r.rows ?? r.error));
+  }
+  ok("password_resets has RLS enabled",
+    (await one(`select relrowsecurity r from pg_class where relnamespace = 'public'::regnamespace and relname = 'password_resets'`)).r === true);
+  ok("password_resets has no policies at all (nothing may read it)",
+    (await db.query(`select 1 from pg_policies where schemaname = 'public' and tablename = 'password_resets'`)).rows.length === 0);
+
+  for (const [fn, sig] of [["complete_password_reset", "text"], ["find_password_reset", "text"], ["purge_old_password_resets", ""]]) {
+    const g = await one(`select has_function_privilege('anon', 'public.${fn}(${sig})', 'execute') a, has_function_privilege('authenticated', 'public.${fn}(${sig})', 'execute') b`);
+    ok(`${fn} is not executable by anon or authenticated`, !g.a && !g.b, JSON.stringify(g));
+  }
+}
+
 console.log("\npolicy hygiene");
 const multi = (await db.query(`select tablename, cmd, count(*)::int n from pg_policies where schemaname = 'public' group by 1, 2 having count(*) > 1`)).rows;
 ok("exactly one policy per table per command (advisor: multiple_permissive_policies)", multi.length === 0, JSON.stringify(multi));
@@ -662,6 +723,6 @@ ok("rls_auto_enable not executable by anon/authenticated", !acl.a && !acl.b);
 
 console.log("\nfinal sweep");
 ok("every table in public has RLS enabled", (await rlsFinal()).length === 0, JSON.stringify(await rlsFinal()));
-ok("public has exactly 25 tables", (await one(`select count(*)::int c from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r'`)).c === 25);
+ok("public has exactly 26 tables", (await one(`select count(*)::int c from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r'`)).c === 26);
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

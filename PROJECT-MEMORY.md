@@ -84,6 +84,7 @@
 | M1-12 Session cookies + single active session | in_progress | Claude | 2026-09-17 | ✅ `lib/auth/sessions.ts`. A JWT cannot express revocation and its lifetime is deliberately longer than the longest test, so the `insignia_session` cookie carries a `user_sessions.id` and every guarded page checks that row is live. ✅ **Students one session, staff several** (user, 2026-09-17, §4): a student's second sign-in revokes the first — the sharing control — while staff work on a phone and a laptop. ✅ `revokeSession` checks ownership, so one user cannot revoke another's. ⬜ Raise the Supabase JWT expiry to 7200 s (needed: a 60-minute Reading test outlasts the 3600 s default and would refresh mid-test) — a dashboard change, awaiting the user. |
 | M1-13 `lib/rbac.ts` + route guards | in_progress | Claude, goverdhan-gaur | 2026-09-15 | ✅ Permission matrix agreed (§4). ✅ `supabase/migrations/20260915180655_role_permissions.sql` (Owner label, permissions + `CHECK`). ✅ `lib/permissions.ts` (pure, TSDoc) + `lib/rbac.ts` (`getActor` via `getClaims()` + secret-key lookup, `requirePermission`, `ForbiddenError`). ✅ `npm run test:unit` 29/29 against the seeded data; a deliberate "teacher can publish" seed is caught. ✅ Pushed by the user; verified live: `super_admin` named Owner, permission counts admin 10 / invigilator 1 / student 1 / Owner 12 / teacher 5, `roles_permissions_well_formed` present. ✅ Route guards (2026-09-17): `lib/auth/guard.ts` — `requireUser` / `requireStaff` / `requirePermissionOrRedirect`. These **redirect** where `requirePermission` throws, which is the difference between a page and an action. They also enforce revocation, so a revoked session with a still-valid JWT is turned away. ⬜ Apply them to the privileged layouts as each screen leaves mock data. |
 | M1-14 Device list + revoke (server side) | in_progress | Claude | 2026-09-17 | ✅ `revokeSession` in `lib/auth/sessions.ts`, ownership-checked and audited. ⬜ Wire Profile's list to `user_sessions`; ⬜ migrate the dead PIN columns off `user_devices` (`pin_hash`, `device_secret_hash`, `failed_pin_attempts`, `locked_until` — never written since the PIN was dropped). |
+| M1-15 Password reset (`/forgot`, `/reset/[token]`) | in_progress | Claude | 2026-09-17 | ✅ Built. Migration `20260917143000_password_resets.sql`: hashed single-use token, **1-hour** TTL, **no API access at all** (no grants, no policies — like `rate_limits`), and `complete_password_reset` marks it used, kills the user's sibling tokens and **revokes every session** in one transaction. ✅ `/forgot` answers identically whether or not the account exists, and is rate-limited by email *and* IP. ✅ Suspended accounts are silently not sent a link — resetting would re-open an account an admin closed. ✅ Completing does **not** sign them in: the reset just revoked every session, possibly an intruder's, and handing back a fresh one would undo that. ✅ 18 new DB checks (300 total). ⬜ **Migration not yet pushed.** |
 
 ### M2 — Student core, Listening
 
@@ -273,6 +274,38 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-17 — There is a self-serve password reset after all  (task: M1-15)
+**Corrects `MVP-1.md` §9**, which said there was none: a locked-out student is
+standing in a building with their teacher in it, so a fresh invitation beats an
+email round trip.
+
+**Why it was wrong:** that reasoning covers students and **fails for the
+Owner**, who has nobody above them — nobody can invite an Owner, by design. A
+forgotten Owner password made the Supabase dashboard the only way back into the
+product, permanently. The user hit exactly this on 2026-09-17.
+
+**Chose (user, 2026-09-17):** open it to **every role**, not staff-only. One path is
+simpler to explain and to test, and it helps a student practising at home at
+10pm with no teacher nearby.
+
+**Chose (user, 2026-09-17):** our own token, like invitations — not Supabase's
+`resetPasswordForEmail`. Consistency with the invite flow, the branch name in
+the email, and it reuses the token and mailer code already built.
+
+**Design points worth keeping:**
+- **One hour**, against an invitation's seven days. An invitation is pushed at
+  someone unexpecting and must survive a weekend; a reset is asked for by
+  someone at the screen.
+- **The reply never varies** — real, unknown or suspended address, same
+  sentence. Otherwise the form hands back the list the login screen protects.
+- **Completing revokes every session.** If an intruder is signed in, a reset
+  that leaves them there has fixed nothing.
+- **It does not sign them in**, unlike accepting an invitation — that would
+  hand a fresh session to whoever just used the link, undoing the revocation.
+- The token is consumed **after** the Auth password update, not before, so a
+  password Auth rejects for appearing in a breach corpus does not burn the link.
+  Replay is still refused: a used token never passes the lookup.
 
 ### 2026-09-17 — The first Owner is linked, not invented  (task: M1-02 bootstrap)
 **Chose (user, 2026-09-17):** the user creates one auth user by hand in the Supabase

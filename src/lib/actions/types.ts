@@ -29,3 +29,12 @@ export type AcceptFormState = {
 	message: string;
 	dead?: "expired" | "used" | "revoked" | "unknown";
 } | null;
+
+/**
+ * The reset-request form's state. Success and "no such account" are the *same*
+ * state on purpose — the form must not reveal which it was.
+ */
+export type ResetRequestState = { message: string; sent: boolean } | null;
+
+/** The choose-a-new-password form's state. */
+export type ResetFormState = { message: string } | null;

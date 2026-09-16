@@ -82,3 +82,64 @@ export function invitationEmail(invite: InvitationEmail): { subject: string; htm
 
 	return { subject, html, text };
 }
+
+/** What the password-reset email needs to know. */
+export type PasswordResetEmail = {
+	name: string;
+	branchName: string;
+	/** The absolute, single-use reset URL. */
+	url: string;
+	/** How long the link lasts, in words, e.g. "60 minutes". */
+	validFor: string;
+};
+
+/**
+ * Subject, HTML and plain text for a password reset (M1-15).
+ *
+ * Says plainly what to do if they did **not** ask for it. A reset email nobody
+ * requested is the first sign an address has been targeted, and "ignore this"
+ * alone leaves them with no way to tell anyone.
+ */
+export function passwordResetEmail(reset: PasswordResetEmail): { subject: string; html: string; text: string } {
+	const firstName = reset.name.trim().split(/\s+/)[0] || "there";
+	const subject = `Reset your ${reset.branchName} password`;
+
+	const text = [
+		`Hello ${firstName},`,
+		"",
+		"Someone asked to reset the password on your account. If that was you, open this link:",
+		reset.url,
+		"",
+		`It works once, and only for the next ${reset.validFor}.`,
+		"",
+		"If it wasn't you, you can ignore this email — your password has not changed.",
+		"Tell your teacher if you keep getting these.",
+		"",
+		reset.branchName,
+	].join("\n");
+
+	const html = `<!doctype html>
+<html lang="en">
+<body style="margin:0;padding:24px;background:#f5f5f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1c1917;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background:#ffffff;border-radius:12px;padding:32px;">
+<tr><td>
+<h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;">Hello ${escapeHtml(firstName)},</h1>
+<p style="margin:0 0 24px;">Someone asked to reset the password on your ${escapeHtml(reset.branchName)} account. If that was you, choose a new one here.</p>
+<p style="margin:0 0 24px;">
+<a href="${escapeHtml(reset.url)}" style="display:inline-block;background:#1c1917;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:600;font-size:16px;">Choose a new password</a>
+</p>
+<p style="margin:0 0 16px;color:#57534e;font-size:14px;">It works once, and only for the next ${escapeHtml(reset.validFor)}.</p>
+<p style="margin:0 0 8px;color:#57534e;font-size:14px;">If the button doesn&rsquo;t work, copy this address into your browser:</p>
+<p style="margin:0 0 24px;color:#57534e;font-size:13px;word-break:break-all;">${escapeHtml(reset.url)}</p>
+<p style="margin:0;color:#78716c;font-size:13px;border-top:1px solid #e7e5e4;padding-top:16px;">If it wasn&rsquo;t you, you can ignore this &mdash; your password has not changed. Tell your teacher if you keep getting these.<br>${escapeHtml(reset.branchName)}</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+	return { subject, html, text };
+}
