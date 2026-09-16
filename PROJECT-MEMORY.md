@@ -325,6 +325,37 @@ So we send it ourselves and need a `RESEND_API_KEY`.
 **The silver lining:** that connection means a sending domain is probably already
 DKIM-verified in Resend, which is the hard half of M1-04.
 
+**Re-examined and confirmed by the user, 2026-09-17.** They asked the right
+question — Supabase *can* send invitations (`auth.admin.inviteUserByEmail`, and
+`[auth.email.template.invite]` exists in `config.toml`) — and then the better
+follow-up: could `auth.admin.deleteUser` serve as "cancel"? It could, for a
+pending invite. It was rejected on the cascade:
+
+```
+auth.users → public.users → attempts → answers, answer_marks,
+                                        attempt_scores, attempt_events
+```
+
+all `ON DELETE CASCADE`. With Supabase's invite there is no `pending` state
+distinct from `accepted`, so a cancel button would sit one stale page-load away
+from destroying a student's entire exam history. Revoke is
+`UPDATE … WHERE status = 'pending'` and **cannot** touch an accepted invitation.
+
+Also lost with the built-in path: the three dead ends collapse into one (
+cancelled, expired and never-existed become indistinguishable, which is most of
+why `/invite/[token]` exists), the invitation record itself disappears, expiry
+becomes a project-wide setting rather than 7 days per invitation (their
+`otp_expiry` is 3600 — a Friday invite would be dead by Monday), and one
+template for the whole project cannot name the branch.
+
+**Correction to the first draft of this entry:** it said Supabase's built-in
+invite "cannot carry" role/branch/batch/plan. Too strong — `app_metadata` could.
+The real blockers are revocation and the prematurely-created account.
+
+`deleteUser` is still the right tool in exactly two places: the rollback in
+`acceptance.ts` (an account seconds old with no data), and M9-08's DPDP deletion
+path, where destroying everything is the intent.
+
 ### 2026-09-17 — The lockout is interface-first; the Durable Object is deferred  (task: M1-09 / M1-10)
 **Chose:** ship the *behaviour* BUILD-STEPS step 39 specifies — five wrong
 passwords, a fifteen-minute lock, counted by account **and** IP — backed by
