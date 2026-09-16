@@ -24,7 +24,7 @@ export function PillTabs({
 	basePath: string;
 	/** The query key the tab writes to. Defaults to `tab`. */
 	paramName?: string;
-	/** Carried through so a review scenario (`?state=`) survives a tab change. */
+	/** Optional query values that should survive a tab change. */
 	extraParams?: Record<string, string | undefined>;
 }) {
 	const extra = Object.entries(extraParams ?? {})

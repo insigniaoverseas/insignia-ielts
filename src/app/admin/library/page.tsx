@@ -14,7 +14,8 @@ import {
 	TableToolbar,
 } from "@/components/ui/table";
 import { SKILL_LABEL } from "@/components/student/labels";
-import { getTestLibrary } from "@/lib/mock/admin";
+import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { getTestLibrary } from "@/lib/queries/admin";
 import type { Variant } from "@/lib/view-models/student";
 
 export const metadata: Metadata = { title: "Test library" };
@@ -38,17 +39,18 @@ export default async function LibraryPage({
 }: {
 	searchParams: Promise<{ skill?: string; status?: string }>;
 }) {
+	await requirePermissionOrRedirect("test:author", "/admin/library");
 	const { skill, status } = await searchParams;
 	let rows = await getTestLibrary();
 	if (skill === "listening" || skill === "reading") rows = rows.filter((r) => r.skill === skill);
 	if (status === "draft" || status === "published") rows = rows.filter((r) => r.status === status);
 
 	const FILTERS = [
-		{ href: "/library", label: "All", on: !skill && !status },
-		{ href: "/library?skill=listening", label: "Listening", on: skill === "listening" },
-		{ href: "/library?skill=reading", label: "Reading", on: skill === "reading" },
-		{ href: "/library?status=draft", label: "Drafts", on: status === "draft" },
-		{ href: "/library?status=published", label: "Published", on: status === "published" },
+		{ href: "/admin/library", label: "All", on: !skill && !status },
+		{ href: "/admin/library?skill=listening", label: "Listening", on: skill === "listening" },
+		{ href: "/admin/library?skill=reading", label: "Reading", on: skill === "reading" },
+		{ href: "/admin/library?status=draft", label: "Drafts", on: status === "draft" },
+		{ href: "/admin/library?status=published", label: "Published", on: status === "published" },
 	];
 
 	return (
@@ -95,7 +97,7 @@ export default async function LibraryPage({
 					</TableHeader>
 					<TableBody>
 						{rows.map((t) => {
-							const complete = t.keysEntered >= t.questionCount;
+							const complete = t.keysEntered !== null && t.keysEntered >= t.questionCount;
 							return (
 								<TableRow key={t.id}>
 									<TableCell>
@@ -112,10 +114,14 @@ export default async function LibraryPage({
 										<DifficultyBadge level={t.difficulty} />
 									</TableCell>
 									<TableCell>
-										<span className={`font-mono ${complete ? "" : "font-semibold text-warning"}`}>
-											{t.keysEntered} of {t.questionCount}
-										</span>
-										{!complete && (
+										{t.keysEntered === null ? (
+											<span className="text-small text-ink-2">Private R2 — deferred</span>
+										) : (
+											<span className={`font-mono ${complete ? "" : "font-semibold text-warning"}`}>
+												{t.keysEntered} of {t.questionCount}
+											</span>
+										)}
+										{t.keysEntered !== null && !complete && (
 											<div className="text-small text-warning">
 												{t.questionCount - t.keysEntered} missing
 											</div>

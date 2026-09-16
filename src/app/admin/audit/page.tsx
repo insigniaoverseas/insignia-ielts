@@ -10,7 +10,8 @@ import {
 	TableRow,
 	TableToolbar,
 } from "@/components/ui/table";
-import { getAuditLog } from "@/lib/mock/admin";
+import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { getAuditLog } from "@/lib/queries/admin";
 
 export const metadata: Metadata = { title: "Audit log" };
 
@@ -31,6 +32,7 @@ export default async function AuditPage({
 }: {
 	searchParams: Promise<{ action?: string }>;
 }) {
+	await requirePermissionOrRedirect("audit:read", "/admin/audit");
 	const { action } = await searchParams;
 	const data = await getAuditLog({ action });
 

@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AccuracyBars } from "@/components/ui/accuracy-bars";
 import { formatBand } from "@/components/ui/band-score";
-import { getClassAnalytics } from "@/lib/mock/teacher";
+import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { getClassAnalytics } from "@/lib/queries/teacher";
 
 export const metadata: Metadata = { title: "What to teach" };
 
@@ -17,6 +18,7 @@ export const metadata: Metadata = { title: "What to teach" };
  */
 export default async function AnalyticsPage({ params }: { params: Promise<{ batchId: string }> }) {
 	const { batchId } = await params;
+	await requirePermissionOrRedirect("assignment:manage", `/teacher/batches/${batchId}/analytics`);
 	const data = await getClassAnalytics(batchId);
 	if (!data) notFound();
 

@@ -11,6 +11,16 @@ import type { PlanStatus } from "@/lib/view-models/student";
  */
 export function PlanBanner({ plan }: { plan: PlanStatus }) {
 	if (plan.state === "active") return null;
+	if (plan.state === "missing") {
+		return (
+			<Banner tone="danger">
+				No access plan is attached to your account yet. Ask your teacher to add one before you start a test.
+			</Banner>
+		);
+	}
+	if (plan.state === "suspended") {
+		return <Banner tone="danger">Your access is paused. Ask your teacher or the front desk to restore it.</Banner>;
+	}
 
 	if (plan.state === "expired") {
 		return (

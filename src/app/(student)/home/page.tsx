@@ -4,7 +4,7 @@ import { NextUpCard } from "@/components/student/next-up-card";
 import { PlanBanner } from "@/components/student/plan-banner";
 import { QuickLinks } from "@/components/student/quick-links";
 import { SKILL_LABEL } from "@/components/student/labels";
-import { getStudentHome, type Scenario } from "@/lib/mock/student";
+import { getStudentHome } from "@/lib/queries/student";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -15,16 +15,9 @@ export const metadata: Metadata = { title: "Home" };
  * exactly one primary action, three quiet shortcuts and one line about the last
  * result. No charts, no stats grid, no feed (`DESIGN-PROMPT.md` C1.3).
  *
- * `searchParams.state` is a review affordance from `@/lib/mock/student` and
- * disappears with it; see that module's README.
  */
-export default async function HomePage({
-	searchParams,
-}: {
-	searchParams: Promise<{ state?: string }>;
-}) {
-	const { state } = await searchParams;
-	const data = await getStudentHome((state as Scenario) ?? "default");
+export default async function HomePage() {
+	const data = await getStudentHome();
 	const { student, plan, counts, lastResult, progressHint } = data;
 
 	return (

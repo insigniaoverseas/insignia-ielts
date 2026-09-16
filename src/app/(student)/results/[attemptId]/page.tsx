@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { BandScore } from "@/components/ui/band-score";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MODE_LABEL, SKILL_LABEL } from "@/components/student/labels";
-import { getAttemptResult } from "@/lib/mock/student";
+import { getAttemptResult } from "@/lib/queries/student";
 
 export const metadata: Metadata = { title: "Your result" };
 

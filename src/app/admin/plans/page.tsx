@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ExtendPlansPanel } from "@/components/staff/extend-plans-panel";
-import { getPlansWorkqueue } from "@/lib/mock/admin";
+import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { getPlansWorkqueue } from "@/lib/queries/admin";
 
 export const metadata: Metadata = { title: "Plans & validity" };
 
@@ -18,6 +19,7 @@ export const metadata: Metadata = { title: "Plans & validity" };
  * confirm step has to state exactly what will change before it changes it.
  */
 export default async function PlansPage() {
+	await requirePermissionOrRedirect("student:manage", "/admin/plans");
 	const data = await getPlansWorkqueue();
 	const empty =
 		data.expired.length === 0 && data.expiringThisWeek.length === 0 && data.expiringThisMonth.length === 0;

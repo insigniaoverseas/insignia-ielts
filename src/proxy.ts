@@ -1,6 +1,10 @@
+import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
+import { homeForRole, roleCanAccess, routeArea, signInPath } from "@/lib/auth/access";
 import { generateNonce, securityHeaders } from "@/lib/security/headers";
+import type { Database } from "@/lib/supabase/database.types";
+import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/env";
 
 /**
  * Runs before every page and API route (Next 16 "proxy", formerly middleware).
@@ -13,7 +17,7 @@ import { generateNonce, securityHeaders } from "@/lib/security/headers";
  * ⚠️ On OpenNext + Workers, proxy support is labelled "experimental" (tested
  * 2026-09-15 — PROJECT-MEMORY §5). Keep this file small.
  */
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
 	const nonce = generateNonce();
 	const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 	const headers = securityHeaders(nonce, {
@@ -25,9 +29,53 @@ export function proxy(request: NextRequest) {
 	requestHeaders.set("x-nonce", nonce);
 	requestHeaders.set("Content-Security-Policy", headers["Content-Security-Policy"]);
 
-	const response = NextResponse.next({ request: { headers: requestHeaders } });
+	const makeNextResponse = () => NextResponse.next({ request: { headers: requestHeaders } });
+	let response = makeNextResponse();
+
+	const area = routeArea(request.nextUrl.pathname);
+	if (area) {
+		const supabase = createServerClient<Database>(supabaseUrl(), supabasePublishableKey(), {
+			cookies: {
+				getAll: () => request.cookies.getAll(),
+				setAll(cookiesToSet) {
+					for (const { name, value } of cookiesToSet) request.cookies.set(name, value);
+					response = makeNextResponse();
+					for (const { name, value, options } of cookiesToSet) response.cookies.set(name, value, options);
+				},
+			},
+		});
+
+		const { data: auth } = await supabase.auth.getClaims();
+		const userId = auth?.claims?.sub;
+
+		if (!userId) {
+			response = copyCookies(response, NextResponse.redirect(new URL(signInPath(request.nextUrl.pathname), request.url)));
+		} else {
+			// User-scoped on purpose: Proxy is an early gate, while layouts and
+			// actions independently enforce authorization with `lib/rbac.ts`.
+			const { data: profile } = await supabase
+				.from("users")
+				.select("status, roles ( key )")
+				.eq("id", userId)
+				.maybeSingle();
+			const role = profile?.status === "active" ? profile.roles?.key : null;
+
+			if (!role) {
+				response = copyCookies(response, NextResponse.redirect(new URL("/login", request.url)));
+			} else if (!roleCanAccess(role, area)) {
+				response = copyCookies(response, NextResponse.redirect(new URL(homeForRole(role), request.url)));
+			}
+		}
+	}
+
 	for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
 	return response;
+}
+
+/** Carries refreshed Supabase cookies onto a redirect response. */
+function copyCookies(from: NextResponse, to: NextResponse): NextResponse {
+	for (const cookie of from.cookies.getAll()) to.cookies.set(cookie);
+	return to;
 }
 
 export const config = {

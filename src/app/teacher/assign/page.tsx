@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AssignFlow } from "@/components/staff/assign-flow";
-import { getAssignOptions } from "@/lib/mock/teacher";
+import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { getAssignOptions } from "@/lib/queries/teacher";
 
 export const metadata: Metadata = { title: "Assign a test" };
 
@@ -16,6 +17,7 @@ export default async function AssignPage({
 }: {
 	searchParams: Promise<{ batch?: string }>;
 }) {
+	await requirePermissionOrRedirect("assignment:manage", "/teacher/assign");
 	const { batch } = await searchParams;
 	const options = await getAssignOptions();
 

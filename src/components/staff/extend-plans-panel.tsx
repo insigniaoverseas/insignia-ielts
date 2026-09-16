@@ -132,7 +132,9 @@ export function ExtendPlansPanel({
 									status={s.daysRemaining < 0 ? "expired" : "expiring"}
 									size="sm"
 									label={
-										s.daysRemaining < 0
+										s.planEndsLabel === "No plan"
+											? "No plan"
+											: s.daysRemaining < 0
 											? `${Math.abs(s.daysRemaining)} days ago`
 											: s.daysRemaining === 0
 												? "Ends today"

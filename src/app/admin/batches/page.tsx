@@ -12,7 +12,8 @@ import {
 	TableRow,
 	TableToolbar,
 } from "@/components/ui/table";
-import { getBatches } from "@/lib/mock/admin";
+import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { getBatches } from "@/lib/queries/admin";
 
 export const metadata: Metadata = { title: "Batches" };
 
@@ -24,6 +25,7 @@ export const metadata: Metadata = { title: "Batches" };
  * rather than leaving an empty cell to be noticed.
  */
 export default async function BatchesPage() {
+	await requirePermissionOrRedirect("student:manage", "/admin/batches");
 	const batches = await getBatches();
 
 	return (

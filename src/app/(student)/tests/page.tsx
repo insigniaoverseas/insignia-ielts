@@ -3,7 +3,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PillTabs } from "@/components/student/pill-tabs";
 import { AssignedTestCard, CompletedAttemptCard } from "@/components/student/test-card";
-import { getMyTests, type Scenario } from "@/lib/mock/student";
+import { getMyTests } from "@/lib/queries/student";
 
 export const metadata: Metadata = { title: "My Tests" };
 
@@ -27,10 +27,10 @@ const TAB_NOTE: Record<string, string> = {
 export default async function MyTestsPage({
 	searchParams,
 }: {
-	searchParams: Promise<{ tab?: string; state?: string }>;
+	searchParams: Promise<{ tab?: string }>;
 }) {
-	const { tab, state } = await searchParams;
-	const data = await getMyTests((state as Scenario) ?? "default");
+	const { tab } = await searchParams;
+	const data = await getMyTests();
 	const active = tab === "practice" || tab === "done" ? tab : "todo";
 
 	return (
@@ -40,7 +40,6 @@ export default async function MyTestsPage({
 			<PillTabs
 				basePath="/tests"
 				active={active}
-				extraParams={{ state }}
 				tabs={[
 					{ value: "todo", label: `To do · ${data.toDo.length}` },
 					{ value: "practice", label: "Practice" },

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TeacherNav, TeacherNavCompact } from "@/components/staff/teacher-nav";
+import { requireRole } from "@/lib/auth/guard";
 
 /**
  * The teacher shell (M6) — screens 14–19, and the invigilator's monitor (17).
@@ -7,11 +8,12 @@ import { TeacherNav, TeacherNavCompact } from "@/components/staff/teacher-nav";
  * Same visual language as admin, fewer destinations: a teacher works one batch
  * at a time, so the sidebar is about tests rather than the whole institute.
  *
- * As with the admin shell, this draws navigation and gates nothing. A teacher
- * sees their **own current students** only, and that is enforced by RLS and
- * `lib/rbac.ts` on the server.
+ * This layout repeats the proxy's Teacher/Invigilator role gate. A teacher
+ * sees their **own current students** only, enforced again by page permissions
+ * and database RLS.
  */
-export default function TeacherLayout({ children }: { children: React.ReactNode }) {
+export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
+	await requireRole(["teacher", "invigilator"]);
 	return (
 		<div className="flex min-h-screen flex-col bg-bg">
 			<header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-6 border-b border-line bg-surface px-4 md:px-8">

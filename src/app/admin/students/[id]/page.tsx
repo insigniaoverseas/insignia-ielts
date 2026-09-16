@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { SKILL_LABEL } from "@/components/student/labels";
-import { getStudentDetail } from "@/lib/mock/admin";
+import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { getStudentDetail } from "@/lib/queries/admin";
 
 export const metadata: Metadata = { title: "Student" };
 
@@ -58,6 +59,7 @@ function Timeline({
  */
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
+	await requirePermissionOrRedirect("student:manage", `/admin/students/${id}`);
 	const data = await getStudentDetail(id);
 	if (!data) notFound();
 
@@ -87,15 +89,21 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 				<div className="flex flex-col gap-1.5 rounded-card border border-line bg-surface p-6">
 					<span className="text-small text-ink-2">Plan</span>
 					<StatusPill
-						status={s.planState === "expired" ? "expired" : s.planState === "expiring" ? "expiring" : "active"}
+						status={s.planState === "expired" ? "expired" : s.planState === "suspended" ? "locked" : s.planState === "expiring" ? "expiring" : "active"}
 						size="sm"
 						label={
-							s.planState === "expired"
+							s.planEndsLabel === "No plan"
+								? "No plan"
+								: s.planState === "suspended"
+									? "Suspended"
+								: s.planState === "expired"
 								? `Ended ${s.planEndsLabel}`
 								: `${s.daysRemaining} days left`
 						}
 					/>
-					<span className="font-mono text-small text-ink-2">Ends {s.planEndsLabel}</span>
+					<span className="font-mono text-small text-ink-2">
+						{s.planEndsLabel === "No plan" ? "Access not configured" : `Ends ${s.planEndsLabel}`}
+					</span>
 				</div>
 				<div className="flex flex-col gap-1.5 rounded-card border border-line bg-surface p-6">
 					<span className="text-small text-ink-2">Batch</span>

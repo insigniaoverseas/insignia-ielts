@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StudentBottomNav, StudentTopNav } from "@/components/student/student-nav";
+import { requireRole } from "@/lib/auth/guard";
 
 /**
  * The student app shell (M2-01) — screens 03, 04, 11, 12, 13.
@@ -11,7 +12,8 @@ import { StudentBottomNav, StudentTopNav } from "@/components/student/student-na
  * The test player (`/attempt/[id]`) deliberately sits **outside** this layout:
  * during a test there is no navigation to anywhere, only the test.
  */
-export default function StudentLayout({ children }: { children: React.ReactNode }) {
+export default async function StudentLayout({ children }: { children: React.ReactNode }) {
+	await requireRole(["student"]);
 	return (
 		<div className="flex min-h-screen flex-col bg-bg">
 			<header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-6 border-b border-line bg-surface px-4 md:min-h-[72px] md:px-8">

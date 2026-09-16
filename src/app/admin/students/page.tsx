@@ -16,13 +16,15 @@ import {
 	TableRow,
 	TableToolbar,
 } from "@/components/ui/table";
-import { getStudentsList } from "@/lib/mock/admin";
+import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { getStudentsList } from "@/lib/queries/admin";
 import type { PlanState } from "@/lib/view-models/admin";
 
 export const metadata: Metadata = { title: "Students" };
 
 /** The plan pill, so "expiring" always says *how* expiring. */
 function PlanPill({ state, days, endsLabel }: { state: PlanState; days: number; endsLabel: string }) {
+	if (endsLabel === "No plan") return <StatusPill status="expired" size="sm" label="No plan" />;
 	if (state === "expired") return <StatusPill status="expired" size="sm" label={`Ended ${endsLabel}`} />;
 	if (state === "expiring")
 		return <StatusPill status="expiring" size="sm" label={days === 0 ? "Ends today" : `${days} days left`} />;
@@ -45,6 +47,7 @@ export default async function StudentsPage({
 }: {
 	searchParams: Promise<{ q?: string; batch?: string; status?: string }>;
 }) {
+	await requirePermissionOrRedirect("student:manage", "/admin/students");
 	const { q, batch, status } = await searchParams;
 	const data = await getStudentsList({ search: q, batch, status });
 
