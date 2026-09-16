@@ -304,9 +304,12 @@ Enforces **one active session per student** — kills PIN/password sharing and d
 
 ### Plans
 
-**`student_plans`** — `id` · `student_id` · `plan_name` · `starts_on` · `expires_on` · `test_quota int NULL` · `tests_used int DEFAULT 0` · `status` (`active`|`expired`|`suspended`) · `created_by` · `notes` · `created_at`
+**`student_plans`** — `id` · `student_id` · `plan_name` · `starts_on` · `expires_on` · `test_quota int NULL` · `tests_used int DEFAULT 0` · `status` (`active`|`expired`|`suspended`) · `created_by` · `created_at`
 `test_quota` is nullable so the time-vs-quota question (`PLAN-V2.md` §7.3) stays cheap to resolve later.
-**At most one `active` plan per student** (partial unique index). `notes` is visible to the student — `PROJECT-MEMORY.md` §7 Q12.
+**At most one `active` plan per student** (partial unique index). Every column here is readable by the student the plan belongs to — they are the facts the student paid for.
+
+**`student_plan_notes`** — `plan_id` (PK) · `body` · `updated_by` · `created_at` · `updated_at`
+The internal staff note, **split out of `student_plans` so RLS keeps it away from the student** (`PROJECT-MEMORY.md` §7 Q12, answered 2026-09-16). Same audience as `plan_history`: admins in the student's branch, and Owner — not teachers, never the student. A note about fees or family circumstances must not be one careless sentence away from the student's Profile screen.
 
 **`plan_history`** — `id` · `plan_id` · `action` (`create`|`extend`|`suspend`|`resume`) · `old_expiry` · `new_expiry` · `reason` · `actor_id` · `at`
 The audit trail required by `PLAN-V2.md` §1.2 A4. **Append-only**: a trigger refuses every `UPDATE`; rows go only when their plan is deleted (DPDP erasure).
