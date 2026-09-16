@@ -21,6 +21,13 @@ export const ADMIN_GROUPS: SidebarGroup[] = [
 		title: "Content",
 		items: [{ href: "/admin/library", label: "Test library", icon: "📄" }],
 	},
+	{
+		title: "Institute",
+		items: [
+			{ href: "/admin/users", label: "Users & roles", icon: "🔑" },
+			{ href: "/admin/audit", label: "Audit log", icon: "▤" },
+		],
+	},
 ];
 
 /**

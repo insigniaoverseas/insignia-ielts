@@ -186,8 +186,8 @@
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
 | M9-01 Anti-cheat flags | todo | | | Flags, not blocks |
-| M9-02 Audit log screen (29) | todo | | | |
-| M9-03 Users & roles (28) | todo | | | |
+| M9-02 Audit log screen (29) | done | Claude | 2026-09-16 | ✅ `/admin/audit`: who · what · when · **the detail that makes it mean something** (an extension without its reason answers none of the questions this screen gets opened for). A deleted actor renders as "Account deleted", never a blank — `audit_log` keeps actor ids without FKs for exactly this (M0-10). |
+| M9-03 Users & roles (28) | done | Claude | 2026-09-16 | ✅ `/admin/users`: staff list + permission matrix. The matrix is **read from `roles.permissions`**, not hardcoded — that table is what `lib/rbac.ts` enforces, and a permissions screen drawn from anything else would eventually lie. Cells say *where* a permission applies ("Their centre" ≠ "Everywhere"), and "No" is a word, not an empty cell. |
 | M9-04 Error / edge screens (30) | in_progress | Claude | 2026-09-16 | ✅ `app/not-found.tsx` and `app/error.tsx`. The error page's first line is **"Your answers are saved"** — that's the difference between a student who retries and one who panics mid-test. No stack trace or error code; `digest` is present but quiet, for support. ⬜ Connection-lost banner in the player, test-not-available, session-expired, browser-unsupported. |
 | M9-05 Load test at **200** concurrent | todo | | | ~~40~~ → 200 (user, 2026-09-15). Throwaway free Supabase project. First run right after M2-07 |
 | M9-06 Backups + restore drill | todo | | | The drill must actually restore. Free has no backups → nightly `db dump` to private R2. **Before the first real student** |

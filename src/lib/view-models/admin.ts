@@ -135,3 +135,45 @@ export type AnswerKeyRow = {
 	acceptedVariants: string[];
 	marks: number;
 };
+
+/** Screen 28 — Users & roles (M9-03). */
+export type UsersAndRoles = {
+	users: StaffUserRow[];
+	/** The matrix, read from `roles.permissions` — not hardcoded in the UI. */
+	roles: { key: string; label: string; userCount: number }[];
+	/** One row per permission, with the scope each role holds it at (or null). */
+	matrix: { permission: string; label: string; byRole: Record<string, string | null> }[];
+};
+
+/** A staff account in the users list. */
+export type StaffUserRow = {
+	id: string;
+	name: string;
+	email: string;
+	roleKey: string;
+	roleLabel: string;
+	branchName: string;
+	status: AccountStatus;
+	lastActiveLabel: string;
+};
+
+/** Screen 29 — Audit log (M9-02). */
+export type AuditLog = {
+	entries: AuditEntry[];
+	total: number;
+	/** The actions actually present, so the filter offers only real options. */
+	actions: { value: string; label: string }[];
+};
+
+/** One audit row. `actorName` may be null — staff can be erased, the trail cannot. */
+export type AuditEntry = {
+	id: string;
+	whenLabel: string;
+	/** `null` when the actor's account has been deleted (`M0-10`: ids without FKs). */
+	actorName: string | null;
+	actorRole: string | null;
+	action: string;
+	actionLabel: string;
+	target: string;
+	detail: string;
+};

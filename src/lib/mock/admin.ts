@@ -9,6 +9,9 @@ import type {
 	StudentRow,
 	StudentsList,
 	TestLibraryRow,
+	UsersAndRoles,
+	AuditLog,
+	AuditEntry,
 } from "@/lib/view-models/admin";
 
 /*
@@ -175,4 +178,73 @@ export async function getAnswerKey(testId: string): Promise<AnswerKeyEditor | nu
 			};
 		}),
 	};
+}
+
+/** Screen 28 — Users & roles. */
+export async function getUsersAndRoles(): Promise<UsersAndRoles> {
+	const roles = [
+		{ key: "super_admin", label: "Owner", userCount: 1 },
+		{ key: "admin", label: "Admin", userCount: 1 },
+		{ key: "teacher", label: "Teacher", userCount: 2 },
+		{ key: "invigilator", label: "Invigilator", userCount: 1 },
+	];
+
+	/* Mirrors the seeded `roles.permissions`. The real screen reads that table —
+	   the matrix is data, never a hardcoded grid in the UI. */
+	const P = (all?: string | null, admin?: string | null, teacher?: string | null, invig?: string | null) => ({
+		super_admin: all ?? null,
+		admin: admin ?? null,
+		teacher: teacher ?? null,
+		invigilator: invig ?? null,
+	});
+
+	return {
+		users: [
+			{ id: "u-1", name: "Rajender Gaur", email: "owner@example.com", roleKey: "super_admin", roleLabel: "Owner", branchName: "Karol Bagh", status: "active", lastActiveLabel: "Today" },
+			{ id: "u-2", name: "Ravi Kumar", email: "ravi@example.com", roleKey: "admin", roleLabel: "Admin", branchName: "Karol Bagh", status: "active", lastActiveLabel: "Today" },
+			{ id: "u-3", name: "Anita Desai", email: "anita@example.com", roleKey: "teacher", roleLabel: "Teacher", branchName: "Karol Bagh", status: "active", lastActiveLabel: "Yesterday" },
+			{ id: "u-4", name: "Suresh Iyer", email: "suresh@example.com", roleKey: "invigilator", roleLabel: "Invigilator", branchName: "Lajpat Nagar", status: "active", lastActiveLabel: "Last week" },
+			{ id: "u-5", name: "Farah Sheikh", email: "farah@example.com", roleKey: "teacher", roleLabel: "Teacher", branchName: "Lajpat Nagar", status: "inactive", lastActiveLabel: "3 months ago" },
+		],
+		roles,
+		matrix: [
+			{ permission: "attempt:take", label: "Take tests", byRole: P() },
+			{ permission: "session:invigilate", label: "Run a live session", byRole: P("all", "branch", null, "branch") },
+			{ permission: "assignment:manage", label: "Assign tests", byRole: P("all", "branch", "batch") },
+			{ permission: "results:release", label: "Release results", byRole: P("all", "branch", "batch") },
+			{ permission: "mark:override", label: "Change a mark", byRole: P("all", "branch", "batch") },
+			{ permission: "test:author", label: "Write tests and keys", byRole: P("all", "all", "all") },
+			{ permission: "test:publish", label: "Publish a test", byRole: P("all", "all") },
+			{ permission: "band_scale:edit", label: "Edit band scales", byRole: P("all", "all") },
+			{ permission: "student:manage", label: "Manage students and plans", byRole: P("all", "branch") },
+			{ permission: "staff:manage", label: "Manage teachers", byRole: P("all", "branch") },
+			{ permission: "admin:manage", label: "Manage admins", byRole: P("all") },
+			{ permission: "role:change", label: "Change someone's role", byRole: P("all") },
+			{ permission: "audit:read", label: "Read the audit log", byRole: P("all", "branch") },
+		],
+	};
+}
+
+/** Screen 29 — Audit log. */
+export async function getAuditLog(query?: { action?: string }): Promise<AuditLog> {
+	const ACTIONS = [
+		{ value: "plan.extend", label: "Plan extended" },
+		{ value: "results.release", label: "Results released" },
+		{ value: "mark.override", label: "Mark changed" },
+		{ value: "invitation.create", label: "Invitation sent" },
+		{ value: "test.publish", label: "Test published" },
+		{ value: "role.change", label: "Role changed" },
+	];
+
+	const raw: AuditEntry[] = [
+		{ id: "e1", whenLabel: "16 Sep 2026, 09:41", actorName: "Anita Desai", actorRole: "Teacher", action: "results.release", actionLabel: "Results released", target: "Listening Mock Test 2 · Morning Batch A", detail: "28 attempts" },
+		{ id: "e2", whenLabel: "16 Sep 2026, 09:12", actorName: "Rajender Gaur", actorRole: "Owner", action: "plan.extend", actionLabel: "Plan extended", target: "6 students", detail: "+3 months — “fee cycle moved”" },
+		{ id: "e3", whenLabel: "15 Sep 2026, 18:30", actorName: "Ravi Kumar", actorRole: "Admin", action: "invitation.create", actionLabel: "Invitation sent", target: "14 students · Evening Batch A", detail: "Bulk CSV import" },
+		{ id: "e4", whenLabel: "15 Sep 2026, 16:02", actorName: "Anita Desai", actorRole: "Teacher", action: "test.publish", actionLabel: "Test published", target: "Academic Reading Mock Test 4", detail: "40 of 40 keys entered" },
+		{ id: "e5", whenLabel: "15 Sep 2026, 14:20", actorName: "Anita Desai", actorRole: "Teacher", action: "mark.override", actionLabel: "Mark changed", target: "Neha Rao · question 7", detail: "0 → 1 — “£ sign not required by the key”" },
+		{ id: "e6", whenLabel: "12 Sep 2026, 11:05", actorName: null, actorRole: null, action: "role.change", actionLabel: "Role changed", target: "Farah Sheikh", detail: "Teacher → Invigilator" },
+	];
+
+	const entries = query?.action && query.action !== "all" ? raw.filter((e) => e.action === query.action) : raw;
+	return { entries, total: entries.length, actions: ACTIONS };
 }
