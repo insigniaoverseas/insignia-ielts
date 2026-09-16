@@ -90,7 +90,7 @@
 | M2-02 Student Home (03) | done | Claude | 2026-09-16 | ✅ `/home` from `03 Student Home.dc.html`: one `NextUpCard` hero (night surface), three quick links, last-band line. Three states: startable · locked-with-reason · nothing-assigned (becomes "Practice at home"). Data via `getStudentHome()` — **fixtures, not queries** (see `lib/mock/README.md`). Verified in Chrome at 390 + 1280. |
 | M2-03 My Tests (04) | done | Claude | 2026-09-16 | ✅ `/tests` with To do / Practice / Done. Tabs are **links** (`?tab=`), not client state, so back works and a tab is linkable. Locked cards dim but stay readable and always print `locked.message`; a held result says the teacher will release it. Empty state per tab. Verified at 390 + 1280. |
 | M2-04 Assignment eligibility resolver | todo | | | Windows, attempts, plan validity, unlocks |
-| M2-05 Pre-test instructions (05) + headphone check | todo | | | Prevents most support calls |
+| M2-05 Pre-test instructions (05) + headphone check | done | Claude | 2026-09-16 | ✅ `/tests/[assignmentId]/start`: facts strip, 4–5 rules, `SoundCheck` for Listening. The check asks a question with a *wrong* answer and the wrong answer leads somewhere (3 ordered fixes, then "tell your teacher"); it never blocks Start, so a student whose lab machine has no sound can still begin if told to. Audio `play()` rejection and "I heard nothing" land on the same help. |
 | M2-06 Audio preload + owner-bound cache purge | todo | | | Highest-value lines in the caching layer |
 | M2-07 Attempt lifecycle server actions | todo | | | start, resume, autosave, submit, expire |
 | M2-08 Server-authoritative timer + countdown | todo | | | |
@@ -103,7 +103,7 @@
 | M2-15 Listening player shell (06) | todo | | | |
 | M2-16 Submit confirmation modal (08) | todo | | | |
 | M2-17 Scoring on submit + band + section scores | todo | | | |
-| M2-18 Result screen (09) | todo | | | |
+| M2-18 Result screen (09) | done | Claude | 2026-09-16 | ✅ `/results/[attemptId]`: band hero, raw score / time / wrong count, per-section bars, two actions. Three states: released · **held** (a sentence, never an empty score card) · **below the scale** (`band` null → `belowBand` marker in its own card, because `BandScore` would have to invent a number). |
 | M2-19 Crash-recovery E2E | todo | | | V1 in MVP-1 §19 |
 
 ### M3 — Reading player
@@ -126,7 +126,7 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M4-01 Review my mistakes (10) + release gating | todo | | | |
+| M4-01 Review my mistakes (10) + release gating | done | Claude | 2026-09-16 | ✅ `/review/[attemptId]`: summary strip, per-question cards, "Show why" expander with the explanation and the audio timestamp. Defaults to **mistakes only**. Teacher HTML goes through `sanitizePassageHtml` **again on render** (§8 rule 8) — the write-side pass can be bypassed by anything reaching the table another way. Release gating is server-side; a held or foreign attempt 404s. |
 | M4-02 Transcript + jump to timestamp | todo | | | Offsets into the one audio file |
 | M4-03 My Progress (11) | done | Claude | 2026-09-16 | ✅ `/progress`: band-over-time line per skill, then "What to practise" worst-first, one sentence of advice, tests-taken + average. No filters, no date pickers. **`BandTrendChart` extended** (§4): `BandPoint.band` may be `null` so a skill not tested on a date breaks the line instead of inventing a score; end labels are laid out top-down with a collision nudge and a surface-coloured halo. Backward compatible — `/dev/components` unchanged. |
 | M4-04 Practice at home (12) | done | Claude | 2026-09-16 | ✅ `/practice`: rule stated once at the top, Listening/Reading filter as links (`?skill=`), each card says how many times it's been done. No "Not started" pill on practice — it can be taken any number of times, so the count *is* the status. |

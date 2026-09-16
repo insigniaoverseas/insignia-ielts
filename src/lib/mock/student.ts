@@ -301,12 +301,12 @@ export async function getPreTestBriefing(assignmentId: string): Promise<PreTestB
 	return {
 		assignment,
 		rules: [
-			`You have ${assignment.test.durationMinutes} minutes for ${assignment.test.questionCount} questions.`,
-			"The timer will not stop, even if you close the page.",
-			...(listening && mock ? ["The audio plays once. You cannot rewind it."] : []),
+			"The timer starts when you press Start, and it will not stop.",
+			...(listening && mock ? ["The audio plays once. You cannot rewind it, just like the real test."] : []),
 			...(listening && !mock ? ["You can pause and replay the audio as much as you like."] : []),
-			"Your answers save by themselves as you type.",
-			"You can flag a question and come back to it before you finish.",
+			"Your answers save by themselves. If the internet drops, keep working.",
+			"You can mark a question and come back to it before you finish.",
+			"Spelling counts. Write numbers as digits unless the question says otherwise.",
 		],
 		soundCheckUrl: listening ? "/sound-check.mp3" : null,
 	};

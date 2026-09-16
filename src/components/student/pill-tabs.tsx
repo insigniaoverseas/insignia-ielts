@@ -16,11 +16,14 @@ export function PillTabs({
 	tabs,
 	active,
 	basePath,
+	paramName = "tab",
 	extraParams,
 }: {
 	tabs: PillTab[];
 	active: string;
 	basePath: string;
+	/** The query key the tab writes to. Defaults to `tab`. */
+	paramName?: string;
 	/** Carried through so a review scenario (`?state=`) survives a tab change. */
 	extraParams?: Record<string, string | undefined>;
 }) {
@@ -40,7 +43,7 @@ export function PillTabs({
 				return (
 					<Link
 						key={tab.value}
-						href={`${basePath}?tab=${tab.value}${extra}`}
+						href={`${basePath}?${paramName}=${tab.value}${extra}`}
 						role="tab"
 						aria-selected={on}
 						className={cn(
