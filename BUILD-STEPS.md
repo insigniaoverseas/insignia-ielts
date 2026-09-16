@@ -117,7 +117,7 @@ Create the seven files listed in [`MVP-1.md` §16](MVP-1.md#16-documentation-and
 ### 12. CI gates `(M0-22)`
 > ✅ **Written 2026-09-15:** `.github/workflows/ci.yml` — `npm ci`, `typecheck`, `lint`, `test:unit`, `test:db`, `test:db:sweep`, `next build`, `check:bundle` (`scripts/check-client-bundle.mjs`, replaces the grep below), `npm audit --audit-level=high`. Every step passes locally; the guard was proven with a throwaway client component leaking a `key.json` path. ✅ First GitHub run green 2026-09-15 (all 12 steps, 2m27s).
 
-GitHub Actions: typecheck · lint · vitest · `npm audit`. Then the one that matters:
+GitHub Actions: typecheck · lint · Node unit tests · `npm audit`. Then the one that matters:
 
 ```bash
 # fail the build if scoring logic or an R2 key path reaches the client
@@ -235,6 +235,29 @@ Server-only. The marking rules from [`MVP-1.md` §10](MVP-1.md#10-question-types
 Convert [`ielts-data.js`](Design%20files/Prioritizing%20project%20scope/ielts-data.js) into upload JSON, then import it.
 ⚠️ `PLAN-V2.md` §10 notes the original `tests/*.js` answer keys were empty. Verify every key before relying on it.
 **✅ Done when** a `tests` row exists, `content.json` has 40 questions and no answers, `key.json` has 40 keys.
+
+> 🟡 **In progress 2026-09-16 (OpenAI Codex, then Claude Opus 5):** the real
+> Listening paper and its recording arrived in `Sample test/`, and they are a
+> **different test** from the prototype's placeholder questions — pairing the two
+> would have produced a broken paper. The converter no longer assumes the
+> prototype's fixed layout: it derives groups from consecutive runs, reads each
+> word limit from the paper's own instruction line, folds "choose TWO letters"
+> into one control covering both numbers, and refuses T/F/NG, which Listening
+> does not use. The upload schema now also rejects a test clock shorter than its
+> recording — the supplied audio is 1916 s against a 1800 s legacy clock, so
+> every attempt would have been cut off inside Part 4.
+>
+> ⚠️ **The source paper stays out of this repository.** It is public, and the
+> paper, its recording and the generated upload JSON all carry the answer key
+> (MVP-1 §7). `Sample test/` is gitignored; the CLI takes the paper via
+> `--source`. `ielts-data.js` remains placeholder content for the design screens.
+>
+> ⚠️ **The 40 Listening answers are not verified.** `Listening - 1.docx` contains
+> questions only — no key — so the answers were derived from the recording. They
+> must be checked by a teacher before this test leaves `draft`. The two Reading
+> papers in the same folder *do* ship authoritative 1-40 keys.
+>
+> Still blocked on an active `test:author` in the live database.
 
 ### 29. ⚡ `/dev/components` gallery `(M0-23)`
 Every component from [`MVP-1.md` §15](MVP-1.md#15-repo-structure-and-design-system) in every state. The in-repo successor to `00 Design System.dc.html`.

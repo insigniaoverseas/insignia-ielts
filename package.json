@@ -17,7 +17,8 @@
     "test:unit": "node --conditions=react-server --test \"tests/unit/**/*.test.mjs\"",
     "typecheck": "tsc --noEmit",
     "check:bundle": "node scripts/check-client-bundle.mjs",
-    "import:test": "node --conditions=react-server scripts/import-test.ts"
+    "import:test": "node --conditions=react-server scripts/import-test.ts",
+    "import:legacy-listening": "node --conditions=react-server scripts/import-legacy-tests.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.3",
