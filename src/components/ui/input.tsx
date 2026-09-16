@@ -68,12 +68,26 @@ function Input({
  * The country code is not editable — every student is in India, and a free-text
  * country code is a support call waiting to happen.
  */
-function PhoneInput({ className, ...props }: Omit<React.ComponentProps<"input">, "size" | "type">) {
+function PhoneInput({
+	className,
+	size = "student",
+	...props
+}: Omit<React.ComponentProps<"input">, "size" | "type"> & {
+	/**
+	 * `student` (56px, the default) or `admin` (40px). Staff type phone numbers
+	 * too — on the invite form — and a 56px field beside 40px ones reads as a
+	 * mistake, so the prefix chip follows the field's height.
+	 */
+	size?: "student" | "admin";
+}) {
 	return (
 		<div className="flex gap-2">
 			<span
 				aria-hidden="true"
-				className="grid h-primary min-w-16 place-items-center rounded-control border border-line bg-bg px-4 font-mono text-body font-medium text-ink"
+				className={cn(
+					"grid min-w-16 place-items-center rounded-control border border-line bg-bg px-4 font-mono text-body font-medium text-ink",
+					size === "admin" ? "h-10" : "h-primary",
+				)}
 			>
 				+91
 			</span>
@@ -82,6 +96,7 @@ function PhoneInput({ className, ...props }: Omit<React.ComponentProps<"input">,
 				inputMode="numeric"
 				autoComplete="tel-national"
 				numeric
+				size={size}
 				className={cn("flex-1", className)}
 				{...props}
 			/>

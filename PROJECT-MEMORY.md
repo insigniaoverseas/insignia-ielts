@@ -137,15 +137,15 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M5-01 Admin shell + sidebar | todo | | | |
-| M5-02 Admin overview (20) | todo | | | |
-| M5-03 Students list (21) | todo | | | |
-| M5-04 Invite + bulk CSV invite (22) | todo | | | Column mapping, per-row errors |
-| M5-05 Student detail drawer (23) | todo | | | |
-| M5-06 Plans & validity workqueue (24) | todo | | | |
-| M5-07 Batches (25) | todo | | | |
-| M5-08 Test library (26) | todo | | | |
-| M5-09 Answer key editor (27) | todo | | | Optimise for speed, not beauty |
+| M5-01 Admin shell + sidebar | done | Claude | 2026-09-16 | ✅ `(admin)/layout.tsx` + `StaffSidebar`, grouped Overview / People / Content; scrolling chip row below 1024px. ⚠️ It draws navigation, it is **not a gate** — `lib/rbac.ts` + RLS are, both server-side. |
+| M5-02 Admin overview (20) | done | Claude | 2026-09-16 | ✅ `/overview`: four stat cards, an "expiring soon" table with **inline Extend** on the row (the fix belongs where the problem is seen, not three clicks away), recent activity. |
+| M5-03 Students list (21) | done | Claude | 2026-09-16 | ✅ `/students`: search + status + batch filters, all in the **URL** — a filtered list is something staff paste to each other, and it survives a refresh mid-support-call. Plain GET form, so it works without JS. ⬜ Bulk select + sticky bulk bar land with the server actions. |
+| M5-04 Invite + bulk CSV invite (22) | done | Claude | 2026-09-16 | ✅ `/students/new` (called **Invite**, not Add — no public signup, so the account doesn't exist until they accept) and `/students/import`: auto-guessed column mapping, per-row preview, each error pinned to **its own cell** with the reason. Verified with a real CSV: quoted `"Singh, Arjun"` parsed, `+91 98765 43211` normalised, 3 good / 3 bad split correctly. ⚠️ Browser parsing is for the **preview only** — the real checks run server-side (M1-02). |
+| M5-05 Student detail drawer (23) | done | Claude | 2026-09-16 | ✅ `/students/[id]`. Built as a **page, not a drawer** (§4): staff open it mid-call and paste the link to a colleague, and a drawer has no address. Plan first, then attempts, plan history and the audit trail. |
+| M5-06 Plans & validity workqueue (24) | done | Claude | 2026-09-16 | ✅ `/plans`: grouped Expired / this week / this month — three groups because they're three different jobs (apologise, act, plan), not one sortable list. Bulk select → 1/3/6 months → confirm dialog naming exactly what changes, with a **required reason** kept in plan history. The dialog's date is illustrative; the server recomputes from each plan's own end date, so a stale tab can't write a wrong date. |
+| M5-07 Batches (25) | done | Claude | 2026-09-16 | ✅ `/batches`. A batch with no teacher or no students says so in words — both are easy to create by accident and an empty cell doesn't get noticed. |
+| M5-08 Test library (26) | done | Claude | 2026-09-16 | ✅ `/library` with skill/status filters. The column that matters is **answer keys**: a published test with a missing key silently scores zero, so "34 of 40 · 6 missing" is on every row rather than hidden behind a Draft pill. |
+| M5-09 Answer key editor (27) | done | Claude | 2026-09-16 | ✅ `/library/[testId]/answer-key`. Built for **speed**: Enter drops to the next answer, variants are a comma field (not chips — chips cost a mouse trip each), progress always on screen, missing rows flagged via `aria-invalid`. ⚠️ **The only screen that puts correct answers in a browser.** `noindex`; its view-model `AnswerKeyEditor` is used by nothing else, so no student screen can join onto it. ⬜ Save action + `key.json` write (M5). |
 
 ### M6 — Teacher
 
@@ -255,6 +255,33 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-16 — `Button asChild` was broken for every caller  (task: M5-02)
+
+`Button` rendered `{loading && !asChild ? <Spinner/> : null}` beside
+`{children}`. With `asChild`, Radix's `Slot` counts those as two children and
+throws "Expected a single React element child" — so **every** `asChild` call
+site 500'd. Nothing had used it until the admin screens needed link-shaped
+buttons, so it had never fired.
+
+Fixed by passing `children` alone when `asChild` is set. A link-shaped button
+never shows a spinner anyway: navigation is the browser's job.
+
+### 2026-09-16 — Student detail is a page, not a drawer  (task: M5-05)
+
+`DESIGN-PROMPT.md` C3.23 calls for a drawer. Built as a route with its own URL
+instead: staff open this screen in the middle of a support call and read the
+link out or paste it to a colleague, and a drawer has no address. Content and
+ordering are unchanged from the design — plan first, because that is what the
+call is almost always about.
+
+### 2026-09-16 — `PhoneInput` takes a `size`  (task: M5-04)
+
+It hardcoded `h-primary` (56px, the student height) and omitted `size` from
+its props. Staff type phone numbers too — on the invite form — where a 56px
+field beside 40px ones reads as a mistake. `size` now matches `Input`'s, and
+the `+91` chip follows the field's height. Default is still `student`, so
+nothing already built changes.
 
 ### 2026-09-16 — Attempt HTML is sanitised on the server, not in the player  (task: M2-15 / M3-02)
 

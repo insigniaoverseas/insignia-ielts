@@ -102,8 +102,21 @@ function Button({
 			className={cn(buttonVariants({ variant, size, loading }), className)}
 			{...props}
 		>
-			{loading && !asChild ? <Spinner /> : null}
-			{children}
+			{/*
+			 * `asChild` must pass Slot exactly ONE child. The spinner branch used
+			 * to render `null` beside `children`, which Slot counts as two and
+			 * rejects with "Expected a single React element child" — so every
+			 * `asChild` call site threw. A link-shaped button never shows a
+			 * spinner anyway: navigation is the browser's job, not ours.
+			 */}
+			{asChild ? (
+				children
+			) : (
+				<>
+					{loading ? <Spinner /> : null}
+					{children}
+				</>
+			)}
 		</Comp>
 	);
 }
