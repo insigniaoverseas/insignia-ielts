@@ -1,36 +1,89 @@
-# Copy to .dev.vars (gitignored) and fill in. Names only here — never commit values.
-# Deployed values live in Wrangler secrets: npx wrangler secret put <NAME>
-# Where each comes from: PROJECT-MEMORY.md §6.
+# Local development settings for `next dev` and `wrangler dev`.
+#
+#   cp .dev.vars.example .dev.vars    # .dev.vars is gitignored
+#
+# NAMES ONLY IN THIS FILE. Never a value — it is committed.
+#
+# Deployed, each one lives in one of two places:
+#   * secret  →  npx wrangler secret put <NAME>
+#   * public  →  the `vars` block in wrangler.jsonc
+# Which is which is marked below. Where each comes from: PROJECT-MEMORY.md §6.
 
 NEXTJS_ENV=development
 
-# Supabase → Project Settings → API
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NEEDED NOW — nothing runs without these
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Supabase → Project Settings → API. Project ref: zpqszkwavnjomxjgimni
 SUPABASE_URL=
-# Publishable key (sb_publishable_…) — RLS-scoped requests
+
+# secret · Publishable key (sb_publishable_…). RLS-scoped requests.
 SUPABASE_PUBLISHABLE_KEY=
-# Secret key (sb_secret_…) — BYPASSES RLS. Server-only, behind lib/rbac.ts.
+
+# secret · Secret key (sb_secret_…). **BYPASSES RLS.** Server-only, and only
+# behind a lib/rbac.ts check. Never in a client bundle — CI greps for it.
 SUPABASE_SECRET_KEY=
 
-# Cloudflare R2 S3 API → scoped object-read token for the two project buckets.
-# Account id is an identifier, not a secret; the access key pair is secret.
-CLOUDFLARE_ACCOUNT_ID=
+# public · The absolute origin invitation and password-reset links are built
+# from, with no trailing slash. Must be absolute: these links are read in an
+# email client, where a relative path means nothing.
+# Deployed: wrangler.jsonc `vars`, where it is currently a workers.dev
+# placeholder pending the real domain.
+APP_BASE_URL=http://localhost:3000
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EMAIL — invitations (M1-02) and password resets (M1-15)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# public · From address. Must be on a domain VERIFIED in Resend, or every send
+# is rejected. Deployed: wrangler.jsonc `vars`.
+MAIL_FROM=Insignia IELTS <invites@example.com>
+
+# secret · Resend → API Keys → Create API Key. "Sending access" is enough.
+#
+# ⚠️ Connecting Resend to Supabase does NOT cover this. That connection is SMTP
+#    for Supabase Auth's own mail (recovery, email change). Our invitation and
+#    reset carry our own revocable tokens, so we send them ourselves.
+#
+# Leave BLANK in development and the link prints to the server console instead
+# of sending — the whole invite and reset flow is walkable without a key.
+# In production a missing key makes the app throw rather than silently not
+# send: an invitation that looks sent but never arrives is worse than an error.
+RESEND_API_KEY=
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# R2 — signed media URLs (M0-12). Needed once a test has audio.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# public · An identifier, not a secret. Already in wrangler.jsonc `vars`;
+# repeated here so `next dev` can read it too.
+CLOUDFLARE_ACCOUNT_ID=68799315c4e277e252cf254bba0e7d2b
+
+# secret · Cloudflare → R2 → Manage API Tokens. Scope it to OBJECT READ on just
+# `insignia-ielts-content` and `insignia-ielts-audio`. Do not reuse the
+# account-wide Wrangler token.
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 
-# ── Auth (M1) ────────────────────────────────────────────────────────────────
-# Absolute origin that invitation links are built from, no trailing slash.
-# Deployed, this lives in wrangler.jsonc `vars` — it is not a secret.
-APP_BASE_URL=http://localhost:3000
 
-# From address on invitation email. Must be on a domain verified in Resend.
-MAIL_FROM=Insignia IELTS <invites@example.com>
+# ─────────────────────────────────────────────────────────────────────────────
+# NOT WIRED UP YET — listed so the names are settled before they are needed
+# ─────────────────────────────────────────────────────────────────────────────
 
-# Resend → API Keys. Sending permission only.
-# NOTE: connecting Resend to Supabase covers Supabase Auth's OWN emails (SMTP).
-# Our invitation carries our own token, so we send it ourselves and need this.
-# Leave unset in development and the invite link prints to the server console.
-RESEND_API_KEY=
-
-# Cloudflare → Turnstile → your site. The site key is public (wrangler vars);
-# only the secret belongs here. M1-11.
+# M1-11 · Cloudflare → Turnstile → Add site. List your domain AND the
+# workers.dev hostname. It gives two keys:
+#   public · site key   → wrangler.jsonc `vars` (it is rendered into the page)
+#   secret · secret key → here
+# Nothing reads these yet; the sign-in action has the hook ready.
+TURNSTILE_SITE_KEY=
 TURNSTILE_SECRET_KEY=
+
+# M9 · secret · Sentry → project → Client Keys (DSN). Error reporting.
+SENTRY_DSN=
+
+# M8 · secret · Scoped credential for the test-authoring MCP server.
+MCP_SERVICE_CREDENTIAL=

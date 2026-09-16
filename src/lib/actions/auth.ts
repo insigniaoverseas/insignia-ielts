@@ -3,11 +3,12 @@
 import { redirect } from "next/navigation";
 
 import { acceptInvitation } from "@/lib/auth/acceptance";
+import { completePasswordReset, requestPasswordReset, RESET_REQUESTED_MESSAGE } from "@/lib/auth/password-reset";
 import { landingPathFor, signIn } from "@/lib/auth/sign-in";
 import { endSession } from "@/lib/auth/sessions";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
-import type { AcceptFormState, FormState, LoginFormState } from "@/lib/actions/types";
+import type { AcceptFormState, FormState, LoginFormState, ResetFormState, ResetRequestState } from "@/lib/actions/types";
 
 /**
  * Server Actions for signing in, signing out, accepting an invitation and the
@@ -105,4 +106,42 @@ export async function completeFirstRunSetupAction(_previous: FormState, formData
 	}
 
 	redirect("/admin/overview");
+}
+
+/**
+ * Asks for a reset link (M1-15).
+ *
+ * Always reports the same thing. `requestPasswordReset` decides in silence
+ * whether there is an account to send to — this action cannot tell, and neither
+ * can the person submitting the form.
+ */
+export async function requestPasswordResetAction(
+	_previous: ResetRequestState,
+	formData: FormData,
+): Promise<ResetRequestState> {
+	const email = String(formData.get("email") ?? "");
+	if (!email.includes("@")) {
+		return { message: "Please enter your email address.", sent: false };
+	}
+
+	await requestPasswordReset(email);
+	return { message: RESET_REQUESTED_MESSAGE, sent: true };
+}
+
+/** Sets the new password, then sends them to sign in with it. */
+export async function completePasswordResetAction(
+	_previous: ResetFormState,
+	formData: FormData,
+): Promise<ResetFormState> {
+	const result = await completePasswordReset(
+		String(formData.get("token") ?? ""),
+		String(formData.get("password") ?? ""),
+	);
+	if (!result.ok) return { message: result.message };
+
+	// Deliberately not signed in automatically, unlike accepting an invitation.
+	// Completing a reset revokes every session that account holds — including,
+	// if this was an intruder being locked out, theirs. Handing back a fresh
+	// session here would undo that for whoever just used the link.
+	redirect("/login?reset=1");
 }

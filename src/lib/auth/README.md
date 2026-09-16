@@ -41,7 +41,35 @@ returning student
 | `sign-in.ts` | Verifying a password; one message for every failure. |
 | `sessions.ts` | `user_sessions` records, the session cookie, revocation. |
 | `lockout.ts` | Five wrong passwords → a fifteen-minute lock, by account **and** IP. |
+| `password-reset.ts` | `/forgot` and `/reset/[token]`. Same answer whether or not the account exists. |
 | `guard.ts` | Page-level guards that redirect, rather than throw. |
+
+### Password reset, end to end
+
+```
+/forgot  →  requestPasswordReset(email)
+              ├─ rate limit by email AND ip      (quietly stops; same reply)
+              ├─ no account, or suspended?        stop — same reply
+              └─ mint token, store SHA-256, email it
+
+/reset/[token]  →  lookupPasswordReset            expired / used / unknown
+                     └─ completePasswordReset
+                          ├─ our password rules
+                          ├─ Auth updateUserById
+                          └─ complete_password_reset
+                               ├─ mark used, kill sibling tokens
+                               └─ REVOKE EVERY SESSION
+```
+
+**One hour**, not the invitation's seven days: a reset is asked for by someone at
+the screen right now, so a long life is exposure bought for nothing.
+
+**The reply never varies.** Real address, unknown address, suspended account —
+all get the same sentence. The login screen refuses to say which addresses are
+real; a reset form that said would hand back the list it protects.
+
+**It revokes every session.** If an intruder is signed in, a reset that left them
+there has fixed nothing.
 
 ## Three things that will bite you
 

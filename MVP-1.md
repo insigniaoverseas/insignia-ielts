@@ -489,9 +489,30 @@ stateDiagram-v2
 5. **Teacher and admin accounts** are invited the same way, with optional 2FA. Different threat model — they can delete data.
 
 **An admin never sets or resets a password.** A password is only ever chosen by
-the person who owns it, through an invitation link — so the way to get a
-locked-out student back in is a fresh invitation, not an admin typing a password
-they then have to read out loud.
+the person who owns it — through an invitation link, or through a reset link
+sent to their own email. Never an admin typing one they then have to read out
+loud.
+
+> **Corrected 2026-09-17 (M1-15): there is now a self-serve reset.** This
+> section previously said there was none, reasoning that a locked-out student is
+> standing in a building with their teacher in it, so a fresh invitation beats an
+> email round trip.
+>
+> That holds for students. It **fails for the Owner**, who has nobody above
+> them — nobody can invite an Owner, by design — so a forgotten Owner password
+> made the Supabase dashboard the only way back into the product, permanently.
+> The user hit exactly that and chose to open the reset to every role rather
+> than special-case one.
+>
+> `/forgot` asks for an email and always answers the same way, whether or not
+> an account exists — the login screen already refuses to say which addresses
+> are real, and a reset form that said would hand back the list it protects
+> (§8). `/reset/[token]` takes a hashed, single-use token with a **one-hour**
+> TTL — against an invitation's seven days, because a reset is asked for by
+> someone sitting at the screen, while an invitation has to survive a weekend.
+> Completing one **revokes every session that account holds**: if someone else
+> was signed in, changing the password has to put them out. Suspended accounts
+> are silently not sent a link. See `PROJECT-MEMORY.md` §4.
 
 ### ~~How PIN fast-login actually works~~ — removed 2026-09-16
 
@@ -508,7 +529,8 @@ Rate limiting and lockout still apply — to the password (M1-09, M1-10).
 
 | Screen | Change | Status |
 |---|---|---|
-| **01 Login** | Email + password. No signup link, one error message for both fields, no self-serve reset. | ✅ Built (M1-08). The rendered phone+PIN design does not apply. |
+| **01 Login** | Email + password. No signup link, one error message for both fields. **Links to `/forgot`** since M1-15. | ✅ Built (M1-08). The rendered phone+PIN design does not apply. |
+| **NEW — Forgotten password** | `/forgot` asks for an email; `/reset/[token]` sets a new one. Same answer whether or not the account exists. | ✅ Built (M1-15). |
 | ~~**02 First-login PIN change**~~ | Dropped with the PIN. | ❌ Not built, not wanted. |
 | **NEW — Accept invitation** | Token landing → set password. Expired / used / revoked / unknown each get a plain sentence and a way forward. | ✅ Built (M1-05, M1-06). |
 

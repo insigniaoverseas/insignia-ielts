@@ -762,6 +762,44 @@ export type Database = {
           },
         ]
       }
+      password_resets: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          requested_ip: unknown
+          token_hash: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          requested_ip?: unknown
+          token_hash: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          requested_ip?: unknown
+          token_hash?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "password_resets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_history: {
         Row: {
           action: string
@@ -1229,7 +1267,21 @@ export type Database = {
         }
         Returns: string
       }
+      complete_password_reset: {
+        Args: { p_token_hash: string }
+        Returns: string
+      }
       expire_stale_invitations: { Args: never; Returns: number }
+      find_password_reset: {
+        Args: { p_token_hash: string }
+        Returns: {
+          email: string
+          expired: boolean
+          name: string
+          used: boolean
+          user_id: string
+        }[]
+      }
       first_run_pending: { Args: never; Returns: boolean }
       peek_rate_limit: {
         Args: { p_key: string; p_limit: number; p_window_seconds: number }
@@ -1239,6 +1291,7 @@ export type Database = {
           window_start: string
         }[]
       }
+      purge_old_password_resets: { Args: never; Returns: number }
       purge_old_rate_limits: { Args: never; Returns: number }
     }
     Enums: {

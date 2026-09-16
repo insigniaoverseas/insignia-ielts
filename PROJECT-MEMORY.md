@@ -24,13 +24,13 @@
 | **Last completed** | **M1 auth flow, 2026-09-17 (Claude).** Invitations end to end: mint → email → accept → account → sign in → session → guard, plus lockout. Eight new modules under `lib/auth`, `lib/mail`, `lib/actions`; four migrations; 282 DB checks (was 250), 26/26 sweep, 197 unit tests (was 181), lint, build and bundle scan clean. **Migrations pushed and types regenerated 2026-09-17.** Earlier: **M0-18 server-only scorer, 2026-09-16 (OpenAI Codex).** Runtime-validates immutable keys; applies exact case/space/Unicode normalisation, authored variants, word limits, hyphen counting and plural-sensitive comparison; awards partial multi-select credit with no negatives; emits one fact per numbered question and section/attempt totals; derives bands only from supplied database rows. 21 focused checks in the existing Node suite; all 164 unit tests, 250 DB checks, the 26-policy sweep, typecheck, lint, production build, client-bundle scan and npm audit pass. Earlier: M0-17 importer; M0-12 R2 signing; M0-16 upload schema; M0-15 taxonomy; the complete front end; `plan_notes`; M0-13 CSP + sanitiser; M0-22 CI; M0-19; M0-11; M0-05…M0-10 (**schema complete, 25 tables**). |
 | **Next task — back end** | **Run `/setup`** to create the first branch and the Owner profile, then invite a test student end to end (the dev mailer prints the link). Then the Supabase dashboard settings in M1-01 — above all **JWT expiry 3600 → 7200 s**. Also open: **M0-14** scoped R2 credentials, **M0-21** docs/ADRs, M0-20's live draft import. |
 | **Next task — front end** | **M2-04 eligibility + M2-07 attempt lifecycle** — they unblock the player, and now have a real actor to sit on. Then M2-17 scoring on submit. Also: wire the bulk/CSV invite screen (22b) and Profile's device list to the actions that now exist, and apply `lib/auth/guard.ts` to the privileged layouts as each screen leaves `lib/mock/*`. |
-| **Open PRs** | None. **#14 M0-20 merged 2026-09-16** (this file previously said it was open and would not be merged — corrected 2026-09-17). #10–#13 merged. |
+| **Open PRs** | **#16 M1-15 password reset** from `feat/m1-15-password-reset` — its migration is already applied live. **#15 M1 auth flow merged 2026-09-17** (`705e189`). #10–#14 merged. |
 | ~~**Next task**~~ | ~~**M0-13 sanitiser PR**~~ — superseded 2026-09-16: merged (`fb2040f`), M0-13 closed. Old text: (`feat/sanitize-passages`) — once merged, M0-13 is complete. Then Phase 3: M0-15 `lib/question-types.ts` (step 23), M0-16 upload schema, M0-18 `lib/scoring.ts` + unit tests, M0-17 importer (which calls `sanitizePassageHtml` on write). Also open: M0-21 docs/ADRs. Then the rest of the unfinished Phase 0–1 steps: 3 (R2 buckets), 9 (CSP + sanitize), 11 (docs/ADRs), 12 (CI running `test:db`, `test:db:sweep`, `test:unit`) — then Phase 3 (question types, upload schema, importer, scoring) (Supabase clients `server/client/admin.ts`, M0-05) and step 22 (`lib/rbac.ts`). No-DB tasks still open: M0-12 (R2), M0-13 (CSP), M0-14 (secrets), M0-15, M0-18, M0-21, M0-22. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
 | ~~**Next task**~~ | ~~M0-06 — waiting on the user's `db push`~~ — superseded 2026-09-15: pushed and verified. |
 | ~~**Next task**~~ | ~~M0-06 — resolve where RLS helpers live first~~ — superseded 2026-09-15: `private` schema, approved by the user. |
 | ~~**Next task**~~ | ~~**M0-05** finish: only `npx supabase db push` left~~ — superseded 2026-09-15: pushed by the user, advisor clean. |
 | **Blocked on** | **M1 needs from the user:** the migrations pushed; the **domain name** (said to exist, not yet named); a **`RESEND_API_KEY`** and verified `MAIL_FROM` (the Resend↔Supabase connection does not cover our own invitation email — §4); Turnstile keys for M1-11; and the Supabase dashboard settings listed in M1-01. **M0-20** still needs a teacher-verified 40-answer key and an active `test:author`. |
-| **Branch** | `feat/m1-auth-flow`, in a **git worktree** at `~/dev/insignia-m1-auth` (outside iCloud, so a second `node_modules` does not sync). Branched from merged `origin/main`. |
+| **Branch** | `feat/m1-15-password-reset`, in the worktree at `~/dev/insignia-m1-auth`. ⚠️ `feat/m1-auth-flow` was created by `git worktree add -b … origin/main`, which set its upstream to **main** — four commits went straight onto main before anyone noticed. Always `git push -u origin <branch>` the first time; check `git status -sb` names the branch itself. |
 
 ---
 
@@ -84,6 +84,7 @@
 | M1-12 Session cookies + single active session | in_progress | Claude | 2026-09-17 | ✅ `lib/auth/sessions.ts`. A JWT cannot express revocation and its lifetime is deliberately longer than the longest test, so the `insignia_session` cookie carries a `user_sessions.id` and every guarded page checks that row is live. ✅ **Students one session, staff several** (user, 2026-09-17, §4): a student's second sign-in revokes the first — the sharing control — while staff work on a phone and a laptop. ✅ `revokeSession` checks ownership, so one user cannot revoke another's. ⬜ Raise the Supabase JWT expiry to 7200 s (needed: a 60-minute Reading test outlasts the 3600 s default and would refresh mid-test) — a dashboard change, awaiting the user. |
 | M1-13 `lib/rbac.ts` + route guards | in_progress | Claude, goverdhan-gaur | 2026-09-15 | ✅ Permission matrix agreed (§4). ✅ `supabase/migrations/20260915180655_role_permissions.sql` (Owner label, permissions + `CHECK`). ✅ `lib/permissions.ts` (pure, TSDoc) + `lib/rbac.ts` (`getActor` via `getClaims()` + secret-key lookup, `requirePermission`, `ForbiddenError`). ✅ `npm run test:unit` 29/29 against the seeded data; a deliberate "teacher can publish" seed is caught. ✅ Pushed by the user; verified live: `super_admin` named Owner, permission counts admin 10 / invigilator 1 / student 1 / Owner 12 / teacher 5, `roles_permissions_well_formed` present. ✅ Route guards (2026-09-17): `lib/auth/guard.ts` — `requireUser` / `requireStaff` / `requirePermissionOrRedirect`. These **redirect** where `requirePermission` throws, which is the difference between a page and an action. They also enforce revocation, so a revoked session with a still-valid JWT is turned away. ⬜ Apply them to the privileged layouts as each screen leaves mock data. |
 | M1-14 Device list + revoke (server side) | in_progress | Claude | 2026-09-17 | ✅ `revokeSession` in `lib/auth/sessions.ts`, ownership-checked and audited. ⬜ Wire Profile's list to `user_sessions`; ⬜ migrate the dead PIN columns off `user_devices` (`pin_hash`, `device_secret_hash`, `failed_pin_attempts`, `locked_until` — never written since the PIN was dropped). |
+| M1-15 Password reset (`/forgot`, `/reset/[token]`) | in_progress | Claude | 2026-09-17 | ✅ Built. Migration `20260917143000_password_resets.sql`: hashed single-use token, **1-hour** TTL, **no API access at all** (no grants, no policies — like `rate_limits`), and `complete_password_reset` marks it used, kills the user's sibling tokens and **revokes every session** in one transaction. ✅ `/forgot` answers identically whether or not the account exists, and is rate-limited by email *and* IP. ✅ Suspended accounts are silently not sent a link — resetting would re-open an account an admin closed. ✅ Completing does **not** sign them in: the reset just revoked every session, possibly an intruder's, and handing back a fresh one would undo that. ✅ 18 new DB checks (300 total). ✅ Migration applied to the live project 2026-09-17 and types regenerated; typecheck, build, bundle scan green. |
 
 ### M2 — Student core, Listening
 
@@ -273,6 +274,38 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-17 — There is a self-serve password reset after all  (task: M1-15)
+**Corrects `MVP-1.md` §9**, which said there was none: a locked-out student is
+standing in a building with their teacher in it, so a fresh invitation beats an
+email round trip.
+
+**Why it was wrong:** that reasoning covers students and **fails for the
+Owner**, who has nobody above them — nobody can invite an Owner, by design. A
+forgotten Owner password made the Supabase dashboard the only way back into the
+product, permanently. The user hit exactly this on 2026-09-17.
+
+**Chose (user, 2026-09-17):** open it to **every role**, not staff-only. One path is
+simpler to explain and to test, and it helps a student practising at home at
+10pm with no teacher nearby.
+
+**Chose (user, 2026-09-17):** our own token, like invitations — not Supabase's
+`resetPasswordForEmail`. Consistency with the invite flow, the branch name in
+the email, and it reuses the token and mailer code already built.
+
+**Design points worth keeping:**
+- **One hour**, against an invitation's seven days. An invitation is pushed at
+  someone unexpecting and must survive a weekend; a reset is asked for by
+  someone at the screen.
+- **The reply never varies** — real, unknown or suspended address, same
+  sentence. Otherwise the form hands back the list the login screen protects.
+- **Completing revokes every session.** If an intruder is signed in, a reset
+  that leaves them there has fixed nothing.
+- **It does not sign them in**, unlike accepting an invitation — that would
+  hand a fresh session to whoever just used the link, undoing the revocation.
+- The token is consumed **after** the Auth password update, not before, so a
+  password Auth rejects for appearing in a breach corpus does not burn the link.
+  Replay is still refused: a used token never passes the lookup.
 
 ### 2026-09-17 — The first Owner is linked, not invented  (task: M1-02 bootstrap)
 **Chose (user, 2026-09-17):** the user creates one auth user by hand in the Supabase
@@ -755,10 +788,11 @@ Non-secret settings, in `wrangler.jsonc` `vars` and `.dev.vars.example`:
 
 | Name | Used by | Set? |
 |---|---|---|
-| `APP_BASE_URL` | `lib/env.ts` — the absolute origin invitation links are built from | ⚠️ placeholder `insignia-test.workers.dev`; needs the real domain |
+| `APP_BASE_URL` | `lib/env.ts` — the absolute origin invitation and reset links are built from | ⚠️ placeholder `insignia-test.workers.dev`; needs the real domain |
+| `TURNSTILE_SITE_KEY` | M1-11, rendered into the page so it cannot be secret | ⬜ not yet issued |
 | `MAIL_FROM` | `lib/mail/mailer.ts` — must be a domain verified in Resend | ⚠️ placeholder `invites@example.com`; needs the real domain |
 
-⚠️ **`SUPABASE_SECRET_KEY` and `R2_SECRET_ACCESS_KEY` values must never appear in `wrangler.jsonc` vars, a client bundle, or this file.** `.dev.vars.example` lists names only.
+⚠️ **`SUPABASE_SECRET_KEY` and `R2_SECRET_ACCESS_KEY` values must never appear in `wrangler.jsonc` vars, a client bundle, or this file.** `.dev.vars.example` lists names only, grouped by *needed now* / email / R2 / *not wired up yet*, each marked `secret` or `public` and saying what breaks when it is missing.
 
 ---
 
