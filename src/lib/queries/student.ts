@@ -3,7 +3,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { SESSION_COOKIE } from "@/lib/auth/sessions";
+import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
 import { QUESTION_TYPES, isQuestionType } from "@/lib/question-types";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";

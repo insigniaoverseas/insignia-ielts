@@ -1,9 +1,12 @@
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { recordAudit } from "@/lib/audit";
+import { SESSION_COOKIE, secureSessionCookie } from "@/lib/auth/session-cookie";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+export { SESSION_COOKIE } from "@/lib/auth/session-cookie";
 
 /**
  * Session records and revocation (M1-12, M1-14).
@@ -24,9 +27,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * laptop at once, and logging them out of one to use the other would be a
  * daily irritation that buys nothing: they are not the sharing risk.
  */
-
-/** Holds the `user_sessions.id` for the browser's current session. */
-export const SESSION_COOKIE = "insignia_session";
 
 /**
  * How long the session cookie survives. Longer than the JWT on purpose: it is
@@ -56,11 +56,15 @@ export async function startSession(userId: string, roleKey: string, origin: Sess
 	if (SINGLE_SESSION_ROLES.has(roleKey)) {
 		// A new sign-in ends every earlier one. Done before the insert so a
 		// crash between the two leaves the student signed out, not doubly in.
-		await db
+		const { error } = await db
 			.from("user_sessions")
 			.update({ revoked_at: new Date().toISOString() })
 			.eq("user_id", userId)
 			.is("revoked_at", null);
+		if (error) {
+			console.error("earlier session revocation failed:", error.message);
+			return null;
+		}
 	}
 
 	const { data, error } = await db
@@ -74,14 +78,25 @@ export async function startSession(userId: string, roleKey: string, origin: Sess
 		return null;
 	}
 
-	const store = await cookies();
-	store.set(SESSION_COOKIE, data.id, {
-		httpOnly: true,
-		secure: true,
-		sameSite: "lax",
-		path: "/",
-		maxAge: SESSION_COOKIE_MAX_AGE,
-	});
+	try {
+		const store = await cookies();
+		const requestHeaders = await headers();
+		store.set(SESSION_COOKIE, data.id, {
+			httpOnly: true,
+			secure: secureSessionCookie({
+				forwardedProto: requestHeaders.get("x-forwarded-proto"),
+				host: requestHeaders.get("host"),
+				nodeEnv: process.env.NODE_ENV,
+			}),
+			sameSite: "lax",
+			path: "/",
+			maxAge: SESSION_COOKIE_MAX_AGE,
+		});
+	} catch (error) {
+		console.error("session cookie write failed:", error instanceof Error ? error.message : "unknown error");
+		await db.from("user_sessions").update({ revoked_at: new Date().toISOString() }).eq("id", data.id);
+		return null;
+	}
 
 	return data.id;
 }
@@ -89,13 +104,13 @@ export async function startSession(userId: string, roleKey: string, origin: Sess
 /**
  * Whether the browser's session record is still live.
  *
- * `none` means there is no session cookie at all — which is normal for a
- * request that has a JWT but predates this feature, so callers treat it as
- * live rather than kicking everyone out on deploy.
+ * `missing` means the Supabase JWT has no application-session cookie. It is
+ * not a valid signed-in state: otherwise deleting this cookie would bypass
+ * device revocation and the student's single-session rule.
  */
-export async function sessionState(userId: string): Promise<"live" | "revoked" | "none"> {
+export async function sessionState(userId: string): Promise<"live" | "revoked" | "missing"> {
 	const sessionId = (await cookies()).get(SESSION_COOKIE)?.value;
-	if (!sessionId) return "none";
+	if (!sessionId) return "missing";
 
 	const { data } = await createAdminClient()
 		.from("user_sessions")
@@ -113,12 +128,14 @@ export async function sessionState(userId: string): Promise<"live" | "revoked" |
 export async function touchSession(): Promise<void> {
 	const sessionId = (await cookies()).get(SESSION_COOKIE)?.value;
 	if (!sessionId) return;
+	const staleBefore = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
 	await createAdminClient()
 		.from("user_sessions")
 		.update({ last_seen_at: new Date().toISOString() })
 		.eq("id", sessionId)
-		.is("revoked_at", null);
+		.is("revoked_at", null)
+		.lt("last_seen_at", staleBefore);
 }
 
 /** Closes the browser's own session and clears the cookie. */

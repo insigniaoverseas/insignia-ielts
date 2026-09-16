@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { acceptInvitation } from "@/lib/auth/acceptance";
 import { completePasswordReset, requestPasswordReset, RESET_REQUESTED_MESSAGE } from "@/lib/auth/password-reset";
-import { landingPathFor, signIn } from "@/lib/auth/sign-in";
+import { signIn } from "@/lib/auth/sign-in";
 import { endSession, startSession } from "@/lib/auth/sessions";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
@@ -81,7 +81,7 @@ export async function acceptInvitationAction(_previous: AcceptFormState, formDat
 		if (signedIn.ok) redirect(signedIn.redirectTo);
 	}
 
-	redirect(landingPathFor(result.roleKey));
+	redirect("/login?accepted=1");
 }
 
 /**
@@ -114,10 +114,14 @@ export async function completeFirstRunSetupAction(_previous: FormState, formData
 	const userId = claims?.claims?.sub;
 	if (userId) {
 		const requestHeaders = await headers();
-		await startSession(userId, "super_admin", {
+		const sessionId = await startSession(userId, "super_admin", {
 			ip: requestHeaders.get("cf-connecting-ip") ?? requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
 			userAgent: requestHeaders.get("user-agent"),
 		});
+		if (!sessionId) {
+			await supabase.auth.signOut();
+			redirect("/login?session=1");
+		}
 	}
 
 	redirect("/admin/overview");

@@ -41,3 +41,76 @@ export function signInPath(pathname?: string): string {
 	if (!pathname || !pathname.startsWith("/") || pathname.startsWith("//")) return "/login";
 	return `/login?next=${encodeURIComponent(pathname)}`;
 }
+
+/**
+ * Whether Proxy must resolve who the visitor is before answering.
+ *
+ * Every protected area, plus the two routes whose answer depends on being
+ * signed in: `/` chooses a home, and `/login` bounces a live session away
+ * from a form it does not need.
+ */
+export function routeNeedsIdentity(pathname: string): boolean {
+	return routeArea(pathname) !== null || pathname === "/" || pathname === "/login";
+}
+
+/**
+ * What the request could establish about the browser's application session.
+ *
+ * `unverified` exists because a transient database error must not sign the
+ * whole institute out. A confirmed missing or revoked row is `ended`; a read
+ * that failed is `unverified`, and the server layout repeats the check.
+ */
+export type SessionStanding = "live" | "ended" | "unverified";
+
+/** What the edge should do with a request. */
+export type RouteDecision =
+	/** Continue to the page. */
+	| { kind: "pass" }
+	/** Redirect, carrying refreshed auth cookies. */
+	| { kind: "redirect"; to: string }
+	/** Redirect *and* clear both cookies: the session is gone. */
+	| { kind: "endSession"; to: string };
+
+/**
+ * The single routing rule for entry, login and the protected areas.
+ *
+ * Pure on purpose: Proxy supplies the request facts and performs the effects,
+ * while the policy itself stays testable and lives beside the role rules it
+ * shares. Order matters — a dead session outranks every other outcome.
+ *
+ * @param pathname The request path.
+ * @param userId The Supabase JWT subject, or `null` when unauthenticated.
+ * @param role The role key of an **active** account, else `null`. A signed-in
+ *   visitor with no profile row is the bootstrap Owner mid-first-run.
+ * @param session Standing of the `user_sessions` row named by the cookie.
+ */
+export function routeDecision({
+	pathname,
+	userId,
+	role,
+	session,
+}: {
+	pathname: string;
+	userId: string | null;
+	role: string | null;
+	session: SessionStanding;
+}): RouteDecision {
+	const area = routeArea(pathname);
+	const isEntry = pathname === "/";
+	const isLogin = pathname === "/login";
+	if (!area && !isEntry && !isLogin) return { kind: "pass" };
+
+	// A JWT without its revocable session is only half a login. Deleting the
+	// cookie must not become a way around device revocation.
+	if (userId && role && session === "ended") return { kind: "endSession", to: "/login?ended=1" };
+
+	if (isEntry) return { kind: "redirect", to: role ? homeForRole(role) : "/login" };
+	if (isLogin) return role ? { kind: "redirect", to: homeForRole(role) } : { kind: "pass" };
+
+	if (!area) return { kind: "pass" };
+	if (!userId) return { kind: "redirect", to: signInPath(pathname) };
+	if (!role) return { kind: "redirect", to: "/login" };
+	if (!roleCanAccess(role, area)) return { kind: "redirect", to: homeForRole(role) };
+
+	return { kind: "pass" };
+}

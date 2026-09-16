@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Banner } from "@/components/ui/banner";
 import Link from "next/link";
 
 import { LoginForm } from "@/components/auth/login-form";
+import { homeForRole } from "@/lib/auth/access";
+import { isFirstRunPending } from "@/lib/auth/guard";
+import { sessionState } from "@/lib/auth/sessions";
+import { getActor } from "@/lib/rbac";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -19,16 +24,19 @@ export const metadata: Metadata = { title: "Sign in" };
  *   makes people think they did something wrong.
  * - **No "which field was wrong".** One message for both, because naming the
  *   email tells an attacker which addresses are real (`MVP-1.md` §8).
- * - **No self-serve password reset** yet — a student who is locked out is
- *   standing in a building with their teacher in it, and that is faster and
- *   safer than an email round trip.
+ * - **No signed-in state.** A live session is redirected to its role home;
+ *   the form is only rendered for somebody who actually needs to sign in.
  */
 export default async function LoginPage({
 	searchParams,
 }: {
-	searchParams: Promise<{ next?: string; ended?: string; reset?: string }>;
+	searchParams: Promise<{ next?: string; ended?: string; reset?: string; session?: string; accepted?: string }>;
 }) {
-	const { next, ended, reset } = await searchParams;
+	const actor = await getActor();
+	if (actor && (await sessionState(actor.id)) === "live") redirect(homeForRole(actor.role));
+	if (!actor && (await isFirstRunPending())) redirect("/setup");
+
+	const { next, ended, reset, session, accepted } = await searchParams;
 
 	return (
 		<>
@@ -62,6 +70,16 @@ export default async function LoginPage({
 					Your password has been changed, and you&rsquo;ve been signed out everywhere else. Sign in with your
 					new one.
 				</Banner>
+			)}
+
+			{session && (
+				<Banner tone="danger">
+					Your account is ready, but the app could not start a secure session. Please sign in again.
+				</Banner>
+			)}
+
+			{accepted && (
+				<Banner tone="success">Your account is ready. Sign in with the password you just created.</Banner>
 			)}
 
 			<LoginForm next={next} />

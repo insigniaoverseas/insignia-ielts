@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 import { getActor } from "@/lib/rbac";
 import { can, type Actor, type Permission } from "@/lib/permissions";
-import { endSession, sessionState } from "@/lib/auth/sessions";
+import { sessionState, touchSession } from "@/lib/auth/sessions";
 import { createClient } from "@/lib/supabase/server";
 import { homeForRole, signInPath } from "@/lib/auth/access";
 
@@ -42,11 +42,13 @@ export async function requireUser(currentPath?: string): Promise<Actor> {
 		redirect(signInPath(currentPath));
 	}
 
-	if ((await sessionState(actor.id)) === "revoked") {
-		await endSession();
-		await (await createClient()).auth.signOut();
+	const state = await sessionState(actor.id);
+	if (state !== "live") {
+		// Proxy clears both cookies on the redirected request. Server Components
+		// cannot mutate cookies themselves.
 		redirect("/login?ended=1");
 	}
+	await touchSession();
 
 	return actor;
 }

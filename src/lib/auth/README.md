@@ -43,6 +43,8 @@ returning student
 | `lockout.ts` | Five wrong passwords → a fifteen-minute lock, by account **and** IP. |
 | `password-reset.ts` | `/forgot` and `/reset/[token]`. Same answer whether or not the account exists. |
 | `guard.ts` | Page-level guards that redirect, rather than throw. |
+| `access.ts` | **Pure.** Route areas, role access, and `routeDecision` — the one routing rule Proxy and the guards share. |
+| `session-cookie.ts` | **Pure.** The cookie's name and when it carries `Secure`. Imported by Proxy, which runs on the edge and cannot pull in `sessions.ts`. |
 
 ### Password reset, end to end
 
@@ -91,7 +93,18 @@ log in, because nothing here has an integration test yet.
 **A valid JWT is not a live session.** The JWT lifetime is deliberately longer
 than the longest test, so revocation cannot come from expiry. It comes from the
 `user_sessions` row named by the session cookie, which `guard.ts` checks on every
-guarded page.
+guarded page and `proxy.ts` checks at the edge.
+
+**A missing session cookie is signed *out*, not signed in.** It used to be
+treated as "live" so that a deploy would not evict everyone. That was a way
+around revocation: delete one cookie and the JWT alone got you back in. A JWT
+with no session row now ends the login and clears both cookies.
+
+**One routing rule, two enforcement points.** `routeDecision` in `access.ts` is
+pure and unit-tested; `proxy.ts` supplies the request facts and performs the
+redirect. Order matters inside it — a dead session outranks every other
+outcome, and a *failed* session read is `unverified`, which passes, so a
+database blip cannot sign the whole institute out.
 
 ## Related
 

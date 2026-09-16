@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { homeForRole, roleCanAccess, routeArea, signInPath } from "@/lib/auth/access";
+import { routeDecision, routeNeedsIdentity, type SessionStanding } from "@/lib/auth/access";
+import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
 import { generateNonce, securityHeaders } from "@/lib/security/headers";
 import type { Database } from "@/lib/supabase/database.types";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/env";
@@ -32,8 +33,8 @@ export async function proxy(request: NextRequest) {
 	const makeNextResponse = () => NextResponse.next({ request: { headers: requestHeaders } });
 	let response = makeNextResponse();
 
-	const area = routeArea(request.nextUrl.pathname);
-	if (area) {
+	const pathname = request.nextUrl.pathname;
+	if (routeNeedsIdentity(pathname)) {
 		const supabase = createServerClient<Database>(supabaseUrl(), supabasePublishableKey(), {
 			cookies: {
 				getAll: () => request.cookies.getAll(),
@@ -46,11 +47,11 @@ export async function proxy(request: NextRequest) {
 		});
 
 		const { data: auth } = await supabase.auth.getClaims();
-		const userId = auth?.claims?.sub;
+		const userId = auth?.claims?.sub ?? null;
+		let role: string | null = null;
+		let session: SessionStanding = "unverified";
 
-		if (!userId) {
-			response = copyCookies(response, NextResponse.redirect(new URL(signInPath(request.nextUrl.pathname), request.url)));
-		} else {
+		if (userId) {
 			// User-scoped on purpose: Proxy is an early gate, while layouts and
 			// actions independently enforce authorization with `lib/rbac.ts`.
 			const { data: profile } = await supabase
@@ -58,18 +59,49 @@ export async function proxy(request: NextRequest) {
 				.select("status, roles ( key )")
 				.eq("id", userId)
 				.maybeSingle();
-			const role = profile?.status === "active" ? profile.roles?.key : null;
+			role = profile?.status === "active" ? profile.roles?.key ?? null : null;
 
-			if (!role) {
-				response = copyCookies(response, NextResponse.redirect(new URL("/login", request.url)));
-			} else if (!roleCanAccess(role, area)) {
-				response = copyCookies(response, NextResponse.redirect(new URL(homeForRole(role), request.url)));
-			}
+			session = await sessionStanding(supabase, userId, request.cookies.get(SESSION_COOKIE)?.value);
+		}
+
+		const decision = routeDecision({ pathname, userId, role, session });
+
+		if (decision.kind === "endSession") {
+			await supabase.auth.signOut();
+			const redirectResponse = copyCookies(response, NextResponse.redirect(new URL(decision.to, request.url)));
+			redirectResponse.cookies.delete(SESSION_COOKIE);
+			response = redirectResponse;
+		} else if (decision.kind === "redirect") {
+			response = copyCookies(response, NextResponse.redirect(new URL(decision.to, request.url)));
 		}
 	}
 
 	for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
 	return response;
+}
+
+/**
+ * Standing of the application session named by the cookie.
+ *
+ * A read error returns `unverified` so a database blip cannot sign everyone
+ * out; a confirmed missing or revoked row returns `ended`.
+ */
+async function sessionStanding(
+	supabase: ReturnType<typeof createServerClient<Database>>,
+	userId: string,
+	sessionId: string | undefined,
+): Promise<SessionStanding> {
+	if (!sessionId) return "ended";
+
+	const { data, error } = await supabase
+		.from("user_sessions")
+		.select("id, revoked_at")
+		.eq("id", sessionId)
+		.eq("user_id", userId)
+		.maybeSingle();
+
+	if (error) return "unverified";
+	return !data || data.revoked_at !== null ? "ended" : "live";
 }
 
 /** Carries refreshed Supabase cookies onto a redirect response. */

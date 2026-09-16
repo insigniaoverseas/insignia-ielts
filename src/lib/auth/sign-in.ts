@@ -138,7 +138,18 @@ export async function signIn(email: string, password: string, nextPath?: string 
 
 	const roleKey = profile.roles?.key ?? "student";
 	const userAgent = (await headers()).get("user-agent");
-	await startSession(data.user.id, roleKey, { ip, userAgent });
+	const sessionId = await startSession(data.user.id, roleKey, { ip, userAgent });
+	if (!sessionId) {
+		// A JWT without its revocable application session is only half a login.
+		// Remove it instead of sending the user into an inconsistent state.
+		await supabase.auth.signOut();
+		return {
+			ok: false,
+			message: "We couldn't start your session. Please try again.",
+			triesLeft: null,
+			lockedUntil: null,
+		};
+	}
 
 	await recordAudit({
 		actorId: data.user.id,
