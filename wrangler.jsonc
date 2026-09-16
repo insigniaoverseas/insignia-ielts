@@ -38,6 +38,10 @@
 		{ "binding": "CONTENT_BUCKET", "bucket_name": "insignia-ielts-content" },
 		{ "binding": "AUDIO_BUCKET", "bucket_name": "insignia-ielts-audio" }
 	],
+	"vars": {
+		// Public identifier used for the exact R2 S3 endpoint and CSP origin.
+		"CLOUDFLARE_ACCOUNT_ID": "68799315c4e277e252cf254bba0e7d2b"
+	},
 	"observability": {
 		"enabled": true
 	},

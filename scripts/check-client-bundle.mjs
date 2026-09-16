@@ -19,6 +19,8 @@ const FORBIDDEN = [
 	[/\bbandFor\b|\bscoreAttempt\b/, "scoring function (lib/scoring.ts is server-only)"],
 	[/sb_secret_/, "Supabase secret key value"],
 	[/SUPABASE_SECRET_KEY/, "Supabase secret key variable"],
+	[/R2_SECRET_ACCESS_KEY/, "R2 secret access-key variable"],
+	[/R2_ACCESS_KEY_ID/, "R2 access-key variable"],
 ];
 
 function* files(dir) {
