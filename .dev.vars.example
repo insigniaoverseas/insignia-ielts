@@ -10,3 +10,9 @@ SUPABASE_URL=
 SUPABASE_PUBLISHABLE_KEY=
 # Secret key (sb_secret_…) — BYPASSES RLS. Server-only, behind lib/rbac.ts.
 SUPABASE_SECRET_KEY=
+
+# Cloudflare R2 S3 API → scoped object-read token for the two project buckets.
+# Account id is an identifier, not a secret; the access key pair is secret.
+CLOUDFLARE_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=

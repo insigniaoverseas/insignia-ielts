@@ -205,6 +205,8 @@ The 18-type matrix from [`MVP-1.md` §10](MVP-1.md#10-question-types-d12): `type
 **✅ Done when** a malformed test JSON produces per-question errors, not one generic failure.
 
 ### 25. `lib/r2.ts` with the signing rules `(M0-12 part 2)`
+> ✅ **Implemented 2026-09-16 (OpenAI Codex):** strict server-generated key builders and parser; binding-only reads for `content.json` / `key.json`; attempt-scoped five-minute presigned GETs for audio/assets; submitted + released gate for transcripts; unconditional JSON signing refusals; exact R2 media CSP origin; credential-name bundle guard. Real `aws4fetch` signing is covered with dummy credentials, including the 300-second expiry. Live R2 read credentials remain an M0-14 provisioning step.
+
 Implement [`MVP-1.md` §14](MVP-1.md#14-r2-layout-and-signing-rules) as code, not convention:
 - `test.mp3` and `assets/*` → signable, 5-min TTL, scoped to an attempt.
 - `content.json` → binding read only.

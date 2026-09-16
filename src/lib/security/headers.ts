@@ -28,17 +28,20 @@ export function generateNonce(): string {
  * @param options.isDev Development needs `'unsafe-eval'` (React's dev
  *   tooling) and must not force HTTPS on localhost.
  */
-export function contentSecurityPolicy(nonce: string, { isDev = false }: { isDev?: boolean } = {}): string {
+export function contentSecurityPolicy(
+	nonce: string,
+	{ isDev = false, r2Origin }: { isDev?: boolean; r2Origin?: string } = {},
+): string {
+	const privateMediaSources = r2Origin ? ` ${r2Origin}` : "";
 	const directives = [
 		"default-src 'self'",
 		`script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
 		"style-src 'self' 'unsafe-inline'",
-		"img-src 'self' blob: data:",
+		`img-src 'self' blob: data:${privateMediaSources}`,
 		"font-src 'self'",
 		// The browser never talks to Supabase (lib/supabase/README.md).
 		"connect-src 'self'",
-		// Test audio will come from R2 signed URLs; add that origin with M2-06.
-		"media-src 'self' blob:",
+		`media-src 'self' blob:${privateMediaSources}`,
 		"object-src 'none'",
 		"base-uri 'self'",
 		"form-action 'self'",
@@ -60,6 +63,9 @@ export const STATIC_SECURITY_HEADERS: Readonly<Record<string, string>> = {
 };
 
 /** Every security header for one response: the per-request CSP plus {@link STATIC_SECURITY_HEADERS}. */
-export function securityHeaders(nonce: string, options: { isDev?: boolean } = {}): Record<string, string> {
+export function securityHeaders(
+	nonce: string,
+	options: { isDev?: boolean; r2Origin?: string } = {},
+): Record<string, string> {
 	return { "Content-Security-Policy": contentSecurityPolicy(nonce, options), ...STATIC_SECURITY_HEADERS };
 }

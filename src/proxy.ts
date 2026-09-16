@@ -15,7 +15,11 @@ import { generateNonce, securityHeaders } from "@/lib/security/headers";
  */
 export function proxy(request: NextRequest) {
 	const nonce = generateNonce();
-	const headers = securityHeaders(nonce, { isDev: process.env.NODE_ENV === "development" });
+	const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+	const headers = securityHeaders(nonce, {
+		isDev: process.env.NODE_ENV === "development",
+		r2Origin: accountId && /^[0-9a-f]{32}$/i.test(accountId) ? `https://${accountId}.r2.cloudflarestorage.com` : undefined,
+	});
 
 	const requestHeaders = new Headers(request.headers);
 	requestHeaders.set("x-nonce", nonce);

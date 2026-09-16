@@ -48,6 +48,23 @@ describe("development CSP", () => {
   test("doesn't force HTTPS on localhost", () => assert.ok(!csp.includes("upgrade-insecure-requests")));
 });
 
+describe("private R2 media CSP", () => {
+  const r2Origin = "https://68799315c4e277e252cf254bba0e7d2b.r2.cloudflarestorage.com";
+  const csp = contentSecurityPolicy("abc123", { r2Origin });
+
+  test("allows only the exact private media origin for images and audio", () => {
+    assert.equal(directive(csp, "img-src"), `img-src 'self' blob: data: ${r2Origin}`);
+    assert.equal(directive(csp, "media-src"), `media-src 'self' blob: ${r2Origin}`);
+    assert.doesNotMatch(csp, /\*\.r2\.cloudflarestorage\.com/);
+  });
+
+  test("does not give the R2 endpoint script, connection or fallback access", () => {
+    assert.doesNotMatch(directive(csp, "script-src"), /cloudflarestorage/);
+    assert.doesNotMatch(directive(csp, "connect-src"), /cloudflarestorage/);
+    assert.doesNotMatch(directive(csp, "default-src"), /cloudflarestorage/);
+  });
+});
+
 describe("static headers", () => {
   test("HSTS, nosniff, no framing, referrer policy", () => {
     assert.match(STATIC_SECURITY_HEADERS["Strict-Transport-Security"], /max-age=\d{8}/);
