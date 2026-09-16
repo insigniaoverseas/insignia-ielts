@@ -294,7 +294,9 @@ Stored as data, not hardcoded strings, so a new role does not need a deploy (`PL
 - **No password hash here** — Supabase Auth owns it.
 - `dob` + `guardian_*` exist for **DPDP Act 2023**: anyone under 18 requires verifiable guardian consent, and IELTS candidates are routinely 16–17.
 
-**`invitations`** *(new — D9)* — `id` · `email` · `role_id` · `branch_id` · `batch_id` *(intended)* · `plan_template jsonb` · **`token_hash`** *(never the raw token)* · `expires_at` · `invited_by` · `accepted_at` · `status` (`pending`|`accepted`|`revoked`|`expired`) · `created_at`
+**`invitations`** *(new — D9)* — `id` · `email` · **`name`** · **`phone`** · **`country_code`** · `role_id` · `branch_id` · `batch_id` *(intended)* · `plan_template jsonb` · **`token_hash`** *(never the raw token)* · `expires_at` · `invited_by` · `accepted_at` · `status` (`pending`|`accepted`|`revoked`|`expired`) · `created_at`
+
+> **Corrected 2026-09-17 (M1-02):** `name`, `phone` and `country_code` added. The built invite screen (M5-04) collects them, `users.name` is `NOT NULL`, and nobody but the inviting admin can supply it. See `PROJECT-MEMORY.md` §4.
 
 **`user_devices`** *(new — D9)* — `id` · `user_id` · **`device_secret_hash`** · **`pin_hash`** · `label` · `user_agent` · `failed_pin_attempts int` · `locked_until` · `last_used_at` · `revoked_at` · `created_at`
 A PIN is **only** valid alongside a matching device secret. See [§9](#9-accounts-invites-and-login-d9).
@@ -460,6 +462,13 @@ These are **not** solved by this software. Say so to the institute rather than i
 
 **There is no signup page.** Every account begins as an invitation.
 
+> **The one exception, and why it is not a hole (added 2026-09-17, M1-02).** The
+> first Owner has no one to invite them, so that account is created by hand in
+> the Supabase dashboard and linked by migration. A one-time `/setup` screen
+> then collects the centre and the owner's own details. It is guarded in the
+> database: only one pinned uuid may run it, and only while `public.users` is
+> empty. See `PROJECT-MEMORY.md` §4.
+
 ```mermaid
 stateDiagram-v2
     [*] --> pending: admin invites by email
@@ -473,7 +482,7 @@ stateDiagram-v2
 
 ### The flow
 
-1. **Admin invites.** Enters an email (or bulk-pastes / uploads a CSV), picks role, branch, batch and plan length. The server creates an `invitations` row with a **hashed** single-use token and sends the link via Resend.
+1. **Admin invites.** Enters a **name and email** (or bulk-pastes / uploads a CSV), picks role, branch, batch and plan length. *(Corrected 2026-09-17: the name travels on the invitation — see §6.)* The server creates an `invitations` row with a **hashed** single-use token and sends the link via Resend.
 2. **Student accepts.** Opens the link from their own Gmail or any email account. The token is verified server-side; expired, used or revoked tokens hit a plain-language dead end — *"This link has expired. Ask your teacher for a new one."* Receiving the email proves the address, so there is no separate verification step.
 3. **Sets a password.** Strength-checked, and checked against known-breached passwords (Supabase leaked-password protection, M1-01). This is the account's only credential.
 4. ~~**Sets a PIN.**~~ — dropped 2026-09-16, see the note above.

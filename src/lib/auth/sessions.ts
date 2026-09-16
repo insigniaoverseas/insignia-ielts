@@ -1,0 +1,169 @@
+import "server-only";
+
+import { cookies } from "next/headers";
+
+import { recordAudit } from "@/lib/audit";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+/**
+ * Session records and revocation (M1-12, M1-14).
+ *
+ * Supabase's JWT says *who* you are. It cannot say whether that session has
+ * since been revoked — a JWT is valid until it expires, by design, and we
+ * deliberately set a long lifetime so no refresh lands mid-test (BUILD-STEPS
+ * step 40). So revocation needs its own record, and that is `user_sessions`.
+ *
+ * The link between the two is this cookie: it holds a `user_sessions.id`, and
+ * every guarded request checks that row is still live. Revoking a device, or
+ * signing in elsewhere as a student, sets `revoked_at` and the next request
+ * from the old browser is turned away even though its JWT is still valid.
+ *
+ * **Students get one session; staff get several.** The user chose this
+ * (2026-09-17). A second sign-in by a student ends the first — that is the
+ * account-sharing control. Teachers and admins do real work on a phone and a
+ * laptop at once, and logging them out of one to use the other would be a
+ * daily irritation that buys nothing: they are not the sharing risk.
+ */
+
+/** Holds the `user_sessions.id` for the browser's current session. */
+export const SESSION_COOKIE = "insignia_session";
+
+/**
+ * How long the session cookie survives. Longer than the JWT on purpose: it is
+ * the thing that keeps a student signed in on a shared lab machine between
+ * lessons, which is what the dropped PIN used to buy (PROJECT-MEMORY §4).
+ */
+const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
+
+/** Roles that may only be signed in one place at a time. */
+const SINGLE_SESSION_ROLES = new Set(["student"]);
+
+/** Where a sign-in came from, for the device list on Profile. */
+export type SessionOrigin = {
+	ip: string | null;
+	userAgent: string | null;
+};
+
+/**
+ * Opens a session: revokes the previous one for a student, records the new one
+ * and sets the cookie.
+ *
+ * @returns The new `user_sessions.id`.
+ */
+export async function startSession(userId: string, roleKey: string, origin: SessionOrigin): Promise<string | null> {
+	const db = createAdminClient();
+
+	if (SINGLE_SESSION_ROLES.has(roleKey)) {
+		// A new sign-in ends every earlier one. Done before the insert so a
+		// crash between the two leaves the student signed out, not doubly in.
+		await db
+			.from("user_sessions")
+			.update({ revoked_at: new Date().toISOString() })
+			.eq("user_id", userId)
+			.is("revoked_at", null);
+	}
+
+	const { data, error } = await db
+		.from("user_sessions")
+		.insert({ user_id: userId, ip: origin.ip, user_agent: origin.userAgent })
+		.select("id")
+		.single();
+
+	if (error || !data) {
+		console.error("session insert failed:", error?.message);
+		return null;
+	}
+
+	const store = await cookies();
+	store.set(SESSION_COOKIE, data.id, {
+		httpOnly: true,
+		secure: true,
+		sameSite: "lax",
+		path: "/",
+		maxAge: SESSION_COOKIE_MAX_AGE,
+	});
+
+	return data.id;
+}
+
+/**
+ * Whether the browser's session record is still live.
+ *
+ * `none` means there is no session cookie at all — which is normal for a
+ * request that has a JWT but predates this feature, so callers treat it as
+ * live rather than kicking everyone out on deploy.
+ */
+export async function sessionState(userId: string): Promise<"live" | "revoked" | "none"> {
+	const sessionId = (await cookies()).get(SESSION_COOKIE)?.value;
+	if (!sessionId) return "none";
+
+	const { data } = await createAdminClient()
+		.from("user_sessions")
+		.select("id, revoked_at")
+		.eq("id", sessionId)
+		.eq("user_id", userId)
+		.maybeSingle();
+
+	// A cookie naming a session that is not this user's is treated as revoked.
+	if (!data || data.revoked_at !== null) return "revoked";
+	return "live";
+}
+
+/** Notes that the session was used, for "last seen" in the device list. */
+export async function touchSession(): Promise<void> {
+	const sessionId = (await cookies()).get(SESSION_COOKIE)?.value;
+	if (!sessionId) return;
+
+	await createAdminClient()
+		.from("user_sessions")
+		.update({ last_seen_at: new Date().toISOString() })
+		.eq("id", sessionId)
+		.is("revoked_at", null);
+}
+
+/** Closes the browser's own session and clears the cookie. */
+export async function endSession(): Promise<void> {
+	const store = await cookies();
+	const sessionId = store.get(SESSION_COOKIE)?.value;
+
+	if (sessionId) {
+		await createAdminClient()
+			.from("user_sessions")
+			.update({ revoked_at: new Date().toISOString() })
+			.eq("id", sessionId)
+			.is("revoked_at", null);
+	}
+
+	store.delete(SESSION_COOKIE);
+}
+
+/**
+ * Revokes one session on someone's behalf — the Revoke button on Profile
+ * (M1-14) and an admin ending a session from the student detail screen.
+ *
+ * @param actorId Who is revoking, for the audit trail.
+ * @param ownerId The session's owner. Checked, so one user cannot revoke another's.
+ */
+export async function revokeSession(actorId: string, ownerId: string, sessionId: string): Promise<boolean> {
+	const db = createAdminClient();
+	const { data, error } = await db
+		.from("user_sessions")
+		.update({ revoked_at: new Date().toISOString() })
+		.eq("id", sessionId)
+		.eq("user_id", ownerId)
+		.is("revoked_at", null)
+		.select("id")
+		.maybeSingle();
+
+	if (error || !data) return false;
+
+	await recordAudit({
+		actorId,
+		branchId: null,
+		action: "session.revoke",
+		entity: "user_session",
+		entityId: sessionId,
+		meta: { owner_id: ownerId, self: actorId === ownerId },
+	});
+	return true;
+}

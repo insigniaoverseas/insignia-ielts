@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SetPasswordForm } from "@/components/auth/set-password-form";
-import { getInvite } from "@/lib/mock/auth";
+import { lookupInvitation } from "@/lib/auth/acceptance";
 
 export const metadata: Metadata = {
 	title: "Set up your account",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
  */
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
 	const { token } = await params;
-	const invite = await getInvite(token);
+	const invite = await lookupInvitation(token);
 
 	if (invite.state !== "valid") {
 		return (
@@ -77,7 +77,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 				))}
 			</dl>
 
-			<SetPasswordForm token={invite.token} />
+			<SetPasswordForm token={invite.token} email={invite.email} />
 
 			<p className="m-0 text-center text-ink-2">
 				Not you, or something looks wrong? Tell your teacher before you carry on.

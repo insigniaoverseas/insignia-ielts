@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
+import { useFormStatus } from "react-dom";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-/** The minimum this product accepts. Stated up front, never as an error after the fact. */
-const MIN_LENGTH = 8;
+import { acceptInvitationAction } from "@/lib/actions/auth";
+import { PASSWORD_RULES } from "@/lib/auth/password";
+import type { AcceptFormState } from "@/lib/actions/types";
 
 /**
  * Set a password while accepting an invitation (M1-06).
@@ -20,24 +22,25 @@ const MIN_LENGTH = 8;
  *   typos by accident; being able to read what you typed catches them on
  *   purpose, and on a phone keyboard it is far less frustrating.
  *
- * The strength check here is for the person typing. The server checks again,
- * including against known-breached passwords (Supabase leaked-password
- * protection is already on — M1-01).
+ * The rules come from `lib/auth/password.ts`, which the Server Action imports
+ * too — so this screen can never promise something the server then rejects.
+ * The server also checks against known-breached passwords, which is the check
+ * that catches `password1` (Supabase leaked-password protection, M1-01).
  */
-export function SetPasswordForm({ token }: { token: string }) {
+export function SetPasswordForm({ token, email }: { token: string; email: string }) {
+	const [state, formAction] = useActionState<AcceptFormState, FormData>(acceptInvitationAction, null);
 	const [password, setPassword] = useState("");
 	const [show, setShow] = useState(false);
 
-	const checks = [
-		{ label: `At least ${MIN_LENGTH} characters`, ok: password.length >= MIN_LENGTH },
-		{ label: "A letter", ok: /[a-zA-Z]/.test(password) },
-		{ label: "A number or symbol", ok: /[^a-zA-Z]/.test(password) },
-	];
+	const checks = PASSWORD_RULES.map((rule) => ({ label: rule.label, ok: rule.test(password) }));
 	const ready = checks.every((c) => c.ok);
 
 	return (
-		<form className="flex flex-col gap-5 rounded-card border border-line bg-surface p-6">
+		<form action={formAction} className="flex flex-col gap-5 rounded-card border border-line bg-surface p-6">
 			<input type="hidden" name="token" value={token} />
+			{/* Echoed so the action can sign them straight in afterwards, rather
+			    than sending them to a login form to retype what they just chose. */}
+			<input type="hidden" name="email" value={email} />
 
 			<div className="flex flex-col gap-1.5">
 				<div className="flex items-center justify-between gap-3">
@@ -72,13 +75,28 @@ export function SetPasswordForm({ token }: { token: string }) {
 				))}
 			</ul>
 
-			<Button type="submit" size="student" disabled={!ready}>
-				Save my password and start
-			</Button>
+			{state?.message && (
+				<p className="m-0 flex items-start gap-2 font-semibold text-danger" role="alert">
+					<span aria-hidden="true">✕</span>
+					<span>{state.message}</span>
+				</p>
+			)}
+
+			<SubmitButton ready={ready} />
 
 			<p className="m-0 text-small text-ink-2">
 				Write it somewhere safe. If you forget it, your teacher has to send you a new invitation.
 			</p>
 		</form>
+	);
+}
+
+/** Separate so `useFormStatus` reports on the form above it, not the whole page. */
+function SubmitButton({ ready }: { ready: boolean }) {
+	const { pending } = useFormStatus();
+	return (
+		<Button type="submit" size="student" disabled={!ready || pending}>
+			{pending ? "Setting up…" : "Save my password and start"}
+		</Button>
 	);
 }

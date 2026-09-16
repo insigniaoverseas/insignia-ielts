@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { Banner } from "@/components/ui/banner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { getLoginScreen } from "@/lib/mock/auth";
+import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -27,11 +24,9 @@ export const metadata: Metadata = { title: "Sign in" };
 export default async function LoginPage({
 	searchParams,
 }: {
-	searchParams: Promise<{ state?: string; next?: string }>;
+	searchParams: Promise<{ next?: string; ended?: string }>;
 }) {
-	const { state, next } = await searchParams;
-	const data = await getLoginScreen(state);
-	const locked = data.lockedUntilLabel !== null;
+	const { next, ended } = await searchParams;
 
 	return (
 		<>
@@ -48,63 +43,16 @@ export default async function LoginPage({
 				</div>
 			</div>
 
-			{locked && (
-				<Banner tone="danger">
-					Too many tries. You can sign in again after{" "}
-					<strong className="font-semibold">{data.lockedUntilLabel}</strong>. If you need to get in now, ask
-					your teacher.
+			{/* Reached by the guard when a session was revoked — most often a
+			    student who signed in on another machine. Said plainly, so it
+			    does not read as an error they caused. */}
+			{ended && (
+				<Banner tone="info">
+					You were signed out because this account was used on another device. Sign in again to carry on.
 				</Banner>
 			)}
 
-			<form className="flex flex-col gap-5 rounded-card border border-line bg-surface p-6">
-				{next && <input type="hidden" name="next" value={next} />}
-
-				<div className="flex flex-col gap-1.5">
-					<Label htmlFor="email">Email</Label>
-					<Input
-						id="email"
-						name="email"
-						type="email"
-						autoComplete="username"
-						autoCapitalize="off"
-						required
-						disabled={locked}
-						aria-invalid={data.error ? true : undefined}
-					/>
-				</div>
-
-				<div className="flex flex-col gap-1.5">
-					<Label htmlFor="password">Password</Label>
-					<Input
-						id="password"
-						name="password"
-						type="password"
-						autoComplete="current-password"
-						required
-						disabled={locked}
-						aria-invalid={data.error ? true : undefined}
-					/>
-				</div>
-
-				{data.error && (
-					<p className="m-0 flex items-start gap-2 font-semibold text-danger" role="alert">
-						<span aria-hidden="true">✕</span>
-						<span>
-							{data.error.message}
-							{data.error.triesLeft !== null && (
-								<span className="block font-normal">
-									{data.error.triesLeft === 1 ? "1 try left" : `${data.error.triesLeft} tries left`} before
-									this account is locked for a while.
-								</span>
-							)}
-						</span>
-					</p>
-				)}
-
-				<Button type="submit" size="student" disabled={locked}>
-					Sign in
-				</Button>
-			</form>
+			<LoginForm next={next} />
 
 			{/* No signup link — accounts are created by invitation only. */}
 			<p className="m-0 text-center text-ink-2">
