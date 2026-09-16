@@ -53,3 +53,16 @@ The pipeline, in order:
 Asset source names are used only to load local files. `content.json` gets
 `{ id, alt, ordinal }`; the object name is the server-generated ordinal and
 allowlisted extension. The output can never inherit an author-controlled path.
+
+## Legacy Listening converter
+
+`legacy-listening.ts` converts the prototype's `ielts-data.js` objects into the
+same upload contract. It checks that all 40 questions are sequential, assigned
+to the expected four sections, have non-empty answers and use Listening-valid
+canonical types. The old T/F/NG radio controls become ordinary multiple-choice
+groups because identifying-information is not an official Listening type.
+
+The prototype includes answers but no recording or audio markers. The converter
+therefore requires a real MP3 duration and four contiguous section endpoints;
+it refuses to invent them. `scripts/import-legacy-tests.ts` writes the local
+upload JSON and delegates any dry-run or remote import to the canonical CLI.

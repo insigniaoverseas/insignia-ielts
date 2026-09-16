@@ -117,7 +117,7 @@ Create the seven files listed in [`MVP-1.md` §16](MVP-1.md#16-documentation-and
 ### 12. CI gates `(M0-22)`
 > ✅ **Written 2026-09-15:** `.github/workflows/ci.yml` — `npm ci`, `typecheck`, `lint`, `test:unit`, `test:db`, `test:db:sweep`, `next build`, `check:bundle` (`scripts/check-client-bundle.mjs`, replaces the grep below), `npm audit --audit-level=high`. Every step passes locally; the guard was proven with a throwaway client component leaking a `key.json` path. ✅ First GitHub run green 2026-09-15 (all 12 steps, 2m27s).
 
-GitHub Actions: typecheck · lint · vitest · `npm audit`. Then the one that matters:
+GitHub Actions: typecheck · lint · Node unit tests · `npm audit`. Then the one that matters:
 
 ```bash
 # fail the build if scoring logic or an R2 key path reaches the client
@@ -235,6 +235,8 @@ Server-only. The marking rules from [`MVP-1.md` §10](MVP-1.md#10-question-types
 Convert [`ielts-data.js`](Design%20files/Prioritizing%20project%20scope/ielts-data.js) into upload JSON, then import it.
 ⚠️ `PLAN-V2.md` §10 notes the original `tests/*.js` answer keys were empty. Verify every key before relying on it.
 **✅ Done when** a `tests` row exists, `content.json` has 40 questions and no answers, `key.json` has 40 keys.
+
+> 🟡 **In progress 2026-09-16 (OpenAI Codex):** the checked-in `ielts-data.js` does contain 40 non-empty answers. A strict converter now maps all 40 controls to canonical Listening types and proves the importer emits 40 private key entries while browser-safe content contains no scoring fields. The upload schema now requires markers to cover the complete audio with no gaps. The live draft is still blocked: the legacy source/repository has no MP3 or timing metadata, and the live database has no active `test:author`. Do not invent either prerequisite.
 
 ### 29. ⚡ `/dev/components` gallery `(M0-23)`
 Every component from [`MVP-1.md` §15](MVP-1.md#15-repo-structure-and-design-system) in every state. The in-repo successor to `00 Design System.dc.html`.

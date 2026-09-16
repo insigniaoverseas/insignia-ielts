@@ -1121,7 +1121,7 @@ Nothing user-visible; everything depends on it. **One task here is irreversible.
 | M0-19 | Seed: roles + permissions, default Listening band scale (39–40→9.0, 37–38→8.5, 35–36→8.0, 32–34→7.5, 30–31→7.0, 26–29→6.5, 23–25→6.0, 18–22→5.5, 16–17→5.0 — **verify against a current Cambridge book**) | M0-08 |
 | M0-20 | Port the legacy Listening test from [`ielts-data.js`](Design%20files/Prioritizing%20project%20scope/ielts-data.js) into upload JSON and import it | M0-17, M0-19 |
 | M0-21 | `docs/` tree + ADRs 0001–0013 seeded from [§3](#3-decision-log) | — |
-| M0-22 | CI: typecheck, lint, vitest, `npm audit`, **bundle grep guard** | M0-18 |
+| M0-22 | CI: typecheck, lint, Node unit tests, `npm audit`, **bundle grep guard** | M0-18 |
 | M0-23 | `/dev/components` gallery route | M0-03 |
 
 ### M1 — Invites & auth · 1.5 weeks

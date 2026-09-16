@@ -143,6 +143,29 @@ describe("test-wide structural rules", () => {
     assert.ok(issuePaths.includes("sections.0.starts_at_seconds"));
   });
 
+  test("Listening markers start at zero, stay contiguous and cover the audio", () => {
+    const lateStart = clone(samples.listening);
+    lateStart.sections[0].starts_at_seconds = 1;
+    assert.ok(paths(testUploadSchema.safeParse(lateStart)).includes("sections.0.starts_at_seconds"));
+
+    const shortMarkers = clone(samples.listening);
+    shortMarkers.sections[0].ends_at_seconds -= 1;
+    assert.ok(paths(testUploadSchema.safeParse(shortMarkers)).includes("sections.0.ends_at_seconds"));
+
+    const gap = clone(samples.listening);
+    const finalGroup = gap.sections[0].question_groups.pop();
+    gap.sections[0].ends_at_seconds = 300;
+    gap.sections.push({
+      n: 2,
+      title: "The rest of the recording",
+      starts_at_seconds: 301,
+      ends_at_seconds: gap.audio.duration_seconds,
+      passages: [],
+      question_groups: [finalGroup],
+    });
+    assert.ok(paths(testUploadSchema.safeParse(gap)).includes("sections.1.starts_at_seconds"));
+  });
+
   test("Reading rejects audio, transcript, transfer time and audio markers", () => {
     const input = clone(samples.academic);
     input.audio = { file: "test.mp3", duration_seconds: 100 };

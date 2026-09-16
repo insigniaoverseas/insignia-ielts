@@ -98,7 +98,7 @@ async function main() {
 	}
 
 	const prepared = await importTest(input, files, args.actorId, {
-		newId: crypto.randomUUID,
+		newId: () => crypto.randomUUID(),
 		async putObject(object: ImportObject) {
 			if (args.dryRun) return;
 			runWrangler(

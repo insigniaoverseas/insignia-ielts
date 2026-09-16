@@ -397,6 +397,10 @@ export const testUploadSchema = z
 				}
 				if (section.starts_at_seconds === undefined) {
 					ctx.addIssue({ code: "custom", path: ["sections", sectionIndex, "starts_at_seconds"], message: "Listening sections require starts_at_seconds" });
+				} else if (sectionIndex === 0 && section.starts_at_seconds !== 0) {
+					ctx.addIssue({ code: "custom", path: ["sections", sectionIndex, "starts_at_seconds"], message: "The first Listening section must start at 0" });
+				} else if (sectionIndex > 0 && section.starts_at_seconds !== priorSectionEnd) {
+					ctx.addIssue({ code: "custom", path: ["sections", sectionIndex, "starts_at_seconds"], message: "Listening section markers must be contiguous" });
 				}
 				if (section.ends_at_seconds === undefined) {
 					ctx.addIssue({ code: "custom", path: ["sections", sectionIndex, "ends_at_seconds"], message: "Listening sections require ends_at_seconds" });
@@ -467,6 +471,17 @@ export const testUploadSchema = z
 				});
 			});
 		});
+		if (
+			test.skill === "listening" &&
+			test.audio !== undefined &&
+			test.sections.at(-1)?.ends_at_seconds !== test.audio.duration_seconds
+		) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["sections", test.sections.length - 1, "ends_at_seconds"],
+				message: "Listening section markers must cover the complete audio duration",
+			});
+		}
 
 		if (test.audio !== undefined && test.transcript !== undefined) {
 			let priorCue = -1;
