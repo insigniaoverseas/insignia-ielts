@@ -83,12 +83,16 @@ await db.exec(`
     ('${id.batchX}', '${id.studentLeft}', now() - interval '10 days', now() - interval '1 day'),
     ('${id.batchY}', '${id.studentB}', now() - interval '10 days', null),
     ('${id.batchZ}', '${id.studentOther}', now() - interval '10 days', null);
-  insert into public.student_plans (student_id, plan_name, starts_on, expires_on, notes) values
-    ('${id.studentA}', '3 months', '2026-09-01', '2026-12-01', 'paid'),
-    ('${id.studentB}', '3 months', '2026-09-01', '2026-12-01', null),
-    ('${id.studentOther}', '1 month', '2026-09-01', '2026-10-01', null);
+  insert into public.student_plans (student_id, plan_name, starts_on, expires_on) values
+    ('${id.studentA}', '3 months', '2026-09-01', '2026-12-01'),
+    ('${id.studentB}', '3 months', '2026-09-01', '2026-12-01'),
+    ('${id.studentOther}', '1 month', '2026-09-01', '2026-10-01');
   insert into public.plan_history (plan_id, action, new_expiry, actor_id)
     select id, 'create', expires_on, '${id.admin1}' from public.student_plans;
+  -- A staff note on every plan, so "the student cannot read it" is a real claim
+  -- and not a pass by empty table (§7 Q12).
+  insert into public.student_plan_notes (plan_id, body, updated_by)
+    select id, 'fees pending, father says Friday', '${id.admin1}' from public.student_plans;
 `);
 
 
@@ -240,6 +244,7 @@ ok("sees X's memberships incl. the student who left (history)", (await count("au
 ok("sees own + co-teacher rows for X", (await count("authenticated", "teacher", `select 1 from public.batch_teachers`)) === 3);
 ok("sees only studentA's plan", (await tUsers("teacher", `select student_id from public.student_plans`)).map(r=>r.student_id).join() === id.studentA);
 ok("sees no plan history", (await count("authenticated", "teacher", `select 1 from public.plan_history`)) === 0);
+ok("sees no staff notes, not even for their own student", (await count("authenticated", "teacher", `select 1 from public.student_plan_notes`)) === 0);
 ok("does not see a student who left the batch", !(await tUsers("teacher", `select id from public.users`)).some(r=>r.id===id.studentLeft));
 ok("does not see studentB (other batch) or branch 2", !(await tUsers("teacher", `select id from public.users`)).some(r=>[id.studentB,id.studentOther].includes(r.id)));
 ok("still cannot read other students' devices", (await count("authenticated", "teacher", `select id from public.user_devices`)) === 1);
@@ -255,7 +260,9 @@ console.log("\ncohorts — students");
 ok("studentA sees batch X only", (await tUsers("studentA", `select id from public.batches`)).map(r=>r.id).join() === id.batchX);
 ok("studentA sees only their own membership row", (await tUsers("studentA", `select student_id from public.batch_students`)).map(r=>r.student_id).join() === id.studentA);
 ok("studentA sees no teacher assignments", (await count("authenticated", "studentA", `select 1 from public.batch_teachers`)) === 0);
-ok("studentA sees only their own plan (with notes)", (await tUsers("studentA", `select student_id, notes from public.student_plans`)).map(r=>r.student_id+r.notes).join() === id.studentA+"paid");
+ok("studentA sees only their own plan", (await tUsers("studentA", `select student_id, plan_name, expires_on from public.student_plans`)).map(r=>r.student_id).join() === id.studentA);
+ok("studentA still sees the plan facts they need (name, expiry, quota)", (await tUsers("studentA", `select plan_name, expires_on, test_quota, tests_used, status from public.student_plans`)).map(r=>r.plan_name+r.status).join() === "3 monthsactive");
+ok("studentA cannot read the staff note on their own plan (\u00a77 Q12)", (await count("authenticated", "studentA", `select 1 from public.student_plan_notes`)) === 0);
 ok("studentA sees no plan history", (await count("authenticated", "studentA", `select 1 from public.plan_history`)) === 0);
 ok("studentA still sees only their own user row", (await count("authenticated", "studentA", `select id from public.users`)) === 1);
 ok("student who left sees no batch", (await count("authenticated", "studentLeft", `select id from public.batches`)) === 0);
@@ -268,15 +275,21 @@ ok("admin1 sees all 3 branch-1 memberships", (await count("authenticated", "admi
 ok("admin1 sees branch-1 teacher assignments", (await count("authenticated", "admin1", `select 1 from public.batch_teachers`)) === 3);
 ok("admin1 sees 2 branch-1 plans", (await count("authenticated", "admin1", `select 1 from public.student_plans`)) === 2);
 ok("admin1 sees 2 branch-1 plan histories", (await count("authenticated", "admin1", `select 1 from public.plan_history`)) === 2);
+ok("admin1 sees the 2 branch-1 staff notes", (await count("authenticated", "admin1", `select 1 from public.student_plan_notes`)) === 2);
+ok("admin1 cannot read branch-2 staff notes", (await count("authenticated", "admin1", `select 1 from public.student_plan_notes n join public.student_plans p on p.id = n.plan_id where p.student_id = '${id.studentOther}'`)) === 0);
 ok("admin2 sees batch Z only", (await tUsers("admin2", `select id from public.batches`)).map(r=>r.id).join() === id.batchZ);
 ok("admin2 sees 1 plan and 1 history", (await count("authenticated", "admin2", `select 1 from public.student_plans`)) === 1 && (await count("authenticated", "admin2", `select 1 from public.plan_history`)) === 1);
+ok("super admin sees all 3 staff notes", (await count("authenticated", "superAdmin", `select 1 from public.student_plan_notes`)) === 3);
 ok("super admin sees all 3 batches, plans, histories", (await count("authenticated", "superAdmin", `select 1 from public.batches`)) === 3 && (await count("authenticated", "superAdmin", `select 1 from public.student_plans`)) === 3 && (await count("authenticated", "superAdmin", `select 1 from public.plan_history`)) === 3);
 
 console.log("\ncohorts — writes, anon, constraints");
-const cohortTables = ["batches", "batch_teachers", "batch_students", "student_plans", "plan_history"];
+const cohortTables = ["batches", "batch_teachers", "batch_students", "student_plans", "plan_history", "student_plan_notes"];
 for (const t of cohortTables) ok(`anon cannot select ${t}`, denied(await as("anon", null, `select 1 from public.${t}`)));
 ok("admin cannot insert a batch via the API", denied(await as("authenticated", "admin1", `insert into public.batches (name, branch_id, starts_on) values ('Q', '${id.b1}', '2026-09-01')`)));
 ok("student cannot extend their own plan", denied(await as("authenticated", "studentA", `update public.student_plans set expires_on = '2030-01-01' where student_id = '${id.studentA}'`)));
+ok("student_plans has no notes column — the note lives in its own table (\u00a77 Q12)", (await one(`select count(*)::int c from information_schema.columns where table_schema = 'public' and table_name = 'student_plans' and column_name = 'notes'`)).c === 0);
+ok("admin cannot write a staff note via the API", denied(await as("authenticated", "admin1", `update public.student_plan_notes set body = 'x'`)));
+ok("suspended teacher sees no staff notes", (await count("authenticated", "suspTeacher", `select 1 from public.student_plan_notes`)) === 0);
 ok("teacher cannot enrol a student", denied(await as("authenticated", "teacher", `insert into public.batch_students (batch_id, student_id) values ('${id.batchX}', '${id.studentB}')`)));
 ok("second active plan for a student rejected", await bad(`insert into public.student_plans (student_id, plan_name, starts_on, expires_on) values ('${id.studentA}', 'dup', '2026-09-01', '2026-10-01')`));
 ok("plan_history rows cannot be updated (even by postgres)", await bad(`update public.plan_history set reason = 'x'`));
@@ -531,6 +544,6 @@ ok("rls_auto_enable not executable by anon/authenticated", !acl.a && !acl.b);
 
 console.log("\nfinal sweep");
 ok("every table in public has RLS enabled", (await rlsFinal()).length === 0, JSON.stringify(await rlsFinal()));
-ok("public has exactly 24 tables", (await one(`select count(*)::int c from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r'`)).c === 24);
+ok("public has exactly 25 tables", (await one(`select count(*)::int c from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r'`)).c === 25);
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -836,13 +836,51 @@ export type Database = {
         }
         Relationships: []
       }
+      student_plan_notes: {
+        Row: {
+          body: string
+          created_at: string
+          plan_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          plan_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          plan_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_plan_notes_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: true
+            referencedRelation: "student_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_plan_notes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_plans: {
         Row: {
           created_at: string
           created_by: string | null
           expires_on: string
           id: string
-          notes: string | null
           plan_name: string
           starts_on: string
           status: string
@@ -855,7 +893,6 @@ export type Database = {
           created_by?: string | null
           expires_on: string
           id?: string
-          notes?: string | null
           plan_name: string
           starts_on: string
           status?: string
@@ -868,7 +905,6 @@ export type Database = {
           created_by?: string | null
           expires_on?: string
           id?: string
-          notes?: string | null
           plan_name?: string
           starts_on?: string
           status?: string
