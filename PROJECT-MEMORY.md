@@ -788,10 +788,11 @@ Non-secret settings, in `wrangler.jsonc` `vars` and `.dev.vars.example`:
 
 | Name | Used by | Set? |
 |---|---|---|
-| `APP_BASE_URL` | `lib/env.ts` — the absolute origin invitation links are built from | ⚠️ placeholder `insignia-test.workers.dev`; needs the real domain |
+| `APP_BASE_URL` | `lib/env.ts` — the absolute origin invitation and reset links are built from | ⚠️ placeholder `insignia-test.workers.dev`; needs the real domain |
+| `TURNSTILE_SITE_KEY` | M1-11, rendered into the page so it cannot be secret | ⬜ not yet issued |
 | `MAIL_FROM` | `lib/mail/mailer.ts` — must be a domain verified in Resend | ⚠️ placeholder `invites@example.com`; needs the real domain |
 
-⚠️ **`SUPABASE_SECRET_KEY` and `R2_SECRET_ACCESS_KEY` values must never appear in `wrangler.jsonc` vars, a client bundle, or this file.** `.dev.vars.example` lists names only.
+⚠️ **`SUPABASE_SECRET_KEY` and `R2_SECRET_ACCESS_KEY` values must never appear in `wrangler.jsonc` vars, a client bundle, or this file.** `.dev.vars.example` lists names only, grouped by *needed now* / email / R2 / *not wired up yet*, each marked `secret` or `public` and saying what breaks when it is missing.
 
 ---
 
