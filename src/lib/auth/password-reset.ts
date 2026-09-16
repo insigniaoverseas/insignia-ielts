@@ -94,6 +94,13 @@ export async function requestPasswordReset(email: string): Promise<void> {
 	// No account, or a suspended one. Both stop here, silently: a suspended
 	// user resetting their password would be let back into an account an admin
 	// deliberately closed.
+	//
+	// ⚠️ This also means the **bootstrap Owner before `/setup`** cannot reset:
+	// they exist in `auth.users` but have no profile row yet, so the lookup
+	// above finds nothing. Deliberate — widening this to `auth.users` would let
+	// the reset flow serve accounts with no place in the app at all. The
+	// recovery for that short window is the Supabase dashboard, and it closes
+	// the moment setup is finished.
 	if (!user || user.status !== "active") return;
 
 	const { token, tokenHash } = await mintInvitationToken();

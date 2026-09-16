@@ -1,11 +1,12 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { acceptInvitation } from "@/lib/auth/acceptance";
 import { completePasswordReset, requestPasswordReset, RESET_REQUESTED_MESSAGE } from "@/lib/auth/password-reset";
 import { landingPathFor, signIn } from "@/lib/auth/sign-in";
-import { endSession } from "@/lib/auth/sessions";
+import { endSession, startSession } from "@/lib/auth/sessions";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
 import type { AcceptFormState, FormState, LoginFormState, ResetFormState, ResetRequestState } from "@/lib/actions/types";
@@ -103,6 +104,20 @@ export async function completeFirstRunSetupAction(_previous: FormState, formData
 
 	if (error) {
 		return { ok: false, message: error.message.replace(/^.*?:\s*/, "") };
+	}
+
+	// Only now can a session row exist: `user_sessions.user_id` references
+	// `public.users`, which the call above has just created. Signing in as the
+	// bootstrap Owner deliberately skipped this, so without it the Owner would
+	// hold a JWT that no revocation could ever reach.
+	const { data: claims } = await supabase.auth.getClaims();
+	const userId = claims?.claims?.sub;
+	if (userId) {
+		const requestHeaders = await headers();
+		await startSession(userId, "super_admin", {
+			ip: requestHeaders.get("cf-connecting-ip") ?? requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+			userAgent: requestHeaders.get("user-agent"),
+		});
 	}
 
 	redirect("/admin/overview");
