@@ -684,11 +684,14 @@ export type Database = {
           accepted_at: string | null
           batch_id: string | null
           branch_id: string
+          country_code: string | null
           created_at: string
           email: string
           expires_at: string
           id: string
           invited_by: string
+          name: string
+          phone: string | null
           plan_template: Json | null
           role_id: string
           status: string
@@ -698,11 +701,14 @@ export type Database = {
           accepted_at?: string | null
           batch_id?: string | null
           branch_id: string
+          country_code?: string | null
           created_at?: string
           email: string
           expires_at: string
           id?: string
           invited_by: string
+          name: string
+          phone?: string | null
           plan_template?: Json | null
           role_id: string
           status?: string
@@ -712,11 +718,14 @@ export type Database = {
           accepted_at?: string | null
           batch_id?: string | null
           branch_id?: string
+          country_code?: string | null
           created_at?: string
           email?: string
           expires_at?: string
           id?: string
           invited_by?: string
+          name?: string
+          phone?: string | null
           plan_template?: Json | null
           role_id?: string
           status?: string
@@ -1197,7 +1206,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_invitation: {
+        Args: { p_token_hash: string; p_user_id: string }
+        Returns: string
+      }
+      bump_rate_limit: {
+        Args: { p_key: string; p_limit: number; p_window_seconds: number }
+        Returns: {
+          attempts: number
+          locked: boolean
+          window_start: string
+        }[]
+      }
+      clear_rate_limit: { Args: { p_key: string }; Returns: undefined }
+      complete_first_run_setup: {
+        Args: {
+          p_branch_address: string
+          p_branch_name: string
+          p_country_code?: string
+          p_owner_name: string
+          p_phone?: string
+        }
+        Returns: string
+      }
+      expire_stale_invitations: { Args: never; Returns: number }
+      first_run_pending: { Args: never; Returns: boolean }
+      peek_rate_limit: {
+        Args: { p_key: string; p_limit: number; p_window_seconds: number }
+        Returns: {
+          attempts: number
+          locked: boolean
+          window_start: string
+        }[]
+      }
+      purge_old_rate_limits: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never
