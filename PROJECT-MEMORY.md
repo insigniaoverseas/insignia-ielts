@@ -86,9 +86,9 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M2-01 Student app shell + nav | todo | | | Max 4 labelled tabs |
-| M2-02 Student Home (03) | todo | | | |
-| M2-03 My Tests (04) | todo | | | Locked items must say *why* |
+| M2-01 Student app shell + nav | done | Claude | 2026-09-16 | ✅ `src/app/(student)/layout.tsx` + `components/student/student-nav.tsx`. Top bar ≥768px, sticky bottom tab bar below; four labelled destinations, no hamburger. The player sits **outside** this layout on purpose. Verified in Chrome at 390 + 1280, no overflow at either. |
+| M2-02 Student Home (03) | done | Claude | 2026-09-16 | ✅ `/home` from `03 Student Home.dc.html`: one `NextUpCard` hero (night surface), three quick links, last-band line. Three states: startable · locked-with-reason · nothing-assigned (becomes "Practice at home"). Data via `getStudentHome()` — **fixtures, not queries** (see `lib/mock/README.md`). Verified in Chrome at 390 + 1280. |
+| M2-03 My Tests (04) | done | Claude | 2026-09-16 | ✅ `/tests` with To do / Practice / Done. Tabs are **links** (`?tab=`), not client state, so back works and a tab is linkable. Locked cards dim but stay readable and always print `locked.message`; a held result says the teacher will release it. Empty state per tab. Verified at 390 + 1280. |
 | M2-04 Assignment eligibility resolver | todo | | | Windows, attempts, plan validity, unlocks |
 | M2-05 Pre-test instructions (05) + headphone check | todo | | | Prevents most support calls |
 | M2-06 Audio preload + owner-bound cache purge | todo | | | Highest-value lines in the caching layer |
