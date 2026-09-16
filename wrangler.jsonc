@@ -46,11 +46,11 @@
 		// must be absolute. One setting, so moving to the institute's own domain
 		// is a one-line change. NOT a secret.
 		// TODO(goverdhan-gaur): replace with the real domain once it is confirmed.
-		"APP_BASE_URL": "https://insignia-test.workers.dev",
+		"APP_BASE_URL": "https://app.insigniaoverseas.com",
 		// From address on invitation email. Must be a domain verified in Resend,
 		// or every send is rejected. NOT a secret.
 		// TODO(goverdhan-gaur): replace with the verified sending domain.
-		"MAIL_FROM": "Insignia IELTS <invites@example.com>"
+		"MAIL_FROM": "Insignia IELTS <invites@app.insigniaoverseas.com>"
 	},
 	"observability": {
 		"enabled": true
