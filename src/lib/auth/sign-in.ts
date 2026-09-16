@@ -108,6 +108,25 @@ export async function signIn(email: string, password: string, nextPath?: string 
 		.eq("id", data.user.id)
 		.maybeSingle();
 
+	// ── The bootstrap Owner, before first-run setup ──────────────────────────
+	// They have an auth account and no profile, because only `/setup` creates
+	// one. Turning them away here deadlocks the product: `/setup` needs a
+	// session, a session needs this function, and this function wanted a
+	// profile that only `/setup` writes. Let them through to finish setting up.
+	//
+	// Not a hole: `first_run_pending()` is true for one pinned uuid and only
+	// while `public.users` is empty, and they have already proved the password.
+	if (!profile) {
+		const { data: pending } = await supabase.rpc("first_run_pending");
+		if (pending === true) {
+			await clearSignInFailures(normalised);
+			// No session row yet — `user_sessions.user_id` references
+			// `public.users`, which they are about to create. `startSession`
+			// runs once setup completes.
+			return { ok: true, redirectTo: "/setup" };
+		}
+	}
+
 	if (!profile || profile.status !== "active") {
 		await supabase.auth.signOut();
 		// Not counted as a failed attempt: the password was right, and locking
