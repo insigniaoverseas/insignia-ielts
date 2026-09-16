@@ -1,9 +1,13 @@
 import { cn } from "@/lib/utils";
 
-type Tone = "info" | "warning" | "danger";
+type Tone = "info" | "success" | "warning" | "danger";
 
 const TONE: Record<Tone, { box: string; glyph: string; mark: string }> = {
 	info: { box: "bg-brand-soft border-brand-line", glyph: "i", mark: "text-brand" },
+	// No `--success-line` token exists; `success-muted` is the nearest in-system
+	// border and the palette is switched off, so inventing one would generate
+	// nothing. Added for "invitation sent" (M1-02).
+	success: { box: "bg-success-soft border-success-muted", glyph: "✓", mark: "text-success" },
 	warning: { box: "bg-warning-soft border-warning-line", glyph: "!", mark: "text-warning" },
 	danger: { box: "bg-danger-soft border-danger-line", glyph: "✕", mark: "text-danger" },
 };
