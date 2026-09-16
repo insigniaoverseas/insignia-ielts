@@ -161,7 +161,11 @@ site_url = "http://127.0.0.1:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = ["https://127.0.0.1:3000"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
-jwt_expiry = 3600
+# Longer than the longest test, so no token refresh can land mid-attempt
+# (BUILD-STEPS step 40). Academic Reading is 60 minutes plus transfer time,
+# which the 3600 s default does not clear. The live project needs the same
+# value set in the dashboard.
+jwt_expiry = 7200
 # JWT issuer URL. If not set, defaults to auth.external_url.
 # jwt_issuer = ""
 # Path to JWT signing key. DO NOT commit your signing keys file to git.
@@ -172,13 +176,19 @@ enable_refresh_token_rotation = true
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
-enable_signup = true
+# OFF (D9, CLAUDE.md rule 7): every account starts as an admin invitation, and
+# the only account that is not is the bootstrap Owner, created by hand and
+# linked by migration. Matches the live project, where signup is already off.
+enable_signup = false
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+# Matches lib/auth/password.ts, which the set-password form and the server
+# action both import. Leaving this at 6 would let the database accept what the
+# product's own screen refuses.
+minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""
@@ -216,8 +226,8 @@ web3 = 30
 # secret = ""
 
 [auth.email]
-# Allow/disallow new user signups via email to your project.
-enable_signup = true
+# Allow/disallow new user signups via email to your project. OFF — see [auth].
+enable_signup = false
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
