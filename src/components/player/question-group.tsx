@@ -12,7 +12,7 @@ import type { ContainerKey, PlayerQuestion, QuestionGroup } from "@/lib/view-mod
  * per question (M2-10 … M2-13).
  *
  * The widget key decides the *control*; the container key decides the *layout
- * around it*. That split is why six widgets cover fourteen question types
+ * around it*. That split is why six widgets cover eighteen question types
  * (`MVP-1.md` §10) — a note completion and a table completion are the same
  * text input in different furniture.
  *
