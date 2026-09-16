@@ -20,7 +20,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 /**
  * Screen 13 — Profile (M4-06).
  *
- * Name, phone, batch, teacher, plan validity, change PIN, log out. Nothing
+ * Name, phone, batch, teacher, plan validity, change password, log out. Nothing
  * else — this screen exists to answer "when does my access end?" and "who do I
  * ask?", which are the two things students actually come here for.
  *
@@ -106,7 +106,7 @@ export default async function ProfilePage({
 					<div className="flex flex-col gap-1">
 						<h2 className="m-0 text-h3">Where you&rsquo;re logged in</h2>
 						<p className="m-0 text-ink-2">
-							If you don&rsquo;t recognise one of these, change your PIN and tell your teacher.
+							If you don&rsquo;t recognise one of these, change your password and tell your teacher.
 						</p>
 					</div>
 					<ul className="m-0 flex list-none flex-col gap-0 p-0">
@@ -128,10 +128,10 @@ export default async function ProfilePage({
 
 			<div className="flex flex-col gap-3">
 				<Link
-					href="/profile/pin"
+					href="/profile/password"
 					className="flex h-primary items-center justify-center rounded-control bg-brand text-h3 font-semibold text-white no-underline hover:bg-brand-hover hover:no-underline"
 				>
-					Change my PIN
+					Change my password
 				</Link>
 				<LogOutButton />
 			</div>

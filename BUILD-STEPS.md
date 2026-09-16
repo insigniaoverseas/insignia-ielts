@@ -264,17 +264,24 @@ Invite-only means **an invite in spam blocks enrolment entirely.** This is not a
 No rendered design — build from `DESIGN-PROMPT.md` Part A. Expired, used and revoked tokens each get a plain-language dead end: *"This link has expired. Ask your teacher for a new one."*
 **✅ Done when** all three failure states show a human sentence and a way forward.
 
-### 36. Set password `(M1-06)` → 37. Set PIN + device binding `(M1-07)`
-Step 37 is the security-critical one. Setting a PIN issues a **long-lived httpOnly device secret**; its hash goes in `user_devices.device_secret_hash`. Fast login = **device secret + PIN**, both verified server-side.
-**✅ Done when** the PIN alone, from a fresh browser profile, authenticates nothing.
+### 36. Set password `(M1-06)` → ~~37. Set PIN + device binding `(M1-07)`~~
+**Step 37 is dropped (2026-09-16).** No PIN — sign-in is email and password only
+(`MVP-1.md` §9, `PROJECT-MEMORY.md` §4).
+
+Step 36's screen is built: rules printed before you type and ticked as you meet
+them, show/hide instead of a confirm field. The Server Action behind it is what
+remains.
+**✅ Done when** accepting an invitation sets a password that survives a sign-out
+and sign-in, and the token cannot be reused.
 
 ### 38. Login screen `(M1-08)`
-Password path, plus the PIN fast path **offered only when a known device secret is present**.
-⚠️ The rendered design ([`01 Login.dc.html`](Design%20files/Prioritizing%20project%20scope/01%20Login.dc.html)) shows phone+PIN — that's the superseded design. Keep its visual language, change the fields.
-**✅ Done when** an unrecognised device never sees a PIN box.
+Email and password. **No PIN** (dropped 2026-09-16).
+⚠️ The rendered design ([`01 Login.dc.html`](Design%20files/Prioritizing%20project%20scope/01%20Login.dc.html)) shows phone+PIN — superseded twice over. The built screen keeps its visual language and changes the fields.
+The screen is built; the sign-in Server Action is what remains.
+**✅ Done when** a wrong password and an unknown email give the *same* message, and neither reveals whether the account exists.
 
 ### 39. Lockout + rate limiter + Turnstile `(M1-09, M1-10, M1-11)`
-5 failures → 15-minute lock, on **both** password and PIN. Durable Object counter, limiting by IP **and** account — counts kept in memory, storage written only when a lock is set (free plan: 100,000 DO rows written a day). Turnstile on login and accept-invite.
+5 failures → 15-minute lock on the password (the PIN is gone). Durable Object counter, limiting by IP **and** account — counts kept in memory, storage written only when a lock is set (free plan: 100,000 DO rows written a day). Turnstile on login and accept-invite.
 ⚠️ **Then loosen Supabase's own limit, because ours now does the job** ([`MVP-1.md` §4](MVP-1.md#free-plans-200-students-at-once)): a lab of 200 behind one IP otherwise hits Supabase Auth's per-IP sign-in limit. Dashboard → Authentication → Rate Limits: raise the sign-in limit, and turn on **IP address forwarding** so the Worker can pass the student's real IP in `Sb-Forwarded-For` (needs the secret key, server-side only).
 **✅ Done when** six wrong attempts lock the account, the sixth request is rate-limited by IP too, and 200 scripted sign-ins from one IP inside 5 minutes all succeed.
 
@@ -387,7 +394,7 @@ Academic vs GT type availability in both player and authoring UI. Right-click hi
 | 66 | Review my mistakes `(M4-01, M4-02)` | Gated on submitted **and** released. "Play this part" jumps to a timestamp in the one audio file. This is the teaching screen — the reason students improve. |
 | 67 | My Progress `(M4-03)` | Band over time + **accuracy by question type, worst first**. The per-type breakdown is what actually tells a student what to fix. |
 | 68 | Practice at home `(M4-04, M4-05)` | Instant feedback is a **per-question server round-trip returning one verdict** — never the rest of the key. |
-| 69 | Profile `(M4-06)` | Plan validity bar, change password, change PIN, **device list + revoke**, log out. Nothing else. |
+| 69 | Profile `(M4-06)` | Plan validity bar, change password, **device list + revoke**, log out. Nothing else. ✅ screen built. |
 
 ---
 
@@ -403,7 +410,7 @@ Build in this order — it's the order a real institute needs them.
 | 73 | Test library `(M5-08)` | Filter by skill, variant, difficulty, status |
 | 74 | Answer key editor `(M5-09)` | 40 rows, keyboard-first, tab moves down, autosave indicator, "34 of 40 entered". **Optimise for speed, not beauty** — this screen gets used constantly. |
 | 75 | Batches `(M5-07)` | |
-| 76 | Student detail drawer `(M5-05)` | Plan timeline, attempts, reset PIN, change email, audit trail |
+| 76 | Student detail `(M5-05)` | Plan timeline, attempts, **send a new invitation** (never "reset password" — an admin must not set a credential they then read aloud), change email, audit trail. ✅ built as a page, not a drawer. |
 | 77 | Plans & validity workqueue `(M5-06)` | Grouped by expiry, bulk extend, reason field, confirm dialog stating exactly what changes |
 | 78 | Admin overview `(M5-02)` | Build last — it summarises everything above |
 

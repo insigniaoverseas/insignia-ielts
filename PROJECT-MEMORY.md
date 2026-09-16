@@ -20,15 +20,17 @@
 
 | | |
 |---|---|
-| **Active milestone** | **M0 — Foundations** |
-| **Last completed** | **M0-13** nonce CSP + security headers live (PR #1) and the passage sanitiser. Earlier: M0-12 part 1 (R2 buckets), M0-22 (CI), step 22 (Owner/Admin permissions), M0-19 (band charts), M0-11 (default-deny test + sweep), M0-10 (audit, rate limits — **schema complete, 24 tables**), M0-09 (assessment), M0-08 (content), M0-07 (cohorts), M0-06 (identity), M0-05 (CLI, types), M0-04 (Supabase project `insignia-ielts` in `ap-south-1`, §6), M0-03 + M0-23 (shadcn primitives, gallery), M0-01 (scaffold, lint, auto-deploy). |
-| **Next task** | **Phase 3, the content pipeline**, in order: **M0-15** `lib/question-types.ts` (step 23, blocks the next three) → **M0-16** upload schema in zod (step 24, needs the `zod` dependency) → **M0-12 part 2** `lib/r2.ts` signing (step 25, parallel-safe) → **M0-17** importer + CLI (step 26) → **M0-18** `lib/scoring.ts` (step 27) → **M0-20** port the legacy Listening test (step 28) → `docs/test-authoring.md` (step 30). Also open: **M0-21** docs/ADRs (step 11, `docs/` does not exist yet), the M0-13 leftover (measure per-route Worker CPU against the 10 ms free limit), and M1-01's `supabase/config.toml` `enable_signup` alignment. |
+| **Active milestone** | **Two fronts, both live.** The front end is complete — all 30 screens (`MVP-1.md` §17) — and waiting on the server. The back end is on **M0 Phase 3, the content pipeline**. |
+| **Last completed** | **The whole front end, 2026-09-16.** All 30 screens on a swappable data seam: `lib/view-models/*` is the contract, `lib/mock/*` satisfies it today, real queries satisfy it later — swapping the source must not change a screen file. Student (M2-01…03, 05, 09…16, 18; M3-01…03; M4-01, 03, 04, 06), admin (M5-01…09, M9-02, M9-03), teacher (M6-01…06), invigilator (M7-02), auth (M1-05, 06, 08), error pages (M9-04, partly). Back end, same day: the `plan_notes` migration (Q12, M0-07). Earlier: M0-13 CSP + sanitiser, M0-12 part 1, M0-22 CI, M0-19, M0-11, M0-05…M0-10 (**schema complete, 24 tables**), M0-03, M0-01. |
+| **Next task — back end** | **Phase 3, the content pipeline**, in order: **M0-15** `lib/question-types.ts` (step 23, blocks the next three) → **M0-16** upload schema in zod (step 24, needs the `zod` dependency) → **M0-12 part 2** `lib/r2.ts` signing (step 25, parallel-safe) → **M0-17** importer + CLI (step 26) → **M0-18** `lib/scoring.ts` (step 27) → **M0-20** port the legacy Listening test (step 28) → `docs/test-authoring.md` (step 30). Also open: **M0-21** docs/ADRs (step 11, `docs/` does not exist yet), the M0-13 leftover (measure per-route Worker CPU against the 10 ms free limit), and M1-01's `supabase/config.toml` `enable_signup` alignment. |
+| **Next task — front end** | **Replace `lib/mock/*` with real queries and Server Actions**, one screen at a time, as the back end lands them. Highest value first: M2-04 eligibility resolver + M2-07 attempt lifecycle (they unblock the player), then M2-17 scoring on submit, then M1-02/M1-08's sign-in and invite actions. Still open on screens themselves: M2-14 `image_label` (no design), M3-04…M3-11 the remaining Reading question types and passage highlight, and the four edge screens in M9-04. |
+| **Open PRs** | #6 `feat/m6-teacher-screens` (admin + teacher) → `main`, and #7 `feat/m1-auth-screens` → #6. #4 and #5 merged. ⚠️ #5 merged into `feat/m2-student-screens` rather than `main`, so **`main` carries the student screens only** — #6 brings the admin work forward. |
 | ~~**Next task**~~ | ~~**M0-13 sanitiser PR**~~ — superseded 2026-09-16: merged (`fb2040f`), M0-13 closed. Old text: (`feat/sanitize-passages`) — once merged, M0-13 is complete. Then Phase 3: M0-15 `lib/question-types.ts` (step 23), M0-16 upload schema, M0-18 `lib/scoring.ts` + Vitest, M0-17 importer (which calls `sanitizePassageHtml` on write). Also open: M0-21 docs/ADRs. Then the rest of the unfinished Phase 0–1 steps: 3 (R2 buckets), 9 (CSP + sanitize), 11 (docs/ADRs), 12 (CI running `test:db`, `test:db:sweep`, `test:unit`) — then Phase 3 (question types, upload schema, importer, scoring) (Supabase clients `server/client/admin.ts`, M0-05) and step 22 (`lib/rbac.ts`). No-DB tasks still open: M0-12 (R2), M0-13 (CSP), M0-14 (secrets), M0-15, M0-18, M0-21, M0-22. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
 | ~~**Next task**~~ | ~~M0-06 — waiting on the user's `db push`~~ — superseded 2026-09-15: pushed and verified. |
 | ~~**Next task**~~ | ~~M0-06 — resolve where RLS helpers live first~~ — superseded 2026-09-15: `private` schema, approved by the user. |
 | ~~**Next task**~~ | ~~**M0-05** finish: only `npx supabase db push` left~~ — superseded 2026-09-15: pushed by the user, advisor clean. |
-| **Blocked on** | Nothing. Q1–Q3 answered 2026-09-15. Q9 and Q10 confirmed the same day. |
-| **Branch** | `main` |
+| **Blocked on** | Nothing. Q1–Q3 answered 2026-09-15; Q9, Q10 the same day. PIN dropped by the user 2026-09-16 (§4). |
+| **Branch** | `main`; front-end work on `feat/m6-teacher-screens` → `feat/m1-auth-screens`. |
 
 ---
 
@@ -72,16 +74,16 @@
 | M1-02 Invitation server actions | todo | | | create, bulk, revoke, resend |
 | M1-03 Resend + invite email template | todo | | | |
 | M1-04 SPF / DKIM / DMARC | todo | | | Invite in spam = enrolment blocked |
-| M1-05 Accept-invitation screen + token verify | todo | | | No rendered design |
-| M1-06 Set-password screen | todo | | | |
-| M1-07 Set-PIN screen + device binding | todo | | | |
-| M1-08 Login: password path + PIN fast path | todo | | | Existing design shows phone+PIN — needs rework |
-| M1-09 Lockout on password and PIN | todo | | | |
+| M1-05 Accept-invitation screen + token verify | done | Claude | 2026-09-16 | ✅ `/invite/[token]`, `noindex`. Shows email, centre and batch so a wrong address is spotted **before** it becomes their login. The dead ends are the point: expired / used / revoked / unknown each get a plain sentence and a way forward, never a 404 and never the word "invalid". ⬜ Real token verification (server). |
+| M1-06 Set-password screen | done | Claude | 2026-09-16 | ✅ Part of `/invite/[token]`. Rules are **printed before you type** and tick as you meet them — a student sees this screen once and shouldn't learn the requirements by failing them. Show/hide toggle instead of a confirm field: retyping catches typos by accident, reading catches them on purpose. Server re-checks, incl. leaked-password protection (M1-01). |
+| ~~M1-07 Set-PIN screen + device binding~~ | ~~todo~~ | | | **Dropped 2026-09-16** — the user ruled out the PIN; email + password only (§4). `PinInput` is now unused; kept in `/dev/components` and flagged there. |
+| M1-08 Login: password path | done | Claude | 2026-09-16 | ✅ `/login` — **email + password only** (§4); the rendered phone+PIN design does not apply. No signup link (accounts are invitations only), one error message for both fields (naming the email tells an attacker which addresses are real, §8), and no self-serve reset — a locked-out student is standing in a building with their teacher in it. ⬜ The sign-in action. |
+| M1-09 Lockout on password | in_progress | Claude | 2026-09-16 | ✅ UI: tries-left counter and a locked state that says **until when** — "try again later" sends people to the front desk. ⬜ The server-side counter and lock (M1-10). PIN half dropped (§4). |
 | M1-10 Durable Object rate limiter | todo | | | Login, PIN, invite, MCP only — never autosave. Counts in memory; write storage only on a lockout (free DO quota) |
 | M1-11 Turnstile on login + accept-invite | todo | | | |
 | M1-12 Session cookies + single active session | todo | | | |
 | M1-13 `lib/rbac.ts` + route guards | in_progress | Claude, goverdhan-gaur | 2026-09-15 | ✅ Permission matrix agreed (§4). ✅ `supabase/migrations/20260915180655_role_permissions.sql` (Owner label, permissions + `CHECK`). ✅ `lib/permissions.ts` (pure, TSDoc) + `lib/rbac.ts` (`getActor` via `getClaims()` + secret-key lookup, `requirePermission`, `ForbiddenError`). ✅ `npm run test:unit` 29/29 against the seeded data; a deliberate "teacher can publish" seed is caught. ✅ Pushed by the user; verified live: `super_admin` named Owner, permission counts admin 10 / invigilator 1 / student 1 / Owner 12 / teacher 5, `roles_permissions_well_formed` present. ⬜ Route guards with the first privileged routes (M1); `getActor` gets an integration test then. |
-| M1-14 Device list + revoke (server side) | todo | | | UI lands in M4-06 |
+| M1-14 Device list + revoke (server side) | todo | | | UI shipped in M4-06 (Profile). Still wanted **without** the PIN: it answers "is someone else in my account?", which is independent of how you log in. |
 
 ### M2 — Student core, Listening
 
@@ -203,6 +205,11 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-09-16 | docs | **Corrected the contract to match what was built.** `MVP-1.md` §9: no PIN — email and password only, the fast-login section struck out, an admin never sets a password. §15: staff routes are real segments (`/admin/*`, `/teacher/*`), not route groups, with the shell-collision bug that forced it recorded. §17: all 30 screens marked built, screen 02 dropped, screen 23 noted as a page not a drawer, screen 30 marked partial. `BUILD-STEPS.md`: step 37 dropped, steps 36/38/39/69/76 reworded. `PROJECT-MEMORY.md` §1 rewritten — it still said "Active milestone M0". | `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | goverdhan-gaur (decision), Claude |
+| 2026-09-16 | M1-05, M1-06, M1-08 | Auth screens, **email + password only** — the user dropped the PIN. `/login` (no signup link, one error for both fields, lock says until when) and `/invite/[token]` (four dead-end states, each with a sentence and a way forward). PIN removed from Profile, the log-out dialog, the admin invite form and student detail ("Reset PIN" → "Send a new invitation"); `PinInput` flagged unused in the gallery. PR #7. | `src/app/(auth)/**`, `src/components/auth/set-password-form.tsx`, `src/lib/{view-models,mock}/auth.ts`, `src/app/(student)/profile/page.tsx`, `src/app/admin/students/**` | goverdhan-gaur (decision), Claude |
+| 2026-09-16 | M6, M7-02, M9-02…04 | Teacher screens 14–19, live monitor 17, users & roles 28, audit log 29, not-found and error pages. **Staff routes namespaced** after finding `/batches` rendered Admin while `/batches/b-0` rendered Teacher. PR #6. | `src/app/teacher/**`, `src/app/admin/{users,audit}/**`, `src/app/{not-found,error}.tsx`, `src/components/staff/**`, `src/lib/{view-models,mock}/teacher.ts` | Claude |
+| 2026-09-16 | M5-01…09 | Nine admin screens on the view-model seam. Fixed two shared-component bugs found by using them: `Button asChild` passed Slot two children and threw for every caller; `PhoneInput` hardcoded the 56px student height. PR #5. | `src/app/admin/**`, `src/components/staff/**`, `src/components/ui/{button,input}.tsx`, `src/lib/{view-models,mock}/admin.ts` | Claude |
+| 2026-09-16 | M2, M3-01…03, M4 | Twelve student screens and the test player, on a new `lib/view-models` ↔ `lib/mock` seam so they could be built before the queries. Attempt HTML sanitised server-side (`sanitize-attempt.ts`) to keep `unified`+`rehype` out of the player bundle — verified empty in `.next/static`. `BandTrendChart` extended for gaps; `AudioPlayer` gained a `night` surface. PR #4. | `src/app/(student)/**`, `src/app/attempt/**`, `src/components/{student,player}/**`, `src/lib/{view-models,mock}/**`, `src/lib/security/sanitize-attempt.ts`, `src/components/ui/{band-trend-chart,button,input}.tsx` | Claude |
 | 2026-09-16 | §7 Q12 | PR #3 merged (`9d18e04`); user ran `db push` and regenerated types (`72cbbe6`). **Verified live over the REST API** (no MCP this session — the connector needs an interactive OAuth): secret key reads `student_plan_notes` (200, empty); publishable key with no session is refused (401 / 42501); `student_plans.notes` is gone (400 / 42703); plan facts still read (200). | `src/lib/supabase/database.types.ts`, `PROJECT-MEMORY.md` | goverdhan-gaur, Claude |
 | 2026-09-16 | §7 Q12 | Staff plan notes split out of `student_plans` into `student_plan_notes` (staff-only RLS, same audience as `plan_history`); student keeps every plan fact. `test:db` 250/250 (was 240), sweep 26/26 all covered, 2 deliberate mutations caught (column re-added; policy widened to `using (true)`). **Not yet pushed — needs `npx supabase db push`, then `npm run db:types`.** | `supabase/migrations/20260916125048_plan_notes.sql`, `tests/db/rls.test.mjs`, `MVP-1.md`, `PROJECT-MEMORY.md` | goverdhan-gaur (decision), Claude |
 | 2026-09-16 | M0-13 | Merged PR #1 at the user's request (rebase); production deploy succeeded; live site verified (headers, nonces, Chrome). User granted `goverdhan-gaur` write access. Built `lib/security/sanitize.ts` + 40 tests on branch `feat/sanitize-passages`; deps pinned (unified 11.0.5, rehype-parse 9.0.1, rehype-sanitize 6.0.0, rehype-stringify 10.0.1). All gates pass locally (81 unit, 240 DB, build, bundle scan). | `src/lib/security/sanitize.ts`, `src/lib/security/README.md`, `tests/unit/sanitize.test.mjs`, `package.json`, `package-lock.json`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | goverdhan-gaur, Claude |
@@ -258,6 +265,37 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-16 — No PIN. Email and password only  (task: M1-08)
+
+**The user's call, 2026-09-16:** *"i wont be using pin, i will be using email
+and passwrd nly."*
+
+This supersedes the PIN half of D9 (`MVP-1.md` §9) and both rendered auth
+designs (`01 Login.dc.html`, `02 First Login PIN Change.dc.html`), which show
+phone + PIN.
+
+Dropped with it: the PIN fast path, device-secret binding, the five-wrong-PINs
+device lock, and the "Set your PIN" step of invitation acceptance (M1-07).
+
+Kept, and still worth building: the device list on Profile (M1-14 / M4-06). It
+answers "is someone else in my account?", which is independent of how you sign
+in.
+
+**The trade-off, recorded because it will be felt in a lab:** the PIN existed
+so a student could get back in quickly on a shared machine mid-session. With
+passwords only that is more typing, on a keyboard some of these students are
+slow with. Mitigate it with a long-lived "stay signed in" session cookie when
+M1-12 lands, rather than by re-introducing a 4-digit secret.
+
+`MVP-1.md` §9 and §17 are now wrong on this point. Correcting them is an open
+doc task — `CLAUDE.md` says to fix `MVP-1.md` when it disagrees with reality.
+
+Consequences already applied: `/login` and `/invite/[token]` built without a
+PIN; Profile's "Change my PIN" is now "Change my password"; the student detail
+screen's "Reset PIN" is now "Send a new invitation" (an admin should never set
+a password they then have to read out loud); `PinInput` flagged unused in
+`/dev/components`.
 
 ### 2026-09-16 — Staff routes are namespaced: `/admin/*` and `/teacher/*`  (task: M6-01)
 

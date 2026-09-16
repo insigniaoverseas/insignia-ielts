@@ -30,7 +30,7 @@ export default async function NewStudentPage() {
 			<div className="flex flex-col gap-1">
 				<h1 className="m-0 text-h1">Invite a student</h1>
 				<p className="m-0 text-ink-2">
-					They&rsquo;ll get a link to set their own password and PIN. Nothing is active until they accept.
+					They&rsquo;ll get a link to choose their own password. Nothing is active until they accept.
 				</p>
 			</div>
 
