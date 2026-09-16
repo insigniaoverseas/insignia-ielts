@@ -64,6 +64,8 @@ export type StudentIdentity = {
 	/** Display form, e.g. "+91 98765 43210". Never raw digits. */
 	phone: string;
 	batchName: string | null;
+	/** Who to ask when something is wrong — the answer to most support calls. */
+	teacherName: string | null;
 	branchName: string;
 };
 
@@ -200,10 +202,21 @@ export type PreTestBriefing = {
 	soundCheckUrl: string | null;
 };
 
+/**
+ * Band over time, shaped for `BandTrendChart`: one shared timeline, one entry
+ * per skill. `bands[i]` lines up with `dateLabels[i]`, and is `null` when that
+ * skill was not tested on that date — which is most dates, since a student sits
+ * one skill at a time.
+ */
+export type BandTrend = {
+	/** Every date on which any test was taken, oldest first. */
+	dateLabels: string[];
+	series: { skill: Skill; bands: (number | null)[] }[];
+};
+
 /** Screen 11 — My Progress. */
 export type MyProgress = {
-	/** One point per released result, oldest first. */
-	trend: { dateLabel: string; skill: Skill; band: number }[];
+	trend: BandTrend;
 	/** Worst first — this is the "what to practise" list. */
 	accuracyByType: { questionType: string; label: string; percent: number; attempted: number }[];
 	/** One plain sentence of advice, composed server-side. */

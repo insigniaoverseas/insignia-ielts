@@ -128,10 +128,10 @@
 |---|---|---|---|---|
 | M4-01 Review my mistakes (10) + release gating | todo | | | |
 | M4-02 Transcript + jump to timestamp | todo | | | Offsets into the one audio file |
-| M4-03 My Progress (11) | todo | | | Per-question-type accuracy |
-| M4-04 Practice at home (12) | todo | | | |
+| M4-03 My Progress (11) | done | Claude | 2026-09-16 | ✅ `/progress`: band-over-time line per skill, then "What to practise" worst-first, one sentence of advice, tests-taken + average. No filters, no date pickers. **`BandTrendChart` extended** (§4): `BandPoint.band` may be `null` so a skill not tested on a date breaks the line instead of inventing a score; end labels are laid out top-down with a collision nudge and a surface-coloured halo. Backward compatible — `/dev/components` unchanged. |
+| M4-04 Practice at home (12) | done | Claude | 2026-09-16 | ✅ `/practice`: rule stated once at the top, Listening/Reading filter as links (`?skill=`), each card says how many times it's been done. No "Not started" pill on practice — it can be taken any number of times, so the count *is* the status. |
 | M4-05 Practice instant feedback round-trip | todo | | | One verdict, never the key |
-| M4-06 Profile (13) + device management | todo | | | |
+| M4-06 Profile (13) + device management | done | Claude | 2026-09-16 | ✅ `/profile`: name, phone, batch, teacher, centre; access card with the end date and a bar of time **used** (a full bar reads as "act now"); logged-in devices; Change my PIN; Log out behind a `ConfirmDialog` naming what happens. Sign-out action lands with M1 — the dialog's `onConfirm` is a deliberate no-op until then. |
 
 ### M5 — Admin essentials
 
@@ -255,6 +255,24 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-16 — `BandTrendChart` takes gaps, and lays its end labels out  (task: M4-03)
+
+The chart was built against a series where every skill has a point on every
+date. Real students don't sit both skills on the same day, so one line was
+being drawn straight across months it had skipped, and the two direct end
+labels overlapped each other and the other line.
+
+`BandPoint.band` is now `number | null`. A null is a gap: the line breaks
+there, a lone point gets its own dot, and the x position still comes from the
+shared date index so the two skills stay comparable. End labels are collected,
+sorted by y and pushed apart to a minimum gap, then painted with a
+surface-coloured halo so one stays readable where it crosses the other line.
+
+Backward compatible — `number` is assignable to `number | null`, so
+`/dev/components` renders exactly as before. Alternative rejected: a legend.
+Direct labelling is a stated rule in `DESIGN-PROMPT.md` §A5.19, and a legend
+costs the reader a lookup on the screen most likely to be read in a hurry.
 
 ### 2026-09-16 — Passage HTML allowlist  (task: M0-13)
 **Chose:** `PASSAGE_SCHEMA` in `lib/security/sanitize.ts` — text formatting, `h3`–`h5`, lists, blockquote, tables with merged cells, and `p data-label` (one or two capital letters) for paragraph letters. No links, images, ids, classes or styles. Parse → filter → re-serialise with unified/rehype (all pinned). Scripts, styles, iframes, svg, math etc. are dropped with their contents. Input capped at 200 000 characters.

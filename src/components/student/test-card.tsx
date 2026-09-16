@@ -61,13 +61,16 @@ export function AssignedTestCard({ item, extraDetail }: { item: AssignedTest; ex
 			<div className="flex min-w-[260px] flex-1 flex-col gap-3">
 				<div className="flex flex-wrap items-center gap-2">
 					<Chips test={test} mode={mode} />
+					{/* Practice has no "not started": it can be taken any number of
+					    times, so "You've done this twice" is the true status and it
+					    already appears in the meta line below. */}
 					{resumeAttemptId ? (
 						<StatusPill status="in_progress" size="sm" />
 					) : locked ? (
 						<StatusPill status="locked" size="sm" />
-					) : (
+					) : mode !== "practice" ? (
 						<StatusPill status="not_started" size="sm" />
-					)}
+					) : null}
 				</div>
 				<h2 className="m-0 text-h2">{test.title}</h2>
 				<span className="text-ink-2">

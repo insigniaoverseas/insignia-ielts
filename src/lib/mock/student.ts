@@ -35,6 +35,7 @@ const STUDENT: StudentIdentity = {
 	fullName: "Priya Sharma",
 	phone: "+91 98765 43210",
 	batchName: "Morning Batch A",
+	teacherName: "Anita Desai",
 	branchName: "Insignia — Karol Bagh",
 };
 
@@ -319,17 +320,22 @@ export async function getAttemptResult(attemptId: string): Promise<CompletedAtte
 /** Screen 11 — My Progress. */
 export async function getMyProgress(scenario: Scenario = "default"): Promise<MyProgress> {
 	if (scenario === "empty") {
-		return { trend: [], accuracyByType: [], advice: "", testsTaken: 0, averageBand: null };
+		return {
+			trend: { dateLabels: [], series: [] },
+			accuracyByType: [],
+			advice: "",
+			testsTaken: 0,
+			averageBand: null,
+		};
 	}
 	return {
-		trend: [
-			{ dateLabel: "12 Jul", skill: "listening", band: 5.0 },
-			{ dateLabel: "26 Jul", skill: "reading", band: 5.5 },
-			{ dateLabel: "9 Aug", skill: "listening", band: 5.5 },
-			{ dateLabel: "19 Aug", skill: "listening", band: 6.0 },
-			{ dateLabel: "24 Aug", skill: "reading", band: 6.0 },
-			{ dateLabel: "2 Sep", skill: "reading", band: 6.5 },
-		],
+		trend: {
+			dateLabels: ["12 Jul", "26 Jul", "9 Aug", "19 Aug", "24 Aug", "2 Sep"],
+			series: [
+				{ skill: "listening", bands: [5.0, null, 5.5, 6.0, null, null] },
+				{ skill: "reading", bands: [null, 5.5, null, null, 6.0, 6.5] },
+			],
+		},
 		accuracyByType: [
 			{ questionType: "identifying_information", label: "True / False / Not Given", percent: 41, attempted: 27 },
 			{ questionType: "matching_headings", label: "Matching headings", percent: 52, attempted: 21 },
