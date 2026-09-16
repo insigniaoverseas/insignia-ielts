@@ -16,3 +16,21 @@ SUPABASE_SECRET_KEY=
 CLOUDFLARE_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
+
+# ── Auth (M1) ────────────────────────────────────────────────────────────────
+# Absolute origin that invitation links are built from, no trailing slash.
+# Deployed, this lives in wrangler.jsonc `vars` — it is not a secret.
+APP_BASE_URL=http://localhost:3000
+
+# From address on invitation email. Must be on a domain verified in Resend.
+MAIL_FROM=Insignia IELTS <invites@example.com>
+
+# Resend → API Keys. Sending permission only.
+# NOTE: connecting Resend to Supabase covers Supabase Auth's OWN emails (SMTP).
+# Our invitation carries our own token, so we send it ourselves and need this.
+# Leave unset in development and the invite link prints to the server console.
+RESEND_API_KEY=
+
+# Cloudflare → Turnstile → your site. The site key is public (wrangler vars);
+# only the secret belongs here. M1-11.
+TURNSTILE_SECRET_KEY=

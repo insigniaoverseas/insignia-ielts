@@ -64,10 +64,10 @@ for (const [k, role, b, status] of users) {
   `);
 }
 await db.exec(`
-  insert into public.invitations (email, role_id, branch_id, token_hash, expires_at, invited_by)
-  select 'new1@x.in', r.id, '${id.b1}', 'th-1', now() + interval '7 days', '${id.admin1}' from public.roles r where r.key = 'student';
-  insert into public.invitations (email, role_id, branch_id, token_hash, expires_at, invited_by)
-  select 'new2@x.in', r.id, '${id.b2}', 'th-2', now() + interval '7 days', '${id.admin2}' from public.roles r where r.key = 'student';
+  insert into public.invitations (email, name, role_id, branch_id, token_hash, expires_at, invited_by)
+  select 'new1@x.in', 'New One', r.id, '${id.b1}', 'th-1', now() + interval '7 days', '${id.admin1}' from public.roles r where r.key = 'student';
+  insert into public.invitations (email, name, role_id, branch_id, token_hash, expires_at, invited_by)
+  select 'new2@x.in', 'New Two', r.id, '${id.b2}', 'th-2', now() + interval '7 days', '${id.admin2}' from public.roles r where r.key = 'student';
 `);
 
 
@@ -195,7 +195,7 @@ ok("sees branch-1 invitations only", (await as("authenticated", "admin1", `selec
 ok("cannot read token_hash", denied(await as("authenticated", "admin1", `select token_hash from public.invitations`)));
 ok("sees branch-1 devices only", (await count("authenticated", "admin1", `select id from public.user_devices`)) === branch1Users);
 ok("sees branch-1 sessions only", (await count("authenticated", "admin1", `select id from public.user_sessions`)) === branch1Users);
-ok("cannot create an invitation via the API", denied(await as("authenticated", "admin1", `insert into public.invitations (email, role_id, branch_id, token_hash, expires_at, invited_by) values ('q@x.in', gen_random_uuid(), '${id.b1}', 't', now() + interval '1 day', '${id.admin1}')`)));
+ok("cannot create an invitation via the API", denied(await as("authenticated", "admin1", `insert into public.invitations (email, name, role_id, branch_id, token_hash, expires_at, invited_by) values ('q@x.in', 'Q', gen_random_uuid(), '${id.b1}', 't', now() + interval '1 day', '${id.admin1}')`)));
 ok("sees only their own branch row", (await count("authenticated", "admin1", `select id from public.branches`)) === 1);
 
 console.log("\nsuspended admin, branch 1");
@@ -232,7 +232,7 @@ ok("service_role update fires the private trigger", !(await as("service_role", n
 console.log("\nconstraints");
 const bad = async (sql) => { try { await db.exec(sql); return false; } catch { return true; } };
 ok("uppercase email rejected", await bad(`update public.users set email = 'Upper@x.in' where id = '${id.studentB}'`));
-ok("second pending invite for same email rejected", await bad(`insert into public.invitations (email, role_id, branch_id, token_hash, expires_at, invited_by) select 'new1@x.in', role_id, branch_id, 'th-x', now() + interval '1 day', invited_by from public.invitations limit 1`));
+ok("second pending invite for same email rejected", await bad(`insert into public.invitations (email, name, role_id, branch_id, token_hash, expires_at, invited_by) select 'new1@x.in', name, role_id, branch_id, 'th-x', now() + interval '1 day', invited_by from public.invitations limit 1`));
 ok("accepted without accepted_at rejected", await bad(`update public.invitations set status = 'accepted' where email = 'new1@x.in'`));
 ok("unknown status rejected", await bad(`update public.users set status = 'banned' where id = '${id.studentB}'`));
 
@@ -294,7 +294,7 @@ ok("teacher cannot enrol a student", denied(await as("authenticated", "teacher",
 ok("second active plan for a student rejected", await bad(`insert into public.student_plans (student_id, plan_name, starts_on, expires_on) values ('${id.studentA}', 'dup', '2026-09-01', '2026-10-01')`));
 ok("plan_history rows cannot be updated (even by postgres)", await bad(`update public.plan_history set reason = 'x'`));
 ok("expiry before start rejected", await bad(`insert into public.student_plans (student_id, plan_name, starts_on, expires_on, status) values ('${id.studentB}', 'bad', '2026-09-10', '2026-09-01', 'expired')`));
-ok("invitation with unknown batch_id rejected", await bad(`insert into public.invitations (email, role_id, branch_id, batch_id, token_hash, expires_at, invited_by) select 'b@x.in', role_id, branch_id, gen_random_uuid(), 'th-b', now() + interval '1 day', invited_by from public.invitations limit 1`));
+ok("invitation with unknown batch_id rejected", await bad(`insert into public.invitations (email, name, role_id, branch_id, batch_id, token_hash, expires_at, invited_by) select 'b@x.in', name, role_id, branch_id, gen_random_uuid(), 'th-b', now() + interval '1 day', invited_by from public.invitations limit 1`));
 await db.exec(`insert into public.student_plans (id, student_id, plan_name, starts_on, expires_on, status) values ('00000000-0000-0000-0000-00000000dead', '${id.studentB}', 'old', '2026-01-01', '2026-02-01', 'expired');
   insert into public.plan_history (plan_id, action) values ('00000000-0000-0000-0000-00000000dead', 'create');`);
 ok("deleting a plan cascades its history (DPDP erase still works)", !(await bad(`delete from public.student_plans where id = '00000000-0000-0000-0000-00000000dead'`)) && (await db.query(`select count(*)::int c from public.plan_history where plan_id = '00000000-0000-0000-0000-00000000dead'`)).rows[0].c === 0);
@@ -526,6 +526,124 @@ const seedBefore = await one(`select (select count(*) from public.roles)::int r,
 await db.exec(seedSql);
 const seedAfter = await one(`select (select count(*) from public.roles)::int r, (select count(*) from public.band_scales)::int s, (select count(*) from public.band_scale_rows)::int rw`);
 ok("re-running the seed inserts changes nothing", JSON.stringify(seedBefore) === JSON.stringify(seedAfter), JSON.stringify({ seedBefore, seedAfter }));
+
+// ── M1 · Auth: bootstrap, invitations, acceptance, rate limits ───────────────
+console.log("\nM1 bootstrap (first-run setup)");
+const BOOTSTRAP = "1b7d0ff5-e86a-4050-8870-9fd80ed0a3ce";
+
+// The harness has seeded users, so setup is over. Both guards must say so.
+ok("first_run_pending is false once any user exists",
+  (await one(`select public.first_run_pending() p`)).p !== true);
+
+const setupDone = await as("authenticated", null, `select public.complete_first_run_setup('X', null, 'Y')`);
+ok("setup refuses once users exist", /already been completed|Not signed in/.test(setupDone.error ?? ""), setupDone.error);
+
+// A signed-in stranger must not be able to run it even on an empty database.
+{
+  const fresh = await migratedDatabase();
+  const strangerRan = await (async () => {
+    await fresh.exec("begin");
+    try {
+      await fresh.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub: "00000000-0000-0000-0000-0000000000ff", role: "authenticated" })]);
+      await fresh.exec("set local role authenticated");
+      await fresh.query(`select public.complete_first_run_setup('Other Centre', null, 'Somebody')`);
+      return null;
+    } catch (e) { return e.message; } finally { await fresh.exec("rollback"); }
+  })();
+  ok("setup refuses a caller that is not the pinned bootstrap uuid", /cannot run first-run setup/.test(strangerRan ?? ""), strangerRan ?? "it was allowed");
+
+  // And the pinned account, on an empty database, must succeed exactly once.
+  await fresh.query(`select set_config('request.jwt.claims', $1, false)`, [JSON.stringify({ sub: BOOTSTRAP, role: "authenticated" })]);
+  await fresh.exec(`insert into auth.users (id, email) values ('${BOOTSTRAP}', 'owner@example.in') on conflict do nothing`);
+  let firstRun = null, secondRun = null;
+  try { await fresh.query(`select public.complete_first_run_setup('Insignia Test', '1 Road', 'The Owner')`); } catch (e) { firstRun = e.message; }
+  ok("the pinned account completes setup on an empty database", firstRun === null, firstRun ?? "");
+  const owner = (await fresh.query(`select u.id, u.name, r.key, b.name branch from public.users u join public.roles r on r.id = u.role_id join public.branches b on b.id = u.branch_id`)).rows[0];
+  ok("setup creates the Owner with the super_admin role", owner?.key === "super_admin" && owner?.id === BOOTSTRAP, JSON.stringify(owner));
+  ok("setup creates the branch it was given, not a hardcoded one", owner?.branch === "Insignia Test", JSON.stringify(owner));
+  ok("first_run_pending flips to false after setup", (await fresh.query(`select public.first_run_pending() p`)).rows[0].p !== true);
+  try { await fresh.query(`select public.complete_first_run_setup('Second Centre', null, 'Again')`); } catch (e) { secondRun = e.message; }
+  ok("setup cannot be run twice", /already been completed/.test(secondRun ?? ""), secondRun ?? "it ran again");
+  await fresh.close();
+}
+
+console.log("\nM1 invitation acceptance");
+{
+  const inviteTok = "sha-accept-1";
+  await db.exec(`insert into public.invitations (email, name, role_id, branch_id, batch_id, plan_template, token_hash, expires_at, invited_by)
+    select 'accept@x.in', 'Accept Me', r.id, '${id.b1}', '${id.batchX}', '{"months": 3, "plan_name": "3-month plan"}'::jsonb, '${inviteTok}', now() + interval '2 days', '${id.admin1}' from public.roles r where r.key = 'student';
+    insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000ac', 'accept@x.in') on conflict do nothing;`);
+
+  const roleKey = (await one(`select public.accept_invitation('${inviteTok}', '00000000-0000-0000-0000-0000000000ac') k`)).k;
+  ok("acceptance returns the invited role", roleKey === "student", String(roleKey));
+  ok("acceptance creates the user with the invited name and branch",
+    (await one(`select count(*)::int c from public.users where id = '00000000-0000-0000-0000-0000000000ac' and name = 'Accept Me' and branch_id = '${id.b1}'`)).c === 1);
+  ok("acceptance joins the invited batch",
+    (await one(`select count(*)::int c from public.batch_students where student_id = '00000000-0000-0000-0000-0000000000ac' and batch_id = '${id.batchX}'`)).c === 1);
+  ok("acceptance creates the plan from plan_template",
+    (await one(`select count(*)::int c from public.student_plans where student_id = '00000000-0000-0000-0000-0000000000ac' and status = 'active' and expires_on = starts_on + interval '3 months'`)).c === 1);
+  ok("acceptance marks the invitation accepted, with a timestamp",
+    (await one(`select count(*)::int c from public.invitations where token_hash = '${inviteTok}' and status = 'accepted' and accepted_at is not null`)).c === 1);
+
+  let reuse = null;
+  try { await db.query(`select public.accept_invitation('${inviteTok}', '00000000-0000-0000-0000-0000000000ad')`); } catch (e) { reuse = e.message; }
+  ok("a token cannot be used twice", /accepted/.test(reuse ?? ""), reuse ?? "it was reused");
+
+  // Expired and revoked each refuse, and say which — the screen needs to tell
+  // them apart to show the right sentence.
+  // `invitations_expires_after_created` refuses a back-dated expiry, so the
+  // creation date has to be aged as well — the schema will not let an already
+  // expired invitation simply be inserted.
+  await db.exec(`insert into public.invitations (email, name, role_id, branch_id, token_hash, created_at, expires_at, invited_by)
+    select 'stale@x.in', 'Stale', r.id, '${id.b1}', 'sha-stale', now() - interval '8 days', now() - interval '1 day', '${id.admin1}' from public.roles r where r.key = 'student';`);
+  let stale = null;
+  try { await db.query(`select public.accept_invitation('sha-stale', '00000000-0000-0000-0000-0000000000ae')`); } catch (e) { stale = e.message; }
+  ok("an expired token is refused as expired", /expired/.test(stale ?? ""), stale ?? "it was accepted");
+
+  let unknown = null;
+  try { await db.query(`select public.accept_invitation('sha-nope', '00000000-0000-0000-0000-0000000000af')`); } catch (e) { unknown = e.message; }
+  ok("an unknown token is refused", /unknown_invitation/.test(unknown ?? ""), unknown ?? "it was accepted");
+
+  ok("expire_stale_invitations marks the overdue one",
+    (await one(`select public.expire_stale_invitations() n`)).n >= 1);
+}
+
+console.log("\nM1 sign-in rate limits");
+{
+  const key = "signin:account:probe@x.in";
+  const bump = async () => (await one(`select * from public.bump_rate_limit('${key}', 900, 5)`));
+  let last;
+  for (let i = 0; i < 4; i++) last = await bump();
+  ok("four failures do not lock", last.locked === false, JSON.stringify(last));
+  ok("the count is the number of failures", last.attempts === 4, JSON.stringify(last));
+  last = await bump();
+  ok("the fifth failure locks (BUILD-STEPS step 39)", last.locked === true, JSON.stringify(last));
+
+  const peeked = await one(`select * from public.peek_rate_limit('${key}', 900, 5)`);
+  ok("peek reports the lock without spending an attempt", peeked.locked === true && peeked.attempts === 5, JSON.stringify(peeked));
+  const peekedAgain = await one(`select * from public.peek_rate_limit('${key}', 900, 5)`);
+  ok("peek does not increment", peekedAgain.attempts === 5, JSON.stringify(peekedAgain));
+
+  await db.exec(`select public.clear_rate_limit('${key}')`);
+  ok("a correct password clears the account counter",
+    (await one(`select * from public.peek_rate_limit('${key}', 900, 5)`)).attempts === 0);
+
+  // Two keys must not share a counter, or one student's failures would lock another.
+  await db.exec(`select public.bump_rate_limit('signin:account:a@x.in', 900, 5)`);
+  ok("counters are per key", (await one(`select * from public.peek_rate_limit('signin:account:b@x.in', 900, 5)`)).attempts === 0);
+}
+
+console.log("\nM1 function grants");
+for (const [fn, sig] of [["accept_invitation", "text, uuid"], ["bump_rate_limit", "text, integer, integer"], ["peek_rate_limit", "text, integer, integer"], ["clear_rate_limit", "text"], ["expire_stale_invitations", ""], ["purge_old_rate_limits", ""]]) {
+  const g = await one(`select has_function_privilege('anon', 'public.${fn}(${sig})', 'execute') a, has_function_privilege('authenticated', 'public.${fn}(${sig})', 'execute') b`);
+  ok(`${fn} is not executable by anon or authenticated`, !g.a && !g.b, JSON.stringify(g));
+}
+{
+  const g = await one(`select has_function_privilege('anon', 'public.complete_first_run_setup(text, text, text, text, text)', 'execute') a, has_function_privilege('authenticated', 'public.complete_first_run_setup(text, text, text, text, text)', 'execute') b`);
+  ok("complete_first_run_setup is reachable by authenticated but not anon", !g.a && g.b, JSON.stringify(g));
+}
+ok("invitations.token_hash is still not readable through the API",
+  denied(await as("authenticated", "admin1", `select token_hash from public.invitations limit 1`)));
 
 console.log("\npolicy hygiene");
 const multi = (await db.query(`select tablename, cmd, count(*)::int n from pg_policies where schemaname = 'public' group by 1, 2 having count(*) > 1`)).rows;

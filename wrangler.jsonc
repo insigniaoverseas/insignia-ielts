@@ -40,7 +40,17 @@
 	],
 	"vars": {
 		// Public identifier used for the exact R2 S3 endpoint and CSP origin.
-		"CLOUDFLARE_ACCOUNT_ID": "68799315c4e277e252cf254bba0e7d2b"
+		"CLOUDFLARE_ACCOUNT_ID": "68799315c4e277e252cf254bba0e7d2b",
+		// Origin that invitation links are built from (M1-02). An invite is read
+		// in someone's email client, where a relative path means nothing, so this
+		// must be absolute. One setting, so moving to the institute's own domain
+		// is a one-line change. NOT a secret.
+		// TODO(goverdhan-gaur): replace with the real domain once it is confirmed.
+		"APP_BASE_URL": "https://insignia-test.workers.dev",
+		// From address on invitation email. Must be a domain verified in Resend,
+		// or every send is rejected. NOT a secret.
+		// TODO(goverdhan-gaur): replace with the verified sending domain.
+		"MAIL_FROM": "Insignia IELTS <invites@example.com>"
 	},
 	"observability": {
 		"enabled": true

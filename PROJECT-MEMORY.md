@@ -20,17 +20,17 @@
 
 | | |
 |---|---|
-| **Active milestone** | **Two fronts, both live.** The front end is complete — all 30 screens (`MVP-1.md` §17) — and waiting on the server. The back end is on **M0 Phase 3, the content pipeline**. |
-| **Last completed** | **M0-18 server-only scorer, 2026-09-16 (OpenAI Codex).** Runtime-validates immutable keys; applies exact case/space/Unicode normalisation, authored variants, word limits, hyphen counting and plural-sensitive comparison; awards partial multi-select credit with no negatives; emits one fact per numbered question and section/attempt totals; derives bands only from supplied database rows. 21 focused checks in the existing Node suite; all 164 unit tests, 250 DB checks, the 26-policy sweep, typecheck, lint, production build, client-bundle scan and npm audit pass. Earlier: M0-17 importer; M0-12 R2 signing; M0-16 upload schema; M0-15 taxonomy; the complete front end; `plan_notes`; M0-13 CSP + sanitiser; M0-22 CI; M0-19; M0-11; M0-05…M0-10 (**schema complete, 25 tables**). |
-| **Next task — back end** | **Finish M0-20's live draft import** once its source MP3, exact four section endpoints and an active `test:author` exist. The strict 40-question converter and private-key proof are implemented on the current branch. Also open: **M0-14** provision scoped R2 object-read credentials, **M0-21** docs/ADRs (step 11; `docs/test-authoring.md` now exists, but the prescribed tree and ADRs do not), the M0-13 leftover (measure per-route Worker CPU against the 10 ms free limit), and M1-01's `supabase/config.toml` `enable_signup` alignment. |
-| **Next task — front end** | **Replace `lib/mock/*` with real queries and Server Actions**, one screen at a time, as the back end lands them. Highest value first: M2-04 eligibility resolver + M2-07 attempt lifecycle (they unblock the player), then M2-17 scoring on submit, then M1-02/M1-08's sign-in and invite actions. Still open on screens themselves: M2-14 `image_label` (no design), M3-04…M3-11 the remaining Reading question types and passage highlight, and the four edge screens in M9-04. |
-| **Open PRs** | **#14 M0-20 converter** from `feat/m0-20-legacy-listening-test`; live import prerequisites are explicitly pending and the agent will not merge it. #10 M0-16, #11 M0-12, #12 M0-17 and #13 M0-18 are merged. |
+| **Active milestone** | **Two fronts, converging.** The front end is complete — all 30 screens (`MVP-1.md` §17). The back end has moved off M0's content pipeline onto **M1, auth**: the invitation flow now exists end to end and the first screens can come off `lib/mock/*`. |
+| **Last completed** | **M1 auth flow, 2026-09-17 (Claude).** Invitations end to end: mint → email → accept → account → sign in → session → guard, plus lockout. Eight new modules under `lib/auth`, `lib/mail`, `lib/actions`; four migrations; 282 DB checks (was 250), 26/26 sweep, 197 unit tests (was 181), lint, build and bundle scan clean. **Migrations not yet pushed.** Earlier: **M0-18 server-only scorer, 2026-09-16 (OpenAI Codex).** Runtime-validates immutable keys; applies exact case/space/Unicode normalisation, authored variants, word limits, hyphen counting and plural-sensitive comparison; awards partial multi-select credit with no negatives; emits one fact per numbered question and section/attempt totals; derives bands only from supplied database rows. 21 focused checks in the existing Node suite; all 164 unit tests, 250 DB checks, the 26-policy sweep, typecheck, lint, production build, client-bundle scan and npm audit pass. Earlier: M0-17 importer; M0-12 R2 signing; M0-16 upload schema; M0-15 taxonomy; the complete front end; `plan_notes`; M0-13 CSP + sanitiser; M0-22 CI; M0-19; M0-11; M0-05…M0-10 (**schema complete, 25 tables**). |
+| **Next task — back end** | **Push the four M1 migrations and regenerate types** — `npx supabase db push` then `npm run db:types`; typecheck and build are green immediately afterwards (verified by simulating the regenerated types). Then the Supabase dashboard settings in M1-01, and the first-run setup at `/setup`. Also open: **M0-14** scoped R2 credentials, **M0-21** docs/ADRs, M0-20's live draft import. |
+| **Next task — front end** | **M2-04 eligibility + M2-07 attempt lifecycle** — they unblock the player, and now have a real actor to sit on. Then M2-17 scoring on submit. Also: wire screen 22's invite form and Profile's device list to the actions that now exist, and apply `lib/auth/guard.ts` to the privileged layouts as each screen leaves `lib/mock/*`. |
+| **Open PRs** | None. **#14 M0-20 merged 2026-09-16** (this file previously said it was open and would not be merged — corrected 2026-09-17). #10–#13 merged. |
 | ~~**Next task**~~ | ~~**M0-13 sanitiser PR**~~ — superseded 2026-09-16: merged (`fb2040f`), M0-13 closed. Old text: (`feat/sanitize-passages`) — once merged, M0-13 is complete. Then Phase 3: M0-15 `lib/question-types.ts` (step 23), M0-16 upload schema, M0-18 `lib/scoring.ts` + unit tests, M0-17 importer (which calls `sanitizePassageHtml` on write). Also open: M0-21 docs/ADRs. Then the rest of the unfinished Phase 0–1 steps: 3 (R2 buckets), 9 (CSP + sanitize), 11 (docs/ADRs), 12 (CI running `test:db`, `test:db:sweep`, `test:unit`) — then Phase 3 (question types, upload schema, importer, scoring) (Supabase clients `server/client/admin.ts`, M0-05) and step 22 (`lib/rbac.ts`). No-DB tasks still open: M0-12 (R2), M0-13 (CSP), M0-14 (secrets), M0-15, M0-18, M0-21, M0-22. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
 | ~~**Next task**~~ | ~~M0-06 — waiting on the user's `db push`~~ — superseded 2026-09-15: pushed and verified. |
 | ~~**Next task**~~ | ~~M0-06 — resolve where RLS helpers live first~~ — superseded 2026-09-15: `private` schema, approved by the user. |
 | ~~**Next task**~~ | ~~**M0-05** finish: only `npx supabase db push` left~~ — superseded 2026-09-15: pushed by the user, advisor clean. |
-| **Blocked on** | M0-20's last two inputs: **a teacher-verified 40-answer Listening key** (the supplied paper has none) and **an active user holding `test:author`** (the live eligible-author query is empty as of 2026-09-16). The recording and its four section endpoints are now resolved — mono 64 kbps, 1916 s, ends at 481 / 977 / 1465 / 1916 s. |
-| **Branch** | `feat/m0-20-legacy-listening-test`, created from merged `origin/main` after PR #13 to avoid conflicts. |
+| **Blocked on** | **M1 needs from the user:** the migrations pushed; the **domain name** (said to exist, not yet named); a **`RESEND_API_KEY`** and verified `MAIL_FROM` (the Resend↔Supabase connection does not cover our own invitation email — §4); Turnstile keys for M1-11; and the Supabase dashboard settings listed in M1-01. **M0-20** still needs a teacher-verified 40-answer key and an active `test:author`. |
+| **Branch** | `feat/m1-auth-flow`, in a **git worktree** at `~/dev/insignia-m1-auth` (outside iCloud, so a second `node_modules` does not sync). Branched from merged `origin/main`. |
 
 ---
 
@@ -70,20 +70,20 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M1-01 Supabase Auth config, signup disabled | in_progress | goverdhan-gaur, Claude | 2026-09-15 | ✅ Signup **off** (user, dashboard) — verified: `GET /auth/v1/settings` → `disable_signup: true`; email is the only provider. ✅ Leaked-password protection on. ⬜ Rest of Auth config (password rules, email templates, site URL) with the auth work. ⬜ Align local `supabase/config.toml` `enable_signup`. |
-| M1-02 Invitation server actions | todo | | | create, bulk, revoke, resend |
-| M1-03 Resend + invite email template | todo | | | |
+| M1-01 Supabase Auth config, signup disabled | in_progress | goverdhan-gaur, Claude | 2026-09-15 | ✅ Signup **off** (user, dashboard) — verified: `GET /auth/v1/settings` → `disable_signup: true`; email is the only provider. ✅ Leaked-password protection on. ⬜ Rest of Auth config, now specific and awaiting the user: **JWT expiry 3600 → 7200 s** (a 60-minute Reading test outlasts the default and would refresh mid-test), site + redirect URLs, password minimum length, and raising the sign-in rate limit with IP forwarding on. ⬜ Align local `supabase/config.toml` `enable_signup`. |
+| M1-02 Invitation server actions | in_progress | Claude | 2026-09-17 | ✅ `lib/auth/invitations.ts` (create, revoke, resend) + `lib/actions/invitations.ts` (single, bulk, revoke, resend). ✅ **Never grant above the inviter**: `canInviteRole` gates on the *target* role, refuses `super_admin` outright, and the action re-checks — a teacher posting `roleKey: admin` is refused twice. ✅ `branch` scope pins the invitation to the inviter's own branch whatever the form sent; a batch must belong to that branch. ✅ Token: 32 random bytes, base64url, **only its SHA-256 is stored**; resend mints a new token and kills the old link, because the original is genuinely unrecoverable. ✅ Bulk invites report per row — one bad address must not cost the other thirty-nine. ✅ Migration adds `invitations.name/phone/country_code` (the built screen 22 collects them; §4). ⬜ Wire screen 22's form to the action. **Not yet pushed** — typecheck and build are green only after `npx supabase db push` + `npm run db:types` (verified by simulating the regenerated types). |
+| M1-03 Resend + invite email template | in_progress | Claude | 2026-09-17 | ✅ `lib/mail/` — a `Mailer` interface, a Resend REST implementation (`fetch`, not the SDK), and a dev implementation that prints the invite link to the console so the flow is walkable before keys exist. Production without `RESEND_API_KEY` **throws**, never silently drops. ✅ Template is a pure function with a `text/plain` alternative and no images — HTML-only is a strong spam signal, and an invite in spam blocks enrolment. ⚠️ **The user's Resend↔Supabase connection does not cover this**: that is SMTP for Supabase Auth's own emails; our invitation carries our own revocable token, so we send it ourselves. ⬜ `RESEND_API_KEY`, the domain, and `MAIL_FROM` from the user. |
 | M1-04 SPF / DKIM / DMARC | todo | | | Invite in spam = enrolment blocked |
-| M1-05 Accept-invitation screen + token verify | done | Claude | 2026-09-16 | ✅ `/invite/[token]`, `noindex`. Shows email, centre and batch so a wrong address is spotted **before** it becomes their login. The dead ends are the point: expired / used / revoked / unknown each get a plain sentence and a way forward, never a 404 and never the word "invalid". ⬜ Real token verification (server). |
+| M1-05 Accept-invitation screen + token verify | done | Claude | 2026-09-16 | ✅ `/invite/[token]`, `noindex`. Shows email, centre and batch so a wrong address is spotted **before** it becomes their login. The dead ends are the point: expired / used / revoked / unknown each get a plain sentence and a way forward, never a 404 and never the word "invalid". ✅ Real token verification (2026-09-17): `lookupInvitation` finds the row by **hash**, and distinguishes expired / used / revoked / unknown so each keeps its own sentence. Expiry is judged against the clock, not `status`, so a housekeeping job that has not run cannot let a stale link through. |
 | M1-06 Set-password screen | done | Claude | 2026-09-16 | ✅ Part of `/invite/[token]`. Rules are **printed before you type** and tick as you meet them — a student sees this screen once and shouldn't learn the requirements by failing them. Show/hide toggle instead of a confirm field: retyping catches typos by accident, reading catches them on purpose. Server re-checks, incl. leaked-password protection (M1-01). |
 | ~~M1-07 Set-PIN screen + device binding~~ | ~~todo~~ | | | **Dropped 2026-09-16** — the user ruled out the PIN; email + password only (§4). `PinInput` is now unused; kept in `/dev/components` and flagged there. |
-| M1-08 Login: password path | done | Claude | 2026-09-16 | ✅ `/login` — **email + password only** (§4); the rendered phone+PIN design does not apply. No signup link (accounts are invitations only), one error message for both fields (naming the email tells an attacker which addresses are real, §8), and no self-serve reset — a locked-out student is standing in a building with their teacher in it. ⬜ The sign-in action. |
-| M1-09 Lockout on password | in_progress | Claude | 2026-09-16 | ✅ UI: tries-left counter and a locked state that says **until when** — "try again later" sends people to the front desk. ⬜ The server-side counter and lock (M1-10). PIN half dropped (§4). |
-| M1-10 Durable Object rate limiter | todo | | | Login, PIN, invite, MCP only — never autosave. Counts in memory; write storage only on a lockout (free DO quota) |
-| M1-11 Turnstile on login + accept-invite | todo | | | |
-| M1-12 Session cookies + single active session | todo | | | |
-| M1-13 `lib/rbac.ts` + route guards | in_progress | Claude, goverdhan-gaur | 2026-09-15 | ✅ Permission matrix agreed (§4). ✅ `supabase/migrations/20260915180655_role_permissions.sql` (Owner label, permissions + `CHECK`). ✅ `lib/permissions.ts` (pure, TSDoc) + `lib/rbac.ts` (`getActor` via `getClaims()` + secret-key lookup, `requirePermission`, `ForbiddenError`). ✅ `npm run test:unit` 29/29 against the seeded data; a deliberate "teacher can publish" seed is caught. ✅ Pushed by the user; verified live: `super_admin` named Owner, permission counts admin 10 / invigilator 1 / student 1 / Owner 12 / teacher 5, `roles_permissions_well_formed` present. ⬜ Route guards with the first privileged routes (M1); `getActor` gets an integration test then. |
-| M1-14 Device list + revoke (server side) | todo | | | UI shipped in M4-06 (Profile). Still wanted **without** the PIN: it answers "is someone else in my account?", which is independent of how you log in. |
+| M1-08 Login: password path | done | Claude | 2026-09-16 | ✅ `/login` — **email + password only** (§4); the rendered phone+PIN design does not apply. No signup link (accounts are invitations only), one error message for both fields (naming the email tells an attacker which addresses are real, §8), and no self-serve reset — a locked-out student is standing in a building with their teacher in it. ✅ The sign-in action (2026-09-17): `lib/auth/sign-in.ts`. Wrong password, unknown email, suspended and inactive all return the *same* sentence; only a lock says more, and it says until when. Checks the lock **before** the password, so a locked account never reaches Supabase Auth and the lock cannot be extended by more guessing. A right password on a non-active account is not counted as a failure. `next=` is honoured only when relative — a login form is where an open redirect gets phished. |
+| M1-09 Lockout on password | in_progress | Claude | 2026-09-16 | ✅ UI: tries-left counter and a locked state that says **until when** — "try again later" sends people to the front desk. ✅ Server-side counter and lock (2026-09-17) — see M1-10. PIN half dropped (§4). |
+| M1-10 Durable Object rate limiter | in_progress | Claude | 2026-09-17 | ✅ Behaviour shipped, storage deferred. `lib/auth/lockout.ts` is interface-shaped (`checkSignInAllowed` / `recordFailedSignIn` / `clearSignInFailures`) and says nothing about where counts live; it is backed by `public.rate_limits`, which M0-10 created as exactly this fallback, via three `security definer` functions that increment atomically. 5/account and 30/IP per 15-min window; peek never spends an attempt. ⬜ The Durable Object itself: OpenNext's generated `worker.js` exports only its **own** DOs, so a custom one needs `main` repointed at a wrapper — a build change that deserves its own PR rather than riding along with auth. |
+| M1-11 Turnstile on login + accept-invite | todo | | | ⬜ Blocked on a Turnstile site key + `TURNSTILE_SECRET_KEY` from the user. Names are in `.dev.vars.example`; the sign-in action is the single place it hooks into. |
+| M1-12 Session cookies + single active session | in_progress | Claude | 2026-09-17 | ✅ `lib/auth/sessions.ts`. A JWT cannot express revocation and its lifetime is deliberately longer than the longest test, so the `insignia_session` cookie carries a `user_sessions.id` and every guarded page checks that row is live. ✅ **Students one session, staff several** (user, 2026-09-17, §4): a student's second sign-in revokes the first — the sharing control — while staff work on a phone and a laptop. ✅ `revokeSession` checks ownership, so one user cannot revoke another's. ⬜ Raise the Supabase JWT expiry to 7200 s (needed: a 60-minute Reading test outlasts the 3600 s default and would refresh mid-test) — a dashboard change, awaiting the user. |
+| M1-13 `lib/rbac.ts` + route guards | in_progress | Claude, goverdhan-gaur | 2026-09-15 | ✅ Permission matrix agreed (§4). ✅ `supabase/migrations/20260915180655_role_permissions.sql` (Owner label, permissions + `CHECK`). ✅ `lib/permissions.ts` (pure, TSDoc) + `lib/rbac.ts` (`getActor` via `getClaims()` + secret-key lookup, `requirePermission`, `ForbiddenError`). ✅ `npm run test:unit` 29/29 against the seeded data; a deliberate "teacher can publish" seed is caught. ✅ Pushed by the user; verified live: `super_admin` named Owner, permission counts admin 10 / invigilator 1 / student 1 / Owner 12 / teacher 5, `roles_permissions_well_formed` present. ✅ Route guards (2026-09-17): `lib/auth/guard.ts` — `requireUser` / `requireStaff` / `requirePermissionOrRedirect`. These **redirect** where `requirePermission` throws, which is the difference between a page and an action. They also enforce revocation, so a revoked session with a still-valid JWT is turned away. ⬜ Apply them to the privileged layouts as each screen leaves mock data. |
+| M1-14 Device list + revoke (server side) | in_progress | Claude | 2026-09-17 | ✅ `revokeSession` in `lib/auth/sessions.ts`, ownership-checked and audited. ⬜ Wire Profile's list to `user_sessions`; ⬜ migrate the dead PIN columns off `user_devices` (`pin_hash`, `device_secret_hash`, `failed_pin_attempts`, `locked_until` — never written since the PIN was dropped). |
 
 ### M2 — Student core, Listening
 
@@ -205,6 +205,7 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-09-17 | M1-02…M1-14 | **The auth flow, zero to full.** `lib/auth/{tokens,password,invitations,acceptance,sign-in,sessions,lockout,guard}.ts`, `lib/mail/{mailer,templates}.ts`, `lib/actions/{auth,invitations,types}.ts`, `lib/audit.ts`, `lib/env.ts`, `lib/time.ts`. Four migrations: bootstrap Owner + first-run setup, `invitations.name/phone/country_code`, `accept_invitation`, and the `rate_limits` counters. `/login`, `/invite/[token]` and the set-password form come off `lib/mock/auth`; new `/setup`. Tests found two real bugs before a human did: an ambiguous `window_start` between a `RETURNS TABLE` output and the column, and the schema's refusal to accept a back-dated invitation. 282 DB / 26 sweep / 197 unit, lint, build, bundle scan clean. **Not yet pushed.** | `supabase/migrations/2026091710*.sql`, `src/lib/{auth,mail,actions}/*`, `src/lib/{audit,env,time}.ts`, `src/components/auth/*`, `src/app/(auth)/*`, `tests/unit/auth-tokens.test.mjs`, `tests/db/rls.test.mjs`, `wrangler.jsonc`, `.dev.vars.example` | Claude |
 | 2026-09-16 | M0-20 (in progress) | Took over the unfinished Codex session after the real Listening paper and recording arrived. The supplied audio is a different test from the prototype placeholder, so the prototype is left as design content and the real paper lives in the gitignored `Sample test/`, loaded through a new `--source` argument — this repository is public and the paper, its MP3 and the generated JSON all carry the answer key. Rewrote the converter to derive question groups from consecutive runs rather than a hardcoded layout, take each word limit from the paper's own instruction line, fold "choose TWO letters" into one control covering both numbers, and reject T/F/NG for Listening instead of silently mapping it to multiple choice. Added an upload-schema rule that `duration_seconds` must cover the recording: the supplied 1916 s audio against the legacy 1800 s clock would have expired every attempt inside Part 4. Section endpoints recovered from the recording: 481 / 977 / 1465 / 1916 s. Unit 181/181, DB 250/250, sweep 26/26, typecheck, lint, build, bundle scan and audit pass. ⚠️ The 40 Listening answers came from the recording, not an answer key — the document has none — and must be checked by a teacher before the test leaves draft. | `src/lib/import/{legacy-listening.ts,test-upload.schema.ts,README.md}`, `scripts/{import-legacy-tests.ts,README.md}`, `tests/unit/{legacy-listening,test-upload-schema}.test.mjs`, `.gitignore`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | Claude Opus 5 |
 | 2026-09-16 | M0-20 (in progress) | Added a strict server-only converter for the prototype Listening source and a CLI that generates the canonical upload JSON, then delegates optional dry-run/remote work to the existing importer. It verifies 40 sequential answered questions, expected section membership, Listening-valid type mappings, shared matching banks and real contiguous audio markers. The upload boundary now rejects markers that do not start at zero, contain gaps or fail to cover the complete recording. Eight focused checks prove all source answers survive into 40 private key entries while `content.json` has no scoring fields; the end-to-end CLI check also caught and fixed `import-test.ts` passing `crypto.randomUUID` unbound. Unit 172/172, DB 250/250, policy sweep 26/26, typecheck, lint, build, bundle scan and audit pass. Opened PR #14; not merged. Live import remains blocked because no source MP3/timing metadata exists and the live database has no active `test:author`. | `src/lib/import/{legacy-listening,test-upload.schema}.ts`, `scripts/{import-legacy-tests,import-test}.ts`, `scripts/README.md`, `tests/unit/{legacy-listening,test-upload-schema}.test.mjs`, `package.json`, `BUILD-STEPS.md`, `MVP-1.md`, `PROJECT-MEMORY.md` | OpenAI Codex |
 | 2026-09-16 | M0-18 | Added the server-only scorer and runtime answer-key boundary. Exact normalisation honours only authored alternatives, enforces word limits before comparison, counts hyphenated terms as one and does not stem plurals. Multi-answer controls emit per-number partial credit without negatives; complete attempts include per-question facts, section totals and an attempt total. Band conversion accepts database rows from the caller and fails closed on missing/overlapping matches. Added 21 scoring checks to the existing Node unit runner and tightened upload validation so choice answers cannot carry spelling variants. No Vitest dependency or configuration. Verification: unit 164/164, DB 250/250, policy sweep 26/26, typecheck, lint, build, bundle scan and audit pass. Opened PR #13 from the independent `feat/m0-18-scoring` branch; not merged. | `src/lib/scoring.ts`, `src/lib/import/test-upload.schema.ts`, `src/lib/README.md`, `tests/unit/{scoring,test-upload-schema}.test.mjs`, `MVP-1.md`, `BUILD-STEPS.md`, `PROJECT-MEMORY.md` | OpenAI Codex |
@@ -272,6 +273,76 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-17 — The first Owner is linked, not invented  (task: M1-02 bootstrap)
+**Chose (user, 2026-09-17):** the user creates one auth user by hand in the Supabase
+dashboard and gives us its uuid; a migration pins that uuid, and the **app** —
+not the migration — collects the centre name and the owner's own details, on a
+one-time `/setup` screen. Their words: *"let admin create every other thing like
+branch and stuff and add name and info about himself."*
+
+**Why it needs solving at all:** D9 says every account starts as an invitation,
+and the permission matrix says nobody can be invited into the Owner role. The
+first account therefore has no sender. Something has to break the loop.
+
+**Why this is not a signup route:** `complete_first_run_setup` refuses any caller
+but the pinned uuid, refuses outright once **any** user exists, takes an advisory
+lock so two concurrent calls cannot both pass, and reads the email from
+`auth.users` rather than from the form. The uuid in the migration is an
+identifier, not a credential — it grants nothing without that account's password.
+
+**Also:** no branch was ever seeded, and `users.branch_id` is `NOT NULL`, so
+first-run creates the institute's first branch too.
+
+### 2026-09-17 — Students get one session; staff get several  (task: M1-12)
+**Chose (user, 2026-09-17):** a student signing in on a second machine ends the first
+session — that is the account-sharing control MVP-1 §9 is after. Teachers,
+invigilators, admins and the Owner may hold several: they do real work on a phone
+and a laptop, and logging them out of one to use the other buys nothing, because
+they are not the sharing risk. Everyone still gets the device list and Revoke.
+
+**Design:** a JWT cannot express revocation, and ours is deliberately long-lived
+so no refresh lands mid-test. So the `insignia_session` cookie carries a
+`user_sessions.id` and `lib/auth/guard.ts` checks that row on every guarded page.
+
+### 2026-09-17 — The invitation carries the person's name  (task: M1-02)
+**Corrects `MVP-1.md` §6 and §9**, which define `invitations` with an email and
+describe the admin as entering one. The built invite screen (M5-04, screen 22)
+asks for a full name and phone, and it is right to: `users.name` is `NOT NULL`
+and nobody else can supply it, the admin already knows it, and asking the student
+for their own name adds typing to the one screen that must be effortless — and
+lets a typo into the name staff later search by. Migration
+`20260917101600_invitation_profile.sql` adds `name`, `phone`, `country_code`.
+
+### 2026-09-17 — Resend connected to Supabase does not send our invitations  (task: M1-03)
+**The user connected Resend to Supabase and reasonably expected that to cover
+it.** It does not: that connection is **SMTP for Supabase Auth's own emails**
+(confirmation, recovery, magic links). Our invitation carries a token from
+`public.invitations` with a role, branch, batch and plan attached, and an admin
+must be able to revoke it — none of which Supabase's built-in invite can express.
+So we send it ourselves and need a `RESEND_API_KEY`.
+
+**The silver lining:** that connection means a sending domain is probably already
+DKIM-verified in Resend, which is the hard half of M1-04.
+
+### 2026-09-17 — The lockout is interface-first; the Durable Object is deferred  (task: M1-09 / M1-10)
+**Chose:** ship the *behaviour* BUILD-STEPS step 39 specifies — five wrong
+passwords, a fifteen-minute lock, counted by account **and** IP — backed by
+`public.rate_limits`, which M0-10 created as exactly this fallback. The Durable
+Object is deferred to its own PR.
+
+**Because:** OpenNext's generated `.open-next/worker.js` exports only its *own*
+Durable Objects, so a custom one requires repointing wrangler's `main` at a
+wrapper that re-exports it. That is a change to the build CI gates, and it does
+not belong in the same review as the auth flow. `lib/auth/lockout.ts` is shaped
+so the swap touches nothing else.
+
+### 2026-09-17 — Server Actions live in `lib/actions/`  (task: M1-02)
+`MVP-1.md` §15's tree predates having any. Kept out of the route folders so the
+logic in `lib/auth/` stays unit-testable without a form, and because every export
+from a `"use server"` module is a public endpoint — worth having them in one
+place you can read end to end. Types go in `types.ts`, since such a module may
+only export async functions.
 
 ### 2026-09-16 — Keep one Node unit-test runner  (task: M0-18)
 
@@ -626,7 +697,8 @@ Things that cost an hour and would cost the next agent the same hour. Add as you
 | R2 bucket — audio | `insignia-ielts-audio` · APAC · binding `AUDIO_BUCKET` | Cloudflare dashboard, `wrangler.jsonc` | ✅ private, r2.dev off |
 | R2 bucket — `listenings` | pre-existing in the account, **not created by this project** | Cloudflare dashboard | ❓ ask the user whether it's legacy content to import or unrelated — untouched |
 | Worker | `insignia-test` | `wrangler.jsonc`, `package.json` | ✅ named |
-| Domain | *TBD* | | ⬜ |
+| Domain | *user says one exists; **not yet named*** | needed for `APP_BASE_URL`, `MAIL_FROM`, Turnstile | ⚠️ blocking M1-03/04/11 |
+| Bootstrap Owner auth user | `auth.users` id `1b7d0ff5-e86a-4050-8870-9fd80ed0a3ce` — created by hand by the user, 2026-09-17 | Supabase dashboard; pinned in `20260917101500_bootstrap_owner.sql` | ✅ created, ⬜ `/setup` not yet run |
 | Resend sending domain | *TBD* | needs SPF/DKIM/DMARC | ⬜ M1-04 |
 | Sentry project | *TBD* | | ⬜ |
 | Turnstile site | *TBD* | | ⬜ M1-11 |
@@ -643,10 +715,17 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 | `R2_ACCESS_KEY_ID` | **server only**, `lib/r2.ts` — scoped object-read token id | ⬜ provision in M0-14 |
 | `R2_SECRET_ACCESS_KEY` | **server only**, `lib/r2.ts` — scoped object-read token secret | ⬜ provision in M0-14 |
 | ~~`SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`~~ | superseded 2026-09-15 by the publishable/secret key names above — Supabase's current key model; IP forwarding for Auth rate limits (§4) requires a secret key | — |
-| `RESEND_API_KEY` | invite email | ⬜ |
-| `TURNSTILE_SECRET_KEY` | login + accept-invite | ⬜ |
+| `RESEND_API_KEY` | invite email (`lib/mail/mailer.ts`) — **required in production**; unset in dev prints the link to the console | ⬜ awaiting the user |
+| `TURNSTILE_SECRET_KEY` | login + accept-invite (M1-11) | ⬜ awaiting the user |
 | `SENTRY_DSN` | error reporting | ⬜ |
 | `MCP_SERVICE_CREDENTIAL` | authoring MCP (M8) | ⬜ |
+
+Non-secret settings, in `wrangler.jsonc` `vars` and `.dev.vars.example`:
+
+| Name | Used by | Set? |
+|---|---|---|
+| `APP_BASE_URL` | `lib/env.ts` — the absolute origin invitation links are built from | ⚠️ placeholder `insignia-test.workers.dev`; needs the real domain |
+| `MAIL_FROM` | `lib/mail/mailer.ts` — must be a domain verified in Resend | ⚠️ placeholder `invites@example.com`; needs the real domain |
 
 ⚠️ **`SUPABASE_SECRET_KEY` and `R2_SECRET_ACCESS_KEY` values must never appear in `wrangler.jsonc` vars, a client bundle, or this file.** `.dev.vars.example` lists names only.
 
@@ -663,6 +742,9 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 | ~~Q10~~ | ~~Is each practice set one question type?~~ | **Confirmed 2026-09-15: yes, one type per set** (`tests.practice_question_type`). | ✅ closed |
 | ~~Q12~~ | ~~Should a student see the **notes** on their own plan?~~ | **Answered 2026-09-16 (goverdhan-gaur): no.** Plan facts yes, internal notes no. `student_plans.notes` dropped; staff-only `student_plan_notes` table added (§4, migration `20260916125048_plan_notes.sql`). | ✅ closed |
 | ~~Q11~~ | ~~Which Cloudflare Workers plan — Free or Paid?~~ | **Answered 2026-09-15 (goverdhan-gaur): Free.** Design budget in `MVP-1.md` §4: ~120 Worker requests per student per test, 60 s heartbeat, no DO call on autosave. Still to measure: real CPU per route against the 10 ms limit. | ✅ closed |
+| Q14 | **What is the domain?** Said to exist, never named. | `APP_BASE_URL`, `MAIL_FROM` and the Turnstile site all need it; invitation links are absolute and read in an email client. Placeholders are committed and marked TODO. | **Yes — M1-03/04/11** |
+| Q15 | A `RESEND_API_KEY` with send permission, and confirmation the sending domain shows **Verified** in Resend. | The Supabase↔Resend connection covers Supabase Auth's own mail, not our invitation (§4). Without it, production refuses to send. | **Yes — M1-03** |
+| Q16 | Approval for the Supabase dashboard changes in M1-01, above all **JWT expiry 3600 → 7200 s**. | A 60-minute Reading test outlasts the default hour, so a token refresh would land mid-test. | **Yes — before any real test runs** |
 | Q4 | Plan validity — purely time-based, or also test-count based? | `test_quota` column exists and is nullable, so either works. Cheap now, awkward later. | No |
 | Q5 | Multiple branches, ever? | `branch_id` is already in the schema, so building it in costs nothing. Confirm it should stay. | No |
 | Q6 | Who enters test content? | 40-question answer keys per test is the real bottleneck, not code. The MCP (M8) and answer-key editor (M5-09) address it, but someone's time still has to be budgeted. | No |
