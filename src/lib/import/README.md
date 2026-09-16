@@ -56,13 +56,36 @@ allowlisted extension. The output can never inherit an author-controlled path.
 
 ## Legacy Listening converter
 
-`legacy-listening.ts` converts the prototype's `ielts-data.js` objects into the
-same upload contract. It checks that all 40 questions are sequential, assigned
-to the expected four sections, have non-empty answers and use Listening-valid
-canonical types. The old T/F/NG radio controls become ordinary multiple-choice
-groups because identifying-information is not an official Listening type.
+`legacy-listening.ts` converts a source paper written in the design prototype's
+`ielts-data.js` shape into the same upload contract. It checks that all 40
+questions are sequential, assigned to the expected four sections, have non-empty
+answers and use Listening-valid canonical types.
 
-The prototype includes answers but no recording or audio markers. The converter
-therefore requires a real MP3 duration and four contiguous section endpoints;
-it refuses to invent them. `scripts/import-legacy-tests.ts` writes the local
-upload JSON and delegates any dry-run or remote import to the canonical CLI.
+It derives the structure from the paper instead of assuming a fixed layout:
+
+- Consecutive questions collapse into the longest run one canonical group can
+  hold. A run breaks on a changed word limit, container, matching bank or
+  multi-answer prompt, so the groups match the printed paper's question ranges.
+- Each text group takes its `word_limit` from the source instruction line
+  ("Write ONE WORD ONLY", "NO MORE THAN THREE WORDS"). Scoring enforces that
+  limit, so an instruction the converter cannot read is a hard error rather than
+  a guessed default.
+- A `container` of `form`, `note` or `table` picks the matching completion type.
+- A "choose TWO letters" run is one control covering both numbers and worth one
+  mark per number, which is the shape scoring expects for partial credit.
+- T/F/NG maps to `identifying_information`, which the upload schema then rejects
+  for Listening. An earlier draft laundered it into plain multiple choice; a
+  Listening paper containing it is wrong and must fail loudly.
+- `duration_seconds` is at least the audio duration. The server owns the timer
+  (MVP-1 §7), so a clock shorter than the recording would cut off every
+  candidate mid-test.
+
+A source paper includes answers but no recording or audio markers. The converter
+therefore requires a real MP3 duration and four contiguous section endpoints; it
+refuses to invent them.
+
+`scripts/import-legacy-tests.ts` loads the paper from `--source`, writes the
+local upload JSON, and delegates any dry-run or remote import to the canonical
+CLI. Keep both the source paper and the generated JSON outside this repository:
+they contain the answer key, and this repository is public. `Sample test/` is
+gitignored for exactly that reason.

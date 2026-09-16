@@ -1,27 +1,33 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import process from "node:process";
 
-import { QUESTIONS, TEST } from "../Design files/Prioritizing project scope/ielts-data.js";
 import { buildLegacyListeningUpload } from "../src/lib/import/legacy-listening.ts";
 
 const usage = `Usage:
   npm run import:legacy-listening -- \\
-    --audio /secure/path/listening-mock-2.mp3 \\
+    --source /secure/path/listening-sample-test-1.source.js \\
+    --audio /secure/path/listening-sample-test-1.mp3 \\
     --audio-duration <seconds> \\
     --section-ends <s1,s2,s3,s4> \\
-    [--output /secure/path/listening-mock-2.json] [--force]
+    [--output /secure/path/listening-sample-test-1.json] [--force]
+
+--source is an ES module exporting TEST and QUESTIONS in the prototype's shape.
+Keep it outside the repository: it holds the answer key, and this repository is
+public (MVP-1 §7). The generated JSON holds the key too, so it must live beside
+the MP3 in the same untracked directory.
 
 Add --import --actor <active-author-uuid> [--dry-run] to pass the generated
-payload to the canonical import:test CLI. The JSON must live beside the MP3.
+payload to the canonical import:test CLI.
 
-The legacy source has all 40 answers but has no audio or timing metadata. This
-command requires those real values; it never invents section timestamps.`;
+The source has all 40 answers but no audio or timing metadata. This command
+requires those real values; it never invents section timestamps.`;
 
 type Arguments = {
+	sourcePath: string;
 	audioPath: string;
 	audioDurationSeconds: number;
 	sectionEndsSeconds: number[];
@@ -45,7 +51,7 @@ function parsePositiveInteger(value: string | undefined, label: string): number 
 
 function parseArguments(argv: readonly string[]): Arguments | { help: true } {
 	if (argv.includes("--help") || argv.includes("-h")) return { help: true };
-	const valueOptions = new Set(["--audio", "--audio-duration", "--section-ends", "--output", "--actor"]);
+	const valueOptions = new Set(["--source", "--audio", "--audio-duration", "--section-ends", "--output", "--actor"]);
 	const switches = new Set(["--force", "--import", "--dry-run"]);
 	for (let index = 0; index < argv.length; index++) {
 		const argument = argv[index];
@@ -54,6 +60,11 @@ function parseArguments(argv: readonly string[]): Arguments | { help: true } {
 		if (!argv[index + 1] || argv[index + 1].startsWith("--")) throw new Error(`${argument} requires a value`);
 		index++;
 	}
+	const sourceValue = option(argv, "--source");
+	if (!sourceValue) throw new Error(`--source is required\n\n${usage}`);
+	const sourcePath = resolve(sourceValue);
+	if (!existsSync(sourcePath) || !statSync(sourcePath).isFile()) throw new Error(`Source file does not exist: ${sourcePath}`);
+
 	const audioValue = option(argv, "--audio");
 	if (!audioValue) throw new Error(`--audio is required\n\n${usage}`);
 	const audioPath = resolve(audioValue);
@@ -64,7 +75,7 @@ function parseArguments(argv: readonly string[]): Arguments | { help: true } {
 	const sectionEndsValue = option(argv, "--section-ends");
 	if (!sectionEndsValue) throw new Error(`--section-ends is required\n\n${usage}`);
 	const sectionEndsSeconds = sectionEndsValue.split(",").map((value) => parsePositiveInteger(value.trim(), "--section-ends"));
-	const outputPath = resolve(option(argv, "--output") ?? `${dirname(audioPath)}/listening-mock-test-2.json`);
+	const outputPath = resolve(option(argv, "--output") ?? `${dirname(audioPath)}/${basename(audioPath, ".mp3")}.json`);
 	if (dirname(outputPath) !== dirname(audioPath)) {
 		throw new Error("The generated JSON must be in the same directory as the MP3 so import:test can resolve it");
 	}
@@ -76,6 +87,7 @@ function parseArguments(argv: readonly string[]): Arguments | { help: true } {
 	if (!shouldImport && (actorId || dryRun)) throw new Error("--actor and --dry-run are used only with --import");
 
 	return {
+		sourcePath,
 		audioPath,
 		audioDurationSeconds,
 		sectionEndsSeconds,
@@ -87,11 +99,19 @@ function parseArguments(argv: readonly string[]): Arguments | { help: true } {
 	};
 }
 
-function run(): void {
+async function run(): Promise<void> {
 	const args = parseArguments(process.argv.slice(2));
 	if ("help" in args) {
 		console.log(usage);
 		return;
+	}
+
+	const { TEST, QUESTIONS } = (await import(pathToFileURL(args.sourcePath).href)) as {
+		TEST?: unknown;
+		QUESTIONS?: unknown;
+	};
+	if (TEST === undefined || QUESTIONS === undefined) {
+		throw new Error(`${args.sourcePath} must export both TEST and QUESTIONS`);
 	}
 
 	const upload = buildLegacyListeningUpload(TEST, QUESTIONS, {
@@ -130,7 +150,7 @@ function run(): void {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
 	try {
-		run();
+		await run();
 	} catch (error) {
 		console.error(error instanceof Error ? error.message : String(error));
 		process.exitCode = 1;

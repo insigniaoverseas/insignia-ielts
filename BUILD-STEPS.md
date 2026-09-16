@@ -236,7 +236,28 @@ Convert [`ielts-data.js`](Design%20files/Prioritizing%20project%20scope/ielts-da
 ⚠️ `PLAN-V2.md` §10 notes the original `tests/*.js` answer keys were empty. Verify every key before relying on it.
 **✅ Done when** a `tests` row exists, `content.json` has 40 questions and no answers, `key.json` has 40 keys.
 
-> 🟡 **In progress 2026-09-16 (OpenAI Codex):** the checked-in `ielts-data.js` does contain 40 non-empty answers. A strict converter now maps all 40 controls to canonical Listening types and proves the importer emits 40 private key entries while browser-safe content contains no scoring fields. The upload schema now requires markers to cover the complete audio with no gaps. The live draft is still blocked: the legacy source/repository has no MP3 or timing metadata, and the live database has no active `test:author`. Do not invent either prerequisite.
+> 🟡 **In progress 2026-09-16 (OpenAI Codex, then Claude Opus 5):** the real
+> Listening paper and its recording arrived in `Sample test/`, and they are a
+> **different test** from the prototype's placeholder questions — pairing the two
+> would have produced a broken paper. The converter no longer assumes the
+> prototype's fixed layout: it derives groups from consecutive runs, reads each
+> word limit from the paper's own instruction line, folds "choose TWO letters"
+> into one control covering both numbers, and refuses T/F/NG, which Listening
+> does not use. The upload schema now also rejects a test clock shorter than its
+> recording — the supplied audio is 1916 s against a 1800 s legacy clock, so
+> every attempt would have been cut off inside Part 4.
+>
+> ⚠️ **The source paper stays out of this repository.** It is public, and the
+> paper, its recording and the generated upload JSON all carry the answer key
+> (MVP-1 §7). `Sample test/` is gitignored; the CLI takes the paper via
+> `--source`. `ielts-data.js` remains placeholder content for the design screens.
+>
+> ⚠️ **The 40 Listening answers are not verified.** `Listening - 1.docx` contains
+> questions only — no key — so the answers were derived from the recording. They
+> must be checked by a teacher before this test leaves `draft`. The two Reading
+> papers in the same folder *do* ship authoritative 1-40 keys.
+>
+> Still blocked on an active `test:author` in the live database.
 
 ### 29. ⚡ `/dev/components` gallery `(M0-23)`
 Every component from [`MVP-1.md` §15](MVP-1.md#15-repo-structure-and-design-system) in every state. The in-repo successor to `00 Design System.dc.html`.

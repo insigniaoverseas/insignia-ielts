@@ -10,6 +10,8 @@
 !.yarn/releases
 !.yarn/versions
 
+/Sample test
+
 # testing
 /coverage
 
@@ -51,3 +53,9 @@ next-env.d.ts
 
 !.dev.vars.example
 .mcp.json
+
+# Source test papers and their answer keys.
+# This repository is public. Real IELTS papers, their recordings and the upload
+# JSON the importer generates all contain the answer key, which MVP-1 §7 keeps
+# off the client and out of version control. Keys belong in R2, via import:test.
+/Sample test/

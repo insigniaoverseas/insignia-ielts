@@ -471,6 +471,13 @@ export const testUploadSchema = z
 				});
 			});
 		});
+		if (test.skill === "listening" && test.audio !== undefined && test.audio.duration_seconds > test.duration_seconds) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["duration_seconds"],
+				message: "duration_seconds must cover the whole recording; the server timer would expire before the audio ends",
+			});
+		}
 		if (
 			test.skill === "listening" &&
 			test.audio !== undefined &&

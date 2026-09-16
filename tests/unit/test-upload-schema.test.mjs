@@ -166,6 +166,18 @@ describe("test-wide structural rules", () => {
     assert.ok(paths(testUploadSchema.safeParse(gap)).includes("sections.1.starts_at_seconds"));
   });
 
+  test("Listening rejects a test clock shorter than its own recording", () => {
+    // MVP-1 §7: the server owns the timer. If the recording outlasts the clock,
+    // every attempt is cut off before Part 4 ends.
+    const shortClock = clone(samples.listening);
+    shortClock.duration_seconds = shortClock.audio.duration_seconds - 1;
+    assert.ok(paths(testUploadSchema.safeParse(shortClock)).includes("duration_seconds"));
+
+    const exactClock = clone(samples.listening);
+    exactClock.duration_seconds = exactClock.audio.duration_seconds;
+    assert.equal(testUploadSchema.safeParse(exactClock).success, true);
+  });
+
   test("Reading rejects audio, transcript, transfer time and audio markers", () => {
     const input = clone(samples.academic);
     input.audio = { file: "test.mp3", duration_seconds: 100 };
