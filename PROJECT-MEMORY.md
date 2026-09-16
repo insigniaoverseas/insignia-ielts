@@ -138,34 +138,34 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M5-01 Admin shell + sidebar | todo | | | |
-| M5-02 Admin overview (20) | todo | | | |
-| M5-03 Students list (21) | todo | | | |
-| M5-04 Invite + bulk CSV invite (22) | todo | | | Column mapping, per-row errors |
-| M5-05 Student detail drawer (23) | todo | | | |
-| M5-06 Plans & validity workqueue (24) | todo | | | |
-| M5-07 Batches (25) | todo | | | |
-| M5-08 Test library (26) | todo | | | |
-| M5-09 Answer key editor (27) | todo | | | Optimise for speed, not beauty |
+| M5-01 Admin shell + sidebar | done | Claude | 2026-09-16 | ✅ `(admin)/layout.tsx` + `StaffSidebar`, grouped Overview / People / Content; scrolling chip row below 1024px. ⚠️ It draws navigation, it is **not a gate** — `lib/rbac.ts` + RLS are, both server-side. |
+| M5-02 Admin overview (20) | done | Claude | 2026-09-16 | ✅ `/overview`: four stat cards, an "expiring soon" table with **inline Extend** on the row (the fix belongs where the problem is seen, not three clicks away), recent activity. |
+| M5-03 Students list (21) | done | Claude | 2026-09-16 | ✅ `/students`: search + status + batch filters, all in the **URL** — a filtered list is something staff paste to each other, and it survives a refresh mid-support-call. Plain GET form, so it works without JS. ⬜ Bulk select + sticky bulk bar land with the server actions. |
+| M5-04 Invite + bulk CSV invite (22) | done | Claude | 2026-09-16 | ✅ `/students/new` (called **Invite**, not Add — no public signup, so the account doesn't exist until they accept) and `/students/import`: auto-guessed column mapping, per-row preview, each error pinned to **its own cell** with the reason. Verified with a real CSV: quoted `"Singh, Arjun"` parsed, `+91 98765 43211` normalised, 3 good / 3 bad split correctly. ⚠️ Browser parsing is for the **preview only** — the real checks run server-side (M1-02). |
+| M5-05 Student detail drawer (23) | done | Claude | 2026-09-16 | ✅ `/students/[id]`. Built as a **page, not a drawer** (§4): staff open it mid-call and paste the link to a colleague, and a drawer has no address. Plan first, then attempts, plan history and the audit trail. |
+| M5-06 Plans & validity workqueue (24) | done | Claude | 2026-09-16 | ✅ `/plans`: grouped Expired / this week / this month — three groups because they're three different jobs (apologise, act, plan), not one sortable list. Bulk select → 1/3/6 months → confirm dialog naming exactly what changes, with a **required reason** kept in plan history. The dialog's date is illustrative; the server recomputes from each plan's own end date, so a stale tab can't write a wrong date. |
+| M5-07 Batches (25) | done | Claude | 2026-09-16 | ✅ `/batches`. A batch with no teacher or no students says so in words — both are easy to create by accident and an empty cell doesn't get noticed. |
+| M5-08 Test library (26) | done | Claude | 2026-09-16 | ✅ `/library` with skill/status filters. The column that matters is **answer keys**: a published test with a missing key silently scores zero, so "34 of 40 · 6 missing" is on every row rather than hidden behind a Draft pill. |
+| M5-09 Answer key editor (27) | done | Claude | 2026-09-16 | ✅ `/library/[testId]/answer-key`. Built for **speed**: Enter drops to the next answer, variants are a comma field (not chips — chips cost a mouse trip each), progress always on screen, missing rows flagged via `aria-invalid`. ⚠️ **The only screen that puts correct answers in a browser.** `noindex`; its view-model `AnswerKeyEditor` is used by nothing else, so no student screen can join onto it. ⬜ Save action + `key.json` write (M5). |
 
 ### M6 — Teacher
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M6-01 Teacher dashboard (14) | todo | | | |
-| M6-02 Batch view (15) | todo | | | |
-| M6-03 Assign a test (16) | todo | | | |
-| M6-04 Results & release (18) | todo | | | |
-| M6-05 Mark override + note | todo | | | |
-| M6-06 Class analytics (19) | todo | | | |
+| M6-01 Teacher dashboard (14) | done | Claude | 2026-09-16 | ✅ `/teacher/dashboard`: today, "needs you", batch cards. Every attention item **links somewhere** — a list of problems with no destination only makes people feel behind. |
+| M6-02 Batch view (15) | done | Claude | 2026-09-16 | ✅ `/teacher/batches/[batchId]`: roster with **plan expiry in it**. The teacher sees these students twice a week and finds out first — the warning belongs on the register they already read, not only in the admin queue. |
+| M6-03 Assign a test (16) | done | Claude | 2026-09-16 | ✅ `/teacher/assign`: three steps on one page (not a wizard — a teacher on their fourth test of the week knows all three answers already). Live student count **de-duplicates** batch members against individually-picked students. The deliverable is the plain-English summary sentence before the button: getting an assignment wrong is expensive, and a sentence is checkable in a way five fields aren't. Verified over CDP. |
+| M6-04 Results & release (18) | done | Claude | 2026-09-16 | ✅ `/teacher/results/[assignmentId]`, `noindex` (its expanded rows carry the key). Multi-select → confirm → release; releasing is deliberate, not a per-row toggle, because it's the moment a band becomes real and can't be undone. Flags shown, **never acted on** (M9-01: flags, not blocks). |
+| M6-05 Mark override + note | done | Claude | 2026-09-16 | ✅ Expandable row inside screen 18. **The note is required** — "Give the mark" stays disabled until one is typed. The next person to look needs to know why a mark was changed by hand, and "I'll remember" isn't true a month later. ⬜ The override action itself. |
+| M6-06 Class analytics (19) | done | Claude | 2026-09-16 | ✅ `/teacher/batches/[batchId]/analytics`, titled **"What to teach"** rather than Analytics because that's the only question it answers. Band distribution, weakest types worst-first, most-missed questions. |
 
 ### M7 — Live session monitor
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
 | M7-01 Live-monitor endpoint (polled) | todo | | | ~~Realtime channel on `attempts`~~ superseded 2026-09-15 — polling every 10 s, no Realtime (§4) |
-| M7-02 Live session monitor (17) | todo | | | |
-| M7-03 Invigilator actions | todo | | | +5 min, force submit, unlock |
+| M7-02 Live session monitor (17) | done | Claude | 2026-09-16 | ✅ `/teacher/live/[sessionId]`: tile per student, status as a **word** as well as a colour, mono time so it doesn't jitter, low time in warning. The "Updated Ns ago · refreshes every 10s" stamp is load-bearing — an invigilator must be able to tell the room from a frozen page, and a silently dead feed looks exactly like a calm room. Tiles tick locally between polls; that's cosmetic, every poll replaces them. ⬜ The poll itself is M7-01. |
+| M7-03 Invigilator actions | in_progress | Claude | 2026-09-16 | ✅ UI: +5 minutes and "Finish for them" on in-progress tiles only, each behind a confirm that names the consequence (force-submit quotes how many answers will be sent as they stand). ⬜ The server actions. |
 
 ### M8 — Test-authoring MCP
 
@@ -186,9 +186,9 @@
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
 | M9-01 Anti-cheat flags | todo | | | Flags, not blocks |
-| M9-02 Audit log screen (29) | todo | | | |
-| M9-03 Users & roles (28) | todo | | | |
-| M9-04 Error / edge screens (30) | todo | | | |
+| M9-02 Audit log screen (29) | done | Claude | 2026-09-16 | ✅ `/admin/audit`: who · what · when · **the detail that makes it mean something** (an extension without its reason answers none of the questions this screen gets opened for). A deleted actor renders as "Account deleted", never a blank — `audit_log` keeps actor ids without FKs for exactly this (M0-10). |
+| M9-03 Users & roles (28) | done | Claude | 2026-09-16 | ✅ `/admin/users`: staff list + permission matrix. The matrix is **read from `roles.permissions`**, not hardcoded — that table is what `lib/rbac.ts` enforces, and a permissions screen drawn from anything else would eventually lie. Cells say *where* a permission applies ("Their centre" ≠ "Everywhere"), and "No" is a word, not an empty cell. |
+| M9-04 Error / edge screens (30) | in_progress | Claude | 2026-09-16 | ✅ `app/not-found.tsx` and `app/error.tsx`. The error page's first line is **"Your answers are saved"** — that's the difference between a student who retries and one who panics mid-test. No stack trace or error code; `digest` is present but quiet, for support. ⬜ Connection-lost banner in the player, test-not-available, session-expired, browser-unsupported. |
 | M9-05 Load test at **200** concurrent | todo | | | ~~40~~ → 200 (user, 2026-09-15). Throwaway free Supabase project. First run right after M2-07 |
 | M9-06 Backups + restore drill | todo | | | The drill must actually restore. Free has no backups → nightly `db dump` to private R2. **Before the first real student** |
 | M9-07 Full security review | todo | | | |
@@ -258,6 +258,51 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-16 — Staff routes are namespaced: `/admin/*` and `/teacher/*`  (task: M6-01)
+
+`MVP-1.md` §15 gives both `(teacher)/batches` and `(admin)/batches`, and both
+`(teacher)/results/[id]` and `(student)/results/[id]`. Route groups don't
+create URL segments, so those are the **same URLs**. It shipped a real bug:
+`/batches` rendered the Admin shell while `/batches/b-0`, linked from that very
+list, rendered the Teacher one.
+
+Roles can't pick a layout — a route group is chosen at build time, not per
+user. So the staff areas now carry their prefix in the URL:
+`/admin/overview`, `/teacher/dashboard`, and so on. Students keep the short
+top-level paths (`/home`, `/tests`, `/attempt/[id]`) because they're the
+majority and their URLs are the ones read aloud.
+
+`MVP-1.md` §15's tree is now wrong on this point; correcting it is a doc task.
+Verified after the move: 27 routes build, `/admin/batches` renders Admin and
+`/teacher/batches/b-0` renders Teacher.
+
+### 2026-09-16 — `Button asChild` was broken for every caller  (task: M5-02)
+
+`Button` rendered `{loading && !asChild ? <Spinner/> : null}` beside
+`{children}`. With `asChild`, Radix's `Slot` counts those as two children and
+throws "Expected a single React element child" — so **every** `asChild` call
+site 500'd. Nothing had used it until the admin screens needed link-shaped
+buttons, so it had never fired.
+
+Fixed by passing `children` alone when `asChild` is set. A link-shaped button
+never shows a spinner anyway: navigation is the browser's job.
+
+### 2026-09-16 — Student detail is a page, not a drawer  (task: M5-05)
+
+`DESIGN-PROMPT.md` C3.23 calls for a drawer. Built as a route with its own URL
+instead: staff open this screen in the middle of a support call and read the
+link out or paste it to a colleague, and a drawer has no address. Content and
+ordering are unchanged from the design — plan first, because that is what the
+call is almost always about.
+
+### 2026-09-16 — `PhoneInput` takes a `size`  (task: M5-04)
+
+It hardcoded `h-primary` (56px, the student height) and omitted `size` from
+its props. Staff type phone numbers too — on the invite form — where a 56px
+field beside 40px ones reads as a mistake. `size` now matches `Input`'s, and
+the `+91` chip follows the field's height. Default is still `student`, so
+nothing already built changes.
 
 ### 2026-09-16 — Attempt HTML is sanitised on the server, not in the player  (task: M2-15 / M3-02)
 
