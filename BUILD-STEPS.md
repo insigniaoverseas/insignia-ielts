@@ -217,6 +217,8 @@ All keys server-generated. No user-controlled path component, ever.
 **✅ Done when** `signUrl(keyJsonPath)` throws, and a test asserts that it throws.
 
 ### 26. ⚠️ The importer `(M0-17)`
+> ✅ **Implemented 2026-09-16 (OpenAI Codex):** one reusable validate → sanitise → split → upload transaction plus the audited `scripts/import-test.ts` CLI. It validates MIME/magic, 5 MiB image and 20 MiB audio caps, mono MP3 at no more than 64 kbps, generates every path, writes a draft only after private objects, and attempts object rollback on failure. A recursive test proves `content.json` has zero `answer`, `accepted_variants`, `marks` or `word_limit` keys.
+
 `lib/import/import-test.ts` — validate → **split** → upload. `answer`, `accepted_variants`, `marks`, `word_limit` go to `key.json`; everything else to `content.json`.
 
 **The split is the single reason the answer key never reaches a browser.** One code path, three callers (CLI, admin UI, MCP). Never reimplement it per caller.

@@ -5,5 +5,6 @@
 | Script | Run with | What it does |
 |---|---|---|
 | `check-client-bundle.mjs` | `npm run check:bundle` (after `next build`) | Fails if the browser bundle (`.next/static`) contains anything server-only: answer-key fields or paths, scoring functions, the Supabase secret key. CI runs it on every push. |
+| `import-test.ts` | `npm run import:test -- path/test.json --actor <uuid> --dry-run` | Runs the one M0-17 validator/splitter with files beside the JSON. Remove `--dry-run` to upload to remote R2 and create an audited Supabase draft. Requires Cloudflare CLI login and Supabase values in `.dev.vars`; the actor must be active with `test:author`. |
 
-Coming later (MVP-1 §15): `import-test.ts` and `import-legacy-tests.ts` (M0-17, M0-20).
+Coming later (MVP-1 §15): `import-legacy-tests.ts` (M0-20).
