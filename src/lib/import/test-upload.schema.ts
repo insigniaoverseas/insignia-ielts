@@ -150,6 +150,13 @@ const questionGroupSchema = z
 		group.questions.forEach((question, questionIndex) => {
 			const path = ["questions", questionIndex] as const;
 			const isChoice = group.widget === "radio" || group.widget === "checkbox_n";
+			if (!needsTextLimit && question.accepted_variants !== undefined) {
+				ctx.addIssue({
+					code: "custom",
+					path: [...path, "accepted_variants"],
+					message: "Only text-entry questions use accepted spelling variants",
+				});
+			}
 			if (isChoice && question.options === undefined) {
 				ctx.addIssue({ code: "custom", path: [...path, "options"], message: `${group.widget} requires question options` });
 			} else if (!isChoice && question.options !== undefined) {

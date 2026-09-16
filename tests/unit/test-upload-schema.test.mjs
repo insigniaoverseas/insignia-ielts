@@ -119,6 +119,16 @@ describe("type, widget and format rules", () => {
       paths(testUploadSchema.safeParse(input)).includes("sections.0.question_groups.0.type"),
     );
   });
+
+  test("choice questions cannot declare text spelling variants", () => {
+    const input = clone(samples.listening);
+    input.sections[0].question_groups[0].questions[0].accepted_variants = ["A Friend"];
+    assert.ok(
+      paths(testUploadSchema.safeParse(input)).includes(
+        "sections.0.question_groups.0.questions.0.accepted_variants",
+      ),
+    );
+  });
 });
 
 describe("test-wide structural rules", () => {

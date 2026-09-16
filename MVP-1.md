@@ -160,7 +160,7 @@ Rate limiting     Cloudflare Durable Object counter
 Bot protection    Cloudflare Turnstile      (login + accept-invite)
 MCP               @modelcontextprotocol/sdk (D11)
 Audio             native <audio> + custom controls — no library
-Testing           Vitest (unit) · Playwright (E2E)
+Testing           Node `node:test` (unit) · Playwright (E2E)
 ```
 
 ### Budget
@@ -1013,11 +1013,11 @@ docs/
 
 | Layer | Covers |
 |---|---|
-| **Permissions** (`npm run test:unit`) | `lib/permissions.ts` against the permissions the migrations actually seed — the agreed matrix, who can invite whom, fail-closed parsing, the `CHECK` on `roles.permissions`. Node's built-in runner until Vitest lands (M0-18). |
+| **Permissions** (`npm run test:unit`) | `lib/permissions.ts` against the permissions the migrations actually seed — the agreed matrix, who can invite whom, fail-closed parsing, the `CHECK` on `roles.permissions`. Uses Node's built-in test runner. |
 | **DB access control** (`npm run test:db`, `test:db:sweep`) | Every migration on PGlite, probed as each role: RLS, column grants, triggers (clock, state machine, deadline, revision), append-only tables. The sweep drops each policy in turn and requires a failure. `tests/db/README.md`. |
-| **Vitest** | `lib/scoring.ts` — normalisation, accepted variants, word limits, hyphens, plurals, band lookup. `lib/question-types.ts` — the variant gating matrix. |
+| **Node unit tests** | `lib/scoring.ts` — normalisation, accepted variants, word limits, hyphens, plurals, band lookup. `lib/question-types.ts` — the variant gating matrix. |
 | **Playwright** | The three annotated flows in `DESIGN-PROMPT.md` Part D: student completes a mock · teacher assigns and releases · admin invites and extends plans. Plus the [§19](#19-verification) security checks. |
-| **CI gates** (`.github/workflows/ci.yml`) | typecheck · lint · `test:unit` (vitest from M0-18) · `test:db` + `test:db:sweep` · build · `check:bundle` · `npm audit --audit-level=high` · **bundle grep that fails the build if scoring logic or an R2 key path reaches the client**. |
+| **CI gates** (`.github/workflows/ci.yml`) | typecheck · lint · `test:unit` (Node) · `test:db` + `test:db:sweep` · build · `check:bundle` · `npm audit --audit-level=high` · **bundle grep that fails the build if scoring logic or an R2 key path reaches the client**. |
 
 ---
 
@@ -1117,7 +1117,7 @@ Nothing user-visible; everything depends on it. **One task here is irreversible.
 | M0-15 | `lib/question-types.ts` — the [§10](#10-question-types-d12) matrix, with variant gating | — |
 | M0-16 | `lib/import/test-upload.schema.ts` (zod) + `docs/test-authoring.md` with a worked sample per variant | M0-15 |
 | M0-17 | `lib/import/import-test.ts` — validate → split → upload; `scripts/import-test.ts` CLI | M0-12, M0-16 |
-| M0-18 | `lib/scoring.ts` (server-only) + Vitest suite for the [§10](#10-question-types-d12) marking rules | M0-15 |
+| M0-18 | `lib/scoring.ts` (server-only) + Node unit suite for the [§10](#10-question-types-d12) marking rules | M0-15 |
 | M0-19 | Seed: roles + permissions, default Listening band scale (39–40→9.0, 37–38→8.5, 35–36→8.0, 32–34→7.5, 30–31→7.0, 26–29→6.5, 23–25→6.0, 18–22→5.5, 16–17→5.0 — **verify against a current Cambridge book**) | M0-08 |
 | M0-20 | Port the legacy Listening test from [`ielts-data.js`](Design%20files/Prioritizing%20project%20scope/ielts-data.js) into upload JSON and import it | M0-17, M0-19 |
 | M0-21 | `docs/` tree + ADRs 0001–0013 seeded from [§3](#3-decision-log) | — |
