@@ -31,6 +31,25 @@ listed in `src/lib/security/README.md`.
 File fields contain names only, never directories. The importer generates all
 R2 paths; an uploaded JSON file cannot choose an object key.
 
+## Validate or import from the command line
+
+Keep the referenced MP3/images beside the JSON, then run a write-free check:
+
+```bash
+npm run import:test -- ./path/to/test.json --actor <active-author-uuid> --dry-run
+```
+
+After reviewing the result, remove `--dry-run` to write a remote R2 draft and
+its audited Supabase catalogue row. The write command requires a logged-in
+Cloudflare CLI plus `SUPABASE_URL` and `SUPABASE_SECRET_KEY` in the gitignored
+`.dev.vars`. It never publishes the test. The actor must be active and hold
+`test:author`; their id is stored on both the draft and audit record.
+
+Images are limited to 5 MiB and must match their PNG/JPEG/WebP extension and
+MIME. The single MP3 is limited to 20 MiB, must be mono, and must not exceed
+64 kbps. The importer sanitises all authored HTML and refuses a field that is
+empty after sanitising.
+
 ## Sections
 
 | Field | Required | Meaning |

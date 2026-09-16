@@ -1,7 +1,8 @@
 # `lib/import`
 
-**One responsibility:** accept one versioned authoring format, validate it, and
-(in M0-17) split it into browser-safe content and server-only answer keys.
+**One responsibility:** accept one versioned authoring format, validate it,
+split it into browser-safe content and server-only answer keys, and upload the
+result through caller-supplied storage/catalogue adapters.
 
 ## `test-upload.schema.ts`
 
@@ -28,3 +29,27 @@ caller is responsible for showing that warning before publication.
 
 Worked payloads and field documentation are in `docs/test-authoring.md`. Unit
 tests parse those code blocks directly, making the documentation executable.
+
+## `import-test.ts`
+
+`prepareTestImport()` is the only content/key split. `importTest()` wraps it in
+the upload transaction used by the CLI and, later, the admin UI and MCP. A
+caller supplies R2 `put`/`delete` and catalogue `createDraft` adapters; it must
+not reproduce the split.
+
+The pipeline, in order:
+
+1. validates the full JSON before any write;
+2. checks that every referenced file exists and no unreferenced file was sent;
+3. checks declared MIME plus PNG/JPEG/WebP or MP3 magic bytes, caps images at
+   5 MiB and audio at 20 MiB, and rejects stereo or MP3 bitrate above 64 kbps;
+4. sanitises every instruction, prompt and passage, refusing fields that
+   become empty;
+5. generates the UUID/version R2 layout and splits `answer`,
+   `accepted_variants`, `marks` and `word_limit` into `key.json` only;
+6. uploads private objects, then creates a `draft` catalogue row; and
+7. attempts reverse-order object cleanup if any upload/catalogue step fails.
+
+Asset source names are used only to load local files. `content.json` gets
+`{ id, alt, ordinal }`; the object name is the server-generated ordinal and
+allowlisted extension. The output can never inherit an author-controlled path.
