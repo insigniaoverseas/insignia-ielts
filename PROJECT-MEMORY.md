@@ -275,6 +275,32 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
 
+### 2026-09-17 — First-run deadlocked: sign-in refused the bootstrap Owner  (task: M1-08 / M1-02)
+**Shipped broken, found by the user trying to log in.** `signIn` rejected any
+account with no `public.users` row — meant to stop suspended and deleted users —
+which is exactly the bootstrap Owner's state before `/setup` runs. The result was
+a closed loop: `/setup` needs a session, the session needs `signIn`, and `signIn`
+wanted a profile that only `/setup` creates. The password was correct every time
+and the screen said it was wrong.
+
+**Fixed:** `signIn` now asks `first_run_pending()` when there is no profile, and
+sends that one pinned uuid to `/setup`. Not a hole — the function is true for one
+uuid and only while `public.users` is empty, and they have already proved the
+password. `completeFirstRunSetupAction` then opens the session record, which
+could not exist earlier because `user_sessions.user_id` references a row setup
+had not yet created.
+
+**Same root cause, left as-is deliberately:** password reset also cannot serve
+the pre-setup Owner, because it looks the account up in `public.users`. Widening
+it to `auth.users` would let the reset flow serve accounts with no place in the
+app. The dashboard covers that window, and it closes once setup is done.
+
+**Why the tests missed it:** there are none for the sign-in path. 300 DB checks
+and 197 unit tests cover SQL and pure functions; nothing exercises a Server
+Action end to end. An integration test over `signIn` / `acceptInvitation` /
+`completeFirstRunSetupAction` is the real gap here — worth doing before M2's
+attempt lifecycle, which will have far more states than this.
+
 ### 2026-09-17 — There is a self-serve password reset after all  (task: M1-15)
 **Corrects `MVP-1.md` §9**, which said there was none: a locked-out student is
 standing in a building with their teacher in it, so a fresh invitation beats an

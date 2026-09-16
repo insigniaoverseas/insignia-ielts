@@ -82,6 +82,12 @@ user is an API call. The database half is one `accept_invitation` RPC, and the
 auth user is deleted if that RPC fails. Change the order and you will leave
 accounts nobody can sign in to.
 
+**The bootstrap Owner has no profile until `/setup` runs.** `signIn` therefore
+has an explicit branch for them — without it, first-run deadlocks: `/setup`
+needs a session, the session needs `signIn`, and `signIn` wanted a profile only
+`/setup` creates. Shipped broken on 2026-09-17 and found by a human trying to
+log in, because nothing here has an integration test yet.
+
 **A valid JWT is not a live session.** The JWT lifetime is deliberately longer
 than the longest test, so revocation cannot come from expiry. It comes from the
 `user_sessions` row named by the session cookie, which `guard.ts` checks on every
