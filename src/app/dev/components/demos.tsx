@@ -45,11 +45,11 @@ export function PinDemo() {
 	return (
 		<div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-6">
 			<div className={card}>
-				<span className={caption}>PIN — try typing, Backspace, arrow keys, or pasting 4821</span>
+				<span className={caption}>PIN — ⚠️ unused: the PIN login was dropped 2026-09-16 (PROJECT-MEMORY §4)</span>
 				<PinInput value={pin} onChange={setPin} />
 			</div>
 			<div className={card}>
-				<span className={caption}>6-digit PIN — recommended (MVP-1 §9); fits a 390px phone</span>
+				<span className={caption}>6-digit PIN — kept only so the component stays documented</span>
 				<PinInput value={six} onChange={setSix} length={6} />
 			</div>
 			<div className={card}>

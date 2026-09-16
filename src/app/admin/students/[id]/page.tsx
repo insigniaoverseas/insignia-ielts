@@ -48,9 +48,13 @@ function Timeline({
  * colleague, and a drawer has no address. It keeps the drawer's content and
  * ordering — plan first, because that is what the call is almost always about.
  *
- * The destructive actions (reset PIN, change phone) are listed but inert until
- * their Server Actions land in M1/M5; each one will name what it changes before
- * it does it.
+ * The account actions are listed but inert until their Server Actions land in
+ * M1/M5; each one will name what it changes before it does it.
+ *
+ * There is no password reset here on purpose. Passwords are only ever set by
+ * the person who owns them, through an invitation link — so the way to get a
+ * locked-out student back in is a fresh invitation, not an admin typing a
+ * password they then have to read out loud.
  */
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
@@ -71,7 +75,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 					<span className="font-mono text-ink-2">{s.phone}</span>
 				</div>
 				<div className="flex flex-wrap gap-3">
-					<Button variant="secondary">Reset PIN</Button>
+					<Button variant="secondary">Send a new invitation</Button>
 					<Button variant="secondary">Change phone number</Button>
 					<Button asChild>
 						<Link href={`/admin/plans?student=${s.id}`}>Extend plan</Link>

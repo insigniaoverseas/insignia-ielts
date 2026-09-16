@@ -72,16 +72,16 @@
 | M1-02 Invitation server actions | todo | | | create, bulk, revoke, resend |
 | M1-03 Resend + invite email template | todo | | | |
 | M1-04 SPF / DKIM / DMARC | todo | | | Invite in spam = enrolment blocked |
-| M1-05 Accept-invitation screen + token verify | todo | | | No rendered design |
-| M1-06 Set-password screen | todo | | | |
-| M1-07 Set-PIN screen + device binding | todo | | | |
-| M1-08 Login: password path + PIN fast path | todo | | | Existing design shows phone+PIN — needs rework |
-| M1-09 Lockout on password and PIN | todo | | | |
+| M1-05 Accept-invitation screen + token verify | done | Claude | 2026-09-16 | ✅ `/invite/[token]`, `noindex`. Shows email, centre and batch so a wrong address is spotted **before** it becomes their login. The dead ends are the point: expired / used / revoked / unknown each get a plain sentence and a way forward, never a 404 and never the word "invalid". ⬜ Real token verification (server). |
+| M1-06 Set-password screen | done | Claude | 2026-09-16 | ✅ Part of `/invite/[token]`. Rules are **printed before you type** and tick as you meet them — a student sees this screen once and shouldn't learn the requirements by failing them. Show/hide toggle instead of a confirm field: retyping catches typos by accident, reading catches them on purpose. Server re-checks, incl. leaked-password protection (M1-01). |
+| ~~M1-07 Set-PIN screen + device binding~~ | ~~todo~~ | | | **Dropped 2026-09-16** — the user ruled out the PIN; email + password only (§4). `PinInput` is now unused; kept in `/dev/components` and flagged there. |
+| M1-08 Login: password path | done | Claude | 2026-09-16 | ✅ `/login` — **email + password only** (§4); the rendered phone+PIN design does not apply. No signup link (accounts are invitations only), one error message for both fields (naming the email tells an attacker which addresses are real, §8), and no self-serve reset — a locked-out student is standing in a building with their teacher in it. ⬜ The sign-in action. |
+| M1-09 Lockout on password | in_progress | Claude | 2026-09-16 | ✅ UI: tries-left counter and a locked state that says **until when** — "try again later" sends people to the front desk. ⬜ The server-side counter and lock (M1-10). PIN half dropped (§4). |
 | M1-10 Durable Object rate limiter | todo | | | Login, PIN, invite, MCP only — never autosave. Counts in memory; write storage only on a lockout (free DO quota) |
 | M1-11 Turnstile on login + accept-invite | todo | | | |
 | M1-12 Session cookies + single active session | todo | | | |
 | M1-13 `lib/rbac.ts` + route guards | in_progress | Claude, goverdhan-gaur | 2026-09-15 | ✅ Permission matrix agreed (§4). ✅ `supabase/migrations/20260915180655_role_permissions.sql` (Owner label, permissions + `CHECK`). ✅ `lib/permissions.ts` (pure, TSDoc) + `lib/rbac.ts` (`getActor` via `getClaims()` + secret-key lookup, `requirePermission`, `ForbiddenError`). ✅ `npm run test:unit` 29/29 against the seeded data; a deliberate "teacher can publish" seed is caught. ✅ Pushed by the user; verified live: `super_admin` named Owner, permission counts admin 10 / invigilator 1 / student 1 / Owner 12 / teacher 5, `roles_permissions_well_formed` present. ⬜ Route guards with the first privileged routes (M1); `getActor` gets an integration test then. |
-| M1-14 Device list + revoke (server side) | todo | | | UI lands in M4-06 |
+| M1-14 Device list + revoke (server side) | todo | | | UI shipped in M4-06 (Profile). Still wanted **without** the PIN: it answers "is someone else in my account?", which is independent of how you log in. |
 
 ### M2 — Student core, Listening
 
@@ -258,6 +258,37 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-16 — No PIN. Email and password only  (task: M1-08)
+
+**The user's call, 2026-09-16:** *"i wont be using pin, i will be using email
+and passwrd nly."*
+
+This supersedes the PIN half of D9 (`MVP-1.md` §9) and both rendered auth
+designs (`01 Login.dc.html`, `02 First Login PIN Change.dc.html`), which show
+phone + PIN.
+
+Dropped with it: the PIN fast path, device-secret binding, the five-wrong-PINs
+device lock, and the "Set your PIN" step of invitation acceptance (M1-07).
+
+Kept, and still worth building: the device list on Profile (M1-14 / M4-06). It
+answers "is someone else in my account?", which is independent of how you sign
+in.
+
+**The trade-off, recorded because it will be felt in a lab:** the PIN existed
+so a student could get back in quickly on a shared machine mid-session. With
+passwords only that is more typing, on a keyboard some of these students are
+slow with. Mitigate it with a long-lived "stay signed in" session cookie when
+M1-12 lands, rather than by re-introducing a 4-digit secret.
+
+`MVP-1.md` §9 and §17 are now wrong on this point. Correcting them is an open
+doc task — `CLAUDE.md` says to fix `MVP-1.md` when it disagrees with reality.
+
+Consequences already applied: `/login` and `/invite/[token]` built without a
+PIN; Profile's "Change my PIN" is now "Change my password"; the student detail
+screen's "Reset PIN" is now "Send a new invitation" (an admin should never set
+a password they then have to read out loud); `PinInput` flagged unused in
+`/dev/components`.
 
 ### 2026-09-16 — Staff routes are namespaced: `/admin/*` and `/teacher/*`  (task: M6-01)
 
