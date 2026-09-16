@@ -103,8 +103,8 @@ export type TestLibraryRow = {
 	difficulty: Difficulty;
 	questionCount: number;
 	status: "draft" | "published" | "archived";
-	/** How many of the question keys are filled in — drives "34 of 40". */
-	keysEntered: number;
+	/** `null` while private R2 key inspection is deliberately unavailable. */
+	keysEntered: number | null;
 	tags: string[];
 	updatedLabel: string;
 };
@@ -113,7 +113,7 @@ export type TestLibraryRow = {
  * Screen 27 — Answer key editor.
  *
  * ⚠️ **The only screen in the product that carries correct answers to a
- * browser**, and only for a user holding `test.publish` (`lib/rbac.ts`). It is
+ * browser**, and only for a user holding `test:author` (`lib/rbac.ts`). It is
  * a staff screen behind two gates, never reachable from a student route, and
  * the rows below must never be reused by any student-facing view-model.
  */

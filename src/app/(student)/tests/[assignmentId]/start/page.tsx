@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { DifficultyBadge } from "@/components/ui/difficulty-badge";
 import { SoundCheck } from "@/components/student/sound-check";
 import { MODE_EXPLAINED, SKILL_LABEL } from "@/components/student/labels";
-import { getPreTestBriefing } from "@/lib/mock/student";
+import { getPreTestBriefing } from "@/lib/queries/student";
 
 export const metadata: Metadata = { title: "Before you start" };
 

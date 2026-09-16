@@ -10,8 +10,7 @@ parallel). These types are the contract between the two halves:
 
 ```
 lib/view-models/student.ts   ← the contract (types)
-lib/mock/student.ts          ← satisfies it today  (fixtures)
-lib/queries/student.ts       ← satisfies it later  (Supabase)
+lib/queries/student.ts       ← satisfies it from Supabase
 app/(student)/**/page.tsx    ← renders it, and never changes when the source does
 ```
 

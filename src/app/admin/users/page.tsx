@@ -12,7 +12,8 @@ import {
 	TableRow,
 	TableToolbar,
 } from "@/components/ui/table";
-import { getUsersAndRoles } from "@/lib/mock/admin";
+import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { getUsersAndRoles } from "@/lib/queries/admin";
 
 export const metadata: Metadata = { title: "Users & roles" };
 
@@ -36,6 +37,7 @@ const SCOPE_LABEL: Record<string, string> = {
  * a different answer from "Everywhere", and both are different from "No".
  */
 export default async function UsersPage() {
+	await requirePermissionOrRedirect("staff:manage", "/admin/users");
 	const data = await getUsersAndRoles();
 
 	return (

@@ -14,7 +14,8 @@ import {
 	TableRow,
 	TableToolbar,
 } from "@/components/ui/table";
-import { getBatchView } from "@/lib/mock/teacher";
+import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { getBatchView } from "@/lib/queries/teacher";
 
 export const metadata: Metadata = { title: "Batch" };
 
@@ -28,6 +29,7 @@ export const metadata: Metadata = { title: "Batch" };
  */
 export default async function BatchPage({ params }: { params: Promise<{ batchId: string }> }) {
 	const { batchId } = await params;
+	await requirePermissionOrRedirect("assignment:manage", `/teacher/batches/${batchId}`);
 	const data = await getBatchView(batchId);
 	if (!data) notFound();
 

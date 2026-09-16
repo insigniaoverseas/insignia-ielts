@@ -3,7 +3,7 @@ import Link from "next/link";
 import { StatusPill } from "@/components/ui/status-pill";
 import { LogOutButton } from "@/components/student/log-out-button";
 import { PlanBanner } from "@/components/student/plan-banner";
-import { getStudentProfile, type Scenario } from "@/lib/mock/student";
+import { getStudentProfile } from "@/lib/queries/student";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -27,13 +27,8 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
  * The plan bar shows time *used*, not time left, so a nearly-full bar reads as
  * "act now" at a glance; the date beside it is what they'll quote to a teacher.
  */
-export default async function ProfilePage({
-	searchParams,
-}: {
-	searchParams: Promise<{ state?: string }>;
-}) {
-	const { state } = await searchParams;
-	const { student, plan, devices } = await getStudentProfile((state as Scenario) ?? "default");
+export default async function ProfilePage() {
+	const { student, plan, devices } = await getStudentProfile();
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -66,10 +61,14 @@ export default async function ProfilePage({
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<h2 className="m-0 text-h3">Your access</h2>
 					<StatusPill
-						status={plan.state === "expired" ? "expired" : plan.state === "expiring" ? "expiring" : "active"}
+						status={plan.state === "expired" || plan.state === "missing" ? "expired" : plan.state === "suspended" ? "locked" : plan.state === "expiring" ? "expiring" : "active"}
 						size="sm"
 						label={
-							plan.state === "expired"
+							plan.state === "missing"
+								? "Not set"
+								: plan.state === "suspended"
+									? "Paused"
+								: plan.state === "expired"
 								? "Ended"
 								: plan.state === "expiring"
 									? `${plan.daysRemaining} days left`
@@ -79,8 +78,16 @@ export default async function ProfilePage({
 				</div>
 
 				<p className="m-0 text-ink-2">
-					{plan.state === "expired" ? "Your access ended on " : "Your access ends on "}
-					<strong className="font-semibold text-ink">{plan.endsOnLabel}</strong>.
+					{plan.state === "missing" ? (
+						"Ask your teacher to attach an access plan to your account."
+					) : plan.state === "suspended" ? (
+						"Your access is paused. Ask your teacher or the front desk to restore it."
+					) : (
+						<>
+							{plan.state === "expired" ? "Your access ended on " : "Your access ends on "}
+							<strong className="font-semibold text-ink">{plan.endsOnLabel}</strong>.
+						</>
+					)}
 				</p>
 
 				<div
@@ -93,7 +100,7 @@ export default async function ProfilePage({
 				>
 					<div
 						className={`h-full rounded-full ${
-							plan.state === "expired" ? "bg-danger" : plan.state === "expiring" ? "bg-warning" : "bg-success"
+							plan.state === "expired" || plan.state === "missing" || plan.state === "suspended" ? "bg-danger" : plan.state === "expiring" ? "bg-warning" : "bg-success"
 						}`}
 						style={{ width: `${plan.percentUsed}%` }}
 					/>

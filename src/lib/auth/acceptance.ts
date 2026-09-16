@@ -23,8 +23,7 @@ import type { InviteAcceptance } from "@/lib/view-models/auth";
 /**
  * Reads the invitation behind a token, for the accept screen.
  *
- * Returns the same `InviteAcceptance` shape the screen was built against, so
- * the mock drops out without touching the component.
+ * Returns the screen's `InviteAcceptance` view-model rather than a raw row.
  */
 export async function lookupInvitation(token: string): Promise<InviteAcceptance> {
 	if (!isPlausibleToken(token)) {

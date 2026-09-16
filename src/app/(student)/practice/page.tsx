@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AssignedTestCard } from "@/components/student/test-card";
-import { getPracticeLibrary, type Scenario } from "@/lib/mock/student";
+import { getPracticeLibrary } from "@/lib/queries/student";
 
 export const metadata: Metadata = { title: "Practice at Home" };
 
@@ -17,10 +17,10 @@ export const metadata: Metadata = { title: "Practice at Home" };
 export default async function PracticePage({
 	searchParams,
 }: {
-	searchParams: Promise<{ skill?: string; state?: string }>;
+	searchParams: Promise<{ skill?: string }>;
 }) {
-	const { skill, state } = await searchParams;
-	const data = await getPracticeLibrary((state as Scenario) ?? "default");
+	const { skill } = await searchParams;
+	const data = await getPracticeLibrary();
 
 	const filter = skill === "listening" || skill === "reading" ? skill : "all";
 	const items = filter === "all" ? data.items : data.items.filter((i) => i.test.skill === filter);

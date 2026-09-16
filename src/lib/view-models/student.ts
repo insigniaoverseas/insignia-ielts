@@ -5,9 +5,8 @@
  * a database row: these are what a screen *shows*, already resolved, already
  * formatted where formatting needs a server (dates, eligibility reasons).
  *
- * Why this exists: the screens (M2, M4) are built before the queries. Fixtures in
- * `@/lib/mock/student` satisfy these types today; real Supabase queries satisfy
- * them later. Swapping one for the other must not touch a single screen file.
+ * The server-only modules in `@/lib/queries` satisfy these types from
+ * Supabase. Screens never receive raw database rows.
  *
  * Three rules these types enforce by construction:
  *
@@ -53,6 +52,7 @@ export type LockedReason =
 	| { kind: "closed"; closedAt: string; message: string }
 	| { kind: "no_attempts_left"; used: number; allowed: number; message: string }
 	| { kind: "plan_expired"; expiredOn: string; message: string }
+	| { kind: "no_plan"; message: string }
 	| { kind: "in_progress_elsewhere"; message: string };
 
 /** The signed-in student, as every screen header needs them. */
@@ -71,7 +71,7 @@ export type StudentIdentity = {
 
 /** The student's access window. Drives the banner on every student screen. */
 export type PlanStatus = {
-	state: "active" | "expiring" | "expired";
+	state: "active" | "expiring" | "expired" | "suspended" | "missing";
 	/** ISO-8601 UTC. */
 	startsOn: string;
 	/** ISO-8601 UTC. */

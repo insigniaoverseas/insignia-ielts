@@ -13,7 +13,7 @@ import {
 	TableRow,
 	TableToolbar,
 } from "@/components/ui/table";
-import { getAdminOverview } from "@/lib/mock/admin";
+import { getAdminOverview } from "@/lib/queries/admin";
 
 export const metadata: Metadata = { title: "Overview" };
 

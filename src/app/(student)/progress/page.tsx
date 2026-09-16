@@ -5,7 +5,7 @@ import { BandTrendChart, type BandSeries } from "@/components/ui/band-trend-char
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatBand } from "@/components/ui/band-score";
 import { SKILL_LABEL } from "@/components/student/labels";
-import { getMyProgress, type Scenario } from "@/lib/mock/student";
+import { getMyProgress } from "@/lib/queries/student";
 
 export const metadata: Metadata = { title: "My Progress" };
 
@@ -17,13 +17,8 @@ export const metadata: Metadata = { title: "My Progress" };
  * should be able to answer "am I getting better, and what do I fix?" without
  * making a single choice (`DESIGN-PROMPT.md` C1.11).
  */
-export default async function ProgressPage({
-	searchParams,
-}: {
-	searchParams: Promise<{ state?: string }>;
-}) {
-	const { state } = await searchParams;
-	const data = await getMyProgress((state as Scenario) ?? "default");
+export default async function ProgressPage() {
+	const data = await getMyProgress();
 
 	if (data.testsTaken === 0) {
 		return (

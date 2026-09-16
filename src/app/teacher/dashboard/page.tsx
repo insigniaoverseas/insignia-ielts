@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { formatBand } from "@/components/ui/band-score";
 import { SKILL_LABEL } from "@/components/student/labels";
-import { getTeacherDashboard } from "@/lib/mock/teacher";
+import { getTeacherDashboard } from "@/lib/queries/teacher";
 
 export const metadata: Metadata = { title: "Dashboard" };
 

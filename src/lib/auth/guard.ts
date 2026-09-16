@@ -6,6 +6,7 @@ import { getActor } from "@/lib/rbac";
 import { can, type Actor, type Permission } from "@/lib/permissions";
 import { endSession, sessionState } from "@/lib/auth/sessions";
 import { createClient } from "@/lib/supabase/server";
+import { homeForRole, signInPath } from "@/lib/auth/access";
 
 /**
  * Route guards (M1-13) — the layout-level half of the second gate.
@@ -53,7 +54,7 @@ export async function requireUser(currentPath?: string): Promise<Actor> {
 /** The signed-in user, provided they hold `permission`. Otherwise their own home. */
 export async function requirePermissionOrRedirect(permission: Permission, currentPath?: string): Promise<Actor> {
 	const actor = await requireUser(currentPath);
-	if (!can(actor, permission)) redirect(homeFor(actor.role));
+	if (!can(actor, permission)) redirect(homeForRole(actor.role));
 	return actor;
 }
 
@@ -61,6 +62,13 @@ export async function requirePermissionOrRedirect(permission: Permission, curren
 export async function requireStaff(currentPath?: string): Promise<Actor> {
 	const actor = await requireUser(currentPath);
 	if (actor.role === "student") redirect("/home");
+	return actor;
+}
+
+/** The signed-in user, provided their database role is one of `roles`. */
+export async function requireRole(roles: readonly string[], currentPath?: string): Promise<Actor> {
+	const actor = await requireUser(currentPath);
+	if (!roles.includes(actor.role)) redirect(homeForRole(actor.role));
 	return actor;
 }
 
@@ -75,17 +83,4 @@ export async function isFirstRunPending(): Promise<boolean> {
 
 	const { data: pending } = await supabase.rpc("first_run_pending");
 	return pending === true;
-}
-
-/** The sign-in URL, carrying where the visitor was heading. */
-function signInPath(currentPath?: string): string {
-	if (!currentPath || !currentPath.startsWith("/") || currentPath.startsWith("//")) return "/login";
-	return `/login?next=${encodeURIComponent(currentPath)}`;
-}
-
-/** Where a role belongs when it has strayed somewhere it may not be. */
-function homeFor(roleKey: string): string {
-	if (roleKey === "super_admin" || roleKey === "admin") return "/admin/overview";
-	if (roleKey === "teacher" || roleKey === "invigilator") return "/teacher/dashboard";
-	return "/home";
 }
