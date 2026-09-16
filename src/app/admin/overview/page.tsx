@@ -53,7 +53,7 @@ export default async function OverviewPage() {
 						<p className="m-0 text-small text-ink-2">Soonest first. Extend before the student is locked out.</p>
 					</div>
 					<Button variant="secondary" asChild>
-						<Link href="/plans">Open the plans queue</Link>
+						<Link href="/admin/plans">Open the plans queue</Link>
 					</Button>
 				</TableToolbar>
 
@@ -71,7 +71,7 @@ export default async function OverviewPage() {
 						{data.expiringSoon.map((s) => (
 							<TableRow key={s.id}>
 								<TableCell>
-									<Link href={`/students/${s.id}`} className="font-semibold">
+									<Link href={`/admin/students/${s.id}`} className="font-semibold">
 										{s.name}
 									</Link>
 									<div className="font-mono text-small text-ink-2">{s.phone}</div>
@@ -87,7 +87,7 @@ export default async function OverviewPage() {
 								</TableCell>
 								<TableCell className="text-right">
 									<Button variant="secondary" asChild>
-										<Link href={`/plans?student=${s.id}`}>Extend</Link>
+										<Link href={`/admin/plans?student=${s.id}`}>Extend</Link>
 									</Button>
 								</TableCell>
 							</TableRow>

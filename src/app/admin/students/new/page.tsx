@@ -23,7 +23,7 @@ export default async function NewStudentPage() {
 
 	return (
 		<div className="flex max-w-[640px] flex-col gap-6">
-			<Link href="/students" className="font-semibold">
+			<Link href="/admin/students" className="font-semibold">
 				← Back to students
 			</Link>
 
@@ -92,7 +92,7 @@ export default async function NewStudentPage() {
 				<div className="flex flex-wrap gap-3">
 					<Button type="submit">Send the invitation</Button>
 					<Button variant="secondary" asChild>
-						<Link href="/students">Cancel</Link>
+						<Link href="/admin/students">Cancel</Link>
 					</Button>
 				</div>
 			</form>

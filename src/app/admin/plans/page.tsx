@@ -38,7 +38,7 @@ export default async function PlansPage() {
 					title="Nothing expiring"
 					action={
 						<Link
-							href="/students"
+							href="/admin/students"
 							className="flex min-h-10 items-center rounded-control border border-line bg-surface px-5 font-semibold text-ink no-underline hover:border-ink-3 hover:no-underline"
 						>
 							See all students

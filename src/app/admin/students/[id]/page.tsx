@@ -61,7 +61,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
 	return (
 		<div className="flex flex-col gap-6">
-			<Link href="/students" className="font-semibold">
+			<Link href="/admin/students" className="font-semibold">
 				← Back to students
 			</Link>
 
@@ -74,7 +74,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 					<Button variant="secondary">Reset PIN</Button>
 					<Button variant="secondary">Change phone number</Button>
 					<Button asChild>
-						<Link href={`/plans?student=${s.id}`}>Extend plan</Link>
+						<Link href={`/admin/plans?student=${s.id}`}>Extend plan</Link>
 					</Button>
 				</div>
 			</div>

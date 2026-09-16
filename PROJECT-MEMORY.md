@@ -152,20 +152,20 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M6-01 Teacher dashboard (14) | todo | | | |
-| M6-02 Batch view (15) | todo | | | |
-| M6-03 Assign a test (16) | todo | | | |
-| M6-04 Results & release (18) | todo | | | |
-| M6-05 Mark override + note | todo | | | |
-| M6-06 Class analytics (19) | todo | | | |
+| M6-01 Teacher dashboard (14) | done | Claude | 2026-09-16 | ✅ `/teacher/dashboard`: today, "needs you", batch cards. Every attention item **links somewhere** — a list of problems with no destination only makes people feel behind. |
+| M6-02 Batch view (15) | done | Claude | 2026-09-16 | ✅ `/teacher/batches/[batchId]`: roster with **plan expiry in it**. The teacher sees these students twice a week and finds out first — the warning belongs on the register they already read, not only in the admin queue. |
+| M6-03 Assign a test (16) | done | Claude | 2026-09-16 | ✅ `/teacher/assign`: three steps on one page (not a wizard — a teacher on their fourth test of the week knows all three answers already). Live student count **de-duplicates** batch members against individually-picked students. The deliverable is the plain-English summary sentence before the button: getting an assignment wrong is expensive, and a sentence is checkable in a way five fields aren't. Verified over CDP. |
+| M6-04 Results & release (18) | done | Claude | 2026-09-16 | ✅ `/teacher/results/[assignmentId]`, `noindex` (its expanded rows carry the key). Multi-select → confirm → release; releasing is deliberate, not a per-row toggle, because it's the moment a band becomes real and can't be undone. Flags shown, **never acted on** (M9-01: flags, not blocks). |
+| M6-05 Mark override + note | done | Claude | 2026-09-16 | ✅ Expandable row inside screen 18. **The note is required** — "Give the mark" stays disabled until one is typed. The next person to look needs to know why a mark was changed by hand, and "I'll remember" isn't true a month later. ⬜ The override action itself. |
+| M6-06 Class analytics (19) | done | Claude | 2026-09-16 | ✅ `/teacher/batches/[batchId]/analytics`, titled **"What to teach"** rather than Analytics because that's the only question it answers. Band distribution, weakest types worst-first, most-missed questions. |
 
 ### M7 — Live session monitor
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
 | M7-01 Live-monitor endpoint (polled) | todo | | | ~~Realtime channel on `attempts`~~ superseded 2026-09-15 — polling every 10 s, no Realtime (§4) |
-| M7-02 Live session monitor (17) | todo | | | |
-| M7-03 Invigilator actions | todo | | | +5 min, force submit, unlock |
+| M7-02 Live session monitor (17) | done | Claude | 2026-09-16 | ✅ `/teacher/live/[sessionId]`: tile per student, status as a **word** as well as a colour, mono time so it doesn't jitter, low time in warning. The "Updated Ns ago · refreshes every 10s" stamp is load-bearing — an invigilator must be able to tell the room from a frozen page, and a silently dead feed looks exactly like a calm room. Tiles tick locally between polls; that's cosmetic, every poll replaces them. ⬜ The poll itself is M7-01. |
+| M7-03 Invigilator actions | in_progress | Claude | 2026-09-16 | ✅ UI: +5 minutes and "Finish for them" on in-progress tiles only, each behind a confirm that names the consequence (force-submit quotes how many answers will be sent as they stand). ⬜ The server actions. |
 
 ### M8 — Test-authoring MCP
 
@@ -188,7 +188,7 @@
 | M9-01 Anti-cheat flags | todo | | | Flags, not blocks |
 | M9-02 Audit log screen (29) | todo | | | |
 | M9-03 Users & roles (28) | todo | | | |
-| M9-04 Error / edge screens (30) | todo | | | |
+| M9-04 Error / edge screens (30) | in_progress | Claude | 2026-09-16 | ✅ `app/not-found.tsx` and `app/error.tsx`. The error page's first line is **"Your answers are saved"** — that's the difference between a student who retries and one who panics mid-test. No stack trace or error code; `digest` is present but quiet, for support. ⬜ Connection-lost banner in the player, test-not-available, session-expired, browser-unsupported. |
 | M9-05 Load test at **200** concurrent | todo | | | ~~40~~ → 200 (user, 2026-09-15). Throwaway free Supabase project. First run right after M2-07 |
 | M9-06 Backups + restore drill | todo | | | The drill must actually restore. Free has no backups → nightly `db dump` to private R2. **Before the first real student** |
 | M9-07 Full security review | todo | | | |
@@ -258,6 +258,24 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-16 — Staff routes are namespaced: `/admin/*` and `/teacher/*`  (task: M6-01)
+
+`MVP-1.md` §15 gives both `(teacher)/batches` and `(admin)/batches`, and both
+`(teacher)/results/[id]` and `(student)/results/[id]`. Route groups don't
+create URL segments, so those are the **same URLs**. It shipped a real bug:
+`/batches` rendered the Admin shell while `/batches/b-0`, linked from that very
+list, rendered the Teacher one.
+
+Roles can't pick a layout — a route group is chosen at build time, not per
+user. So the staff areas now carry their prefix in the URL:
+`/admin/overview`, `/teacher/dashboard`, and so on. Students keep the short
+top-level paths (`/home`, `/tests`, `/attempt/[id]`) because they're the
+majority and their URLs are the ones read aloud.
+
+`MVP-1.md` §15's tree is now wrong on this point; correcting it is a doc task.
+Verified after the move: 27 routes build, `/admin/batches` renders Admin and
+`/teacher/batches/b-0` renders Teacher.
 
 ### 2026-09-16 — `Button asChild` was broken for every caller  (task: M5-02)
 

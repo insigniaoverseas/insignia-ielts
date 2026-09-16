@@ -15,7 +15,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 	return (
 		<div className="flex min-h-screen flex-col bg-bg">
 			<header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-6 border-b border-line bg-surface px-4 md:px-8">
-				<Link href="/overview" className="flex items-center gap-3 text-ink no-underline hover:no-underline">
+				<Link href="/admin/overview" className="flex items-center gap-3 text-ink no-underline hover:no-underline">
 					<span
 						className="grid size-8 place-items-center rounded-control bg-night font-bold text-white"
 						aria-hidden="true"

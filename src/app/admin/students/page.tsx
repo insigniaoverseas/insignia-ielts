@@ -62,7 +62,7 @@ export default async function StudentsPage({
 			.filter(([, v]) => v && v !== "all")
 			.map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`)
 			.join("&");
-		return qs ? `/students?${qs}` : "/students";
+		return qs ? `/admin/students?${qs}` : "/admin/students";
 	};
 
 	return (
@@ -71,16 +71,16 @@ export default async function StudentsPage({
 				<h1 className="m-0 text-h1">Students</h1>
 				<div className="flex gap-3">
 					<Button variant="secondary" asChild>
-						<Link href="/students/import">Import CSV</Link>
+						<Link href="/admin/students/import">Import CSV</Link>
 					</Button>
 					<Button asChild>
-						<Link href="/students/new">Add student</Link>
+						<Link href="/admin/students/new">Add student</Link>
 					</Button>
 				</div>
 			</div>
 
 			{/* A plain GET form: no JavaScript needed, and the result is a URL. */}
-			<form action="/students" method="get" className="flex flex-wrap items-end gap-3">
+			<form action="/admin/students" method="get" className="flex flex-wrap items-end gap-3">
 				<label className="flex min-w-[240px] flex-1 flex-col gap-1.5">
 					<span className="text-small font-semibold">Search</span>
 					<Input name="q" size="admin" defaultValue={q ?? ""} placeholder="Name or phone number" />
@@ -143,7 +143,7 @@ export default async function StudentsPage({
 					title="No students match that"
 					action={
 						<Button variant="secondary" asChild>
-							<Link href="/students">Clear the filters</Link>
+							<Link href="/admin/students">Clear the filters</Link>
 						</Button>
 					}
 				>
@@ -173,7 +173,7 @@ export default async function StudentsPage({
 							{data.rows.map((s) => (
 								<TableRow key={s.id}>
 									<TableCell>
-										<Link href={`/students/${s.id}`} className="font-semibold">
+										<Link href={`/admin/students/${s.id}`} className="font-semibold">
 											{s.name}
 										</Link>
 										<div className="font-mono text-small text-ink-2">{s.phone}</div>

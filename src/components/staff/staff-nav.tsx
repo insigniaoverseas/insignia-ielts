@@ -7,19 +7,19 @@ import { StaffSidebar, type SidebarGroup } from "@/components/ui/staff-sidebar";
 export const ADMIN_GROUPS: SidebarGroup[] = [
 	{
 		title: "Overview",
-		items: [{ href: "/overview", label: "Overview", icon: "▤" }],
+		items: [{ href: "/admin/overview", label: "Overview", icon: "▤" }],
 	},
 	{
 		title: "People",
 		items: [
-			{ href: "/students", label: "Students", icon: "👤" },
-			{ href: "/plans", label: "Plans & validity", icon: "⏳" },
-			{ href: "/batches", label: "Batches", icon: "▦" },
+			{ href: "/admin/students", label: "Students", icon: "👤" },
+			{ href: "/admin/plans", label: "Plans & validity", icon: "⏳" },
+			{ href: "/admin/batches", label: "Batches", icon: "▦" },
 		],
 	},
 	{
 		title: "Content",
-		items: [{ href: "/library", label: "Test library", icon: "📄" }],
+		items: [{ href: "/admin/library", label: "Test library", icon: "📄" }],
 	},
 ];
 

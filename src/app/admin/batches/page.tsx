@@ -31,7 +31,7 @@ export default async function BatchesPage() {
 			<div className="flex flex-wrap items-center justify-between gap-4">
 				<h1 className="m-0 text-h1">Batches</h1>
 				<Button asChild>
-					<Link href="/batches/new">Create batch</Link>
+					<Link href="/admin/batches/new">Create batch</Link>
 				</Button>
 			</div>
 
@@ -56,7 +56,7 @@ export default async function BatchesPage() {
 						{batches.map((b) => (
 							<TableRow key={b.id}>
 								<TableCell>
-									<Link href={`/batches/${b.id}`} className="font-semibold">
+									<Link href={`/admin/batches/${b.id}`} className="font-semibold">
 										{b.name}
 									</Link>
 								</TableCell>

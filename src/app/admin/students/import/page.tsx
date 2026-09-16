@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Import students" };
 export default function ImportStudentsPage() {
 	return (
 		<div className="flex flex-col gap-6">
-			<Link href="/students" className="font-semibold">
+			<Link href="/admin/students" className="font-semibold">
 				← Back to students
 			</Link>
 

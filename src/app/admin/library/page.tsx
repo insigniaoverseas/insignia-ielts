@@ -56,7 +56,7 @@ export default async function LibraryPage({
 			<div className="flex flex-wrap items-center justify-between gap-4">
 				<h1 className="m-0 text-h1">Test library</h1>
 				<Button asChild>
-					<Link href="/library/new">Create test</Link>
+					<Link href="/admin/library/new">Create test</Link>
 				</Button>
 			</div>
 
@@ -99,7 +99,7 @@ export default async function LibraryPage({
 							return (
 								<TableRow key={t.id}>
 									<TableCell>
-										<Link href={`/library/${t.id}/answer-key`} className="font-semibold">
+										<Link href={`/admin/library/${t.id}/answer-key`} className="font-semibold">
 											{t.title}
 										</Link>
 										{t.tags.length > 0 && (

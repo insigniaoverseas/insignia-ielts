@@ -35,7 +35,7 @@ export default async function AnswerKeyPage({ params }: { params: Promise<{ test
 
 	return (
 		<div className="flex flex-col gap-6">
-			<Link href="/library" className="font-semibold">
+			<Link href="/admin/library" className="font-semibold">
 				← Back to the test library
 			</Link>
 
