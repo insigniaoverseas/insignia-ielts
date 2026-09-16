@@ -446,6 +446,17 @@ These are **not** solved by this software. Say so to the institute rather than i
 ## 9. Accounts, invites and login (D9)
 
 > Supersedes `TECH-STACK.md` §3 entirely. The phone + PIN synthetic-email pattern described there is **not** what we build.
+>
+> **Corrected 2026-09-16 — there is no PIN.** The user ruled it out: sign-in is
+> **email and password only**. The PIN fast path, device-secret binding, the
+> five-wrong-PINs device lock and the "Set your PIN" step of invitation
+> acceptance (M1-07) are all dropped. What survives is everything about
+> *invitations*, which is the more important half. See `PROJECT-MEMORY.md` §4.
+>
+> The trade-off, recorded because it will be felt in a lab: the PIN existed so a
+> student could get back in quickly on a shared machine mid-session. Mitigate
+> that with a long-lived "stay signed in" session cookie (M1-12), not with a
+> 4-digit secret.
 
 **There is no signup page.** Every account begins as an invitation.
 
@@ -464,29 +475,33 @@ stateDiagram-v2
 
 1. **Admin invites.** Enters an email (or bulk-pastes / uploads a CSV), picks role, branch, batch and plan length. The server creates an `invitations` row with a **hashed** single-use token and sends the link via Resend.
 2. **Student accepts.** Opens the link from their own Gmail or any email account. The token is verified server-side; expired, used or revoked tokens hit a plain-language dead end — *"This link has expired. Ask your teacher for a new one."* Receiving the email proves the address, so there is no separate verification step.
-3. **Sets a password.** Strength-checked. This is the account's primary credential.
-4. **Sets a PIN.** 4 or 6 digits (6 preferred — 100× the search space for one extra keypress), for fast login afterwards.
+3. **Sets a password.** Strength-checked, and checked against known-breached passwords (Supabase leaked-password protection, M1-01). This is the account's only credential.
+4. ~~**Sets a PIN.**~~ — dropped 2026-09-16, see the note above.
 5. **Teacher and admin accounts** are invited the same way, with optional 2FA. Different threat model — they can delete data.
 
-### How PIN fast-login actually works
+**An admin never sets or resets a password.** A password is only ever chosen by
+the person who owns it, through an invitation link — so the way to get a
+locked-out student back in is a fresh invitation, not an admin typing a password
+they then have to read out loud.
 
-**The PIN is a convenience on a known device, not a second password.**
+### ~~How PIN fast-login actually works~~ — removed 2026-09-16
 
-- Setting a PIN binds a **device secret**: a long-lived, httpOnly cookie whose hash is stored in `user_devices.device_secret_hash`.
-- Fast login = **device secret + PIN**, both verified server-side.
-- On an unrecognised device the PIN screen is **never offered** — full password login only.
-- Five wrong PINs locks the PIN on that device; the user falls back to password. There is no bypass.
-- Students can see and revoke their devices from Profile (M4-06).
+This section described a device secret bound at PIN-setting time, fast login as
+device secret + PIN, and a five-attempt device lock. **None of it is built.**
 
-This is what keeps a 4-digit secret from becoming the account's security floor.
+One piece of it is still wanted on its own merits: the **device list and revoke**
+on Profile (M1-14 / M4-06). "Is someone else in my account?" is a question worth
+answering however people sign in.
+
+Rate limiting and lockout still apply — to the password (M1-09, M1-10).
 
 ### Screens this changes
 
-| Screen | Change | Design status |
+| Screen | Change | Status |
 |---|---|---|
-| **01 Login** | Gains a password path alongside the PIN fast path | Rendered design exists but shows phone+PIN — **needs rework** |
-| **02 First-login PIN change** | Becomes *"Set your PIN"* in the invite-acceptance flow | Rendered design exists — **needs rework** |
-| **NEW — Accept invitation** | Token landing → set password → set PIN | **No design** — build from `DESIGN-PROMPT.md` Part A |
+| **01 Login** | Email + password. No signup link, one error message for both fields, no self-serve reset. | ✅ Built (M1-08). The rendered phone+PIN design does not apply. |
+| ~~**02 First-login PIN change**~~ | Dropped with the PIN. | ❌ Not built, not wanted. |
+| **NEW — Accept invitation** | Token landing → set password. Expired / used / revoked / unknown each get a plain sentence and a way forward. | ✅ Built (M1-05, M1-06). |
 
 **Open question:** "Sign in with Google" OAuth. The design allows it; this MVP does not build it. Logged in `PROJECT-MEMORY.md` §7.
 
@@ -814,24 +829,39 @@ Buckets are **private**. The R2 public dev URL is **disabled**. All R2 keys are 
 
 ## 15. Repo structure and design system
 
+> **Corrected 2026-09-16 — the staff areas are real URL segments, not route
+> groups.** This tree previously gave both `(teacher)/batches` and
+> `(admin)/batches`, and both `(teacher)/results/[id]` and
+> `(student)/results/[id]`. Route groups do not create URL segments, so those
+> were the *same URLs*, and it shipped a real bug: `/batches` rendered the Admin
+> shell while `/batches/b-0`, linked from that very list, rendered the Teacher
+> one. A role cannot select a layout — the group is chosen at build time, not
+> per user. Staff paths now carry their prefix (`/admin/…`, `/teacher/…`);
+> students keep the short top-level paths, because theirs are the URLs read
+> aloud. See `PROJECT-MEMORY.md` §4.
+
 **App code lives under `src/`** — the layout the OpenNext scaffold generated. The `@/*` alias resolves to `./src/*`, so imports read `@/lib/scoring`. Tooling that its CLI expects at the root stays at the root. *(Corrected 2026-09-15 — see `PROJECT-MEMORY.md` §4.)* **Where this document writes `lib/…`, `components/…` or `db/…`, read `src/lib/…` etc.**
 
 ```
 insignia-ielts/
 ├─ src/
 │  ├─ app/
-│  │  ├─ (auth)/
-│  │  │   ├─ login/                  password path + PIN fast path
-│  │  │   └─ invite/[token]/         accept → set password → set PIN   (D9)
-│  │  ├─ (student)/
+│  │  ├─ (auth)/                     a route GROUP — no URL segment
+│  │  │   ├─ login/                  /login — email + password (D9, corrected)
+│  │  │   └─ invite/[token]/         /invite/… accept → set password
+│  │  ├─ (student)/                  a route GROUP — students keep short URLs
 │  │  │   ├─ home/ tests/ progress/ practice/ profile/
-│  │  │   ├─ attempt/[id]/           the test player (client-heavy)
+│  │  │   ├─ results/[attemptId]/    the band, released or held
 │  │  │   └─ review/[attemptId]/     gated mistakes review
-│  │  ├─ (teacher)/
-│  │  │   └─ dashboard/ batches/ assign/ live/[id]/ results/[id]/ analytics/
-│  │  ├─ (admin)/
-│  │  │   └─ overview/ students/ invites/ plans/ batches/ library/
-│  │  │       answer-keys/[testId]/ users/ audit/
+│  │  ├─ attempt/[attemptId]/        the test player — OUTSIDE (student):
+│  │  │                              during a test there is no navigation
+│  │  ├─ teacher/                    a real SEGMENT, not a group — see below
+│  │  │   └─ dashboard/ assign/ batches/[id]/ batches/[id]/analytics/
+│  │  │       live/[id]/ results/[id]/
+│  │  ├─ admin/                      a real SEGMENT, not a group
+│  │  │   └─ overview/ students/ students/[id]/ students/new/
+│  │  │       students/import/ plans/ batches/ library/
+│  │  │       library/[testId]/answer-key/ users/ audit/
 │  │  ├─ dev/components/             the design system, live          (D13)
 │  │  ├─ api/
 │  │  │   ├─ auth/                   rate limit, lockout live here
@@ -993,44 +1023,55 @@ docs/
 
 ## 17. Screen inventory
 
-**Design status** — 🎨 rendered · 📝 spec only (`DESIGN-PROMPT.md` Part C) · ⚠️ rendered but needs rework for D9.
+**Status** — ✅ built (2026-09-16). The *Design file* column says where the
+look came from: a rendered `.dc.html` where one exists, otherwise
+`DESIGN-PROMPT.md` Part C against the design system in
+[§15](#15-repo-structure-and-design-system).
 
 | # | Screen | Role | Design file | Status | Milestone |
 |---|---|---|---|---|---|
-| 00 | Design system | — | [`00 Design System.dc.html`](Design%20files/Prioritizing%20project%20scope/00%20Design%20System.dc.html) | 🎨 | M0 |
-| — | **Accept invitation** *(new, D9)* | Student | — | 📝 | M1 |
-| 01 | Login | Student | [`01 Login.dc.html`](Design%20files/Prioritizing%20project%20scope/01%20Login.dc.html) | ⚠️ | M1 |
-| 02 | Set your PIN | Student | [`02 First Login PIN Change.dc.html`](Design%20files/Prioritizing%20project%20scope/02%20First%20Login%20PIN%20Change.dc.html) | ⚠️ | M1 |
-| 03 | Student Home | Student | [`03 Student Home.dc.html`](Design%20files/Prioritizing%20project%20scope/03%20Student%20Home.dc.html) | 🎨 | M2 |
-| 04 | My Tests | Student | [`04 My Tests.dc.html`](Design%20files/Prioritizing%20project%20scope/04%20My%20Tests.dc.html) | 🎨 | M2 |
-| 05 | Pre-test instructions | Student | [`05 Pre-test Instructions.dc.html`](Design%20files/Prioritizing%20project%20scope/05%20Pre-test%20Instructions.dc.html) | 🎨 | M2 |
-| 06 | Test player — Listening | Student | [`06 Test Player Listening.dc.html`](Design%20files/Prioritizing%20project%20scope/06%20Test%20Player%20Listening.dc.html) | 🎨 | M2 |
-| 07 | Test player — Reading | Student | — | 📝 | M3 |
-| 08 | Submit confirmation | Student | *modal inside 06* | 🎨 | M2 |
-| 09 | Result | Student | [`09 Result.dc.html`](Design%20files/Prioritizing%20project%20scope/09%20Result.dc.html) | 🎨 | M2 |
-| 10 | Review my mistakes | Student | [`10 Review My Mistakes.dc.html`](Design%20files/Prioritizing%20project%20scope/10%20Review%20My%20Mistakes.dc.html) | 🎨 | M4 |
-| 11 | My Progress | Student | [`11 My Progress.dc.html`](Design%20files/Prioritizing%20project%20scope/11%20My%20Progress.dc.html) | 🎨 | M4 |
-| 12 | Practice at home | Student | [`12 Practice at Home.dc.html`](Design%20files/Prioritizing%20project%20scope/12%20Practice%20at%20Home.dc.html) | 🎨 | M4 |
-| 13 | Profile | Student | [`13 Profile.dc.html`](Design%20files/Prioritizing%20project%20scope/13%20Profile.dc.html) | 🎨 | M4 |
-| 14 | Teacher dashboard | Teacher | — | 📝 | M6 |
-| 15 | Batch view | Teacher | — | 📝 | M6 |
-| 16 | Assign a test | Teacher | — | 📝 | M6 |
-| 17 | Live session monitor | Invigilator | — | 📝 | M7 |
-| 18 | Results & release | Teacher | — | 📝 | M6 |
-| 19 | Class analytics | Teacher | — | 📝 | M6 |
-| 20 | Admin overview | Admin | — | 📝 | M5 |
-| 21 | Students list | Admin | — | 📝 | M5 |
-| 22 | Invite / bulk invite | Admin | — | 📝 | M5 |
-| 23 | Student detail drawer | Admin | — | 📝 | M5 |
-| 24 | Plans & validity | Admin | — | 📝 | M5 |
-| 25 | Batches | Admin | — | 📝 | M5 |
-| 26 | Test library | Admin | — | 📝 | M5 |
-| 27 | Answer key editor | Admin | — | 📝 | M5 |
-| 28 | Users & roles | Admin | — | 📝 | M9 |
-| 29 | Audit log | Admin | — | 📝 | M9 |
-| 30 | Error / edge screens | Shared | — | 📝 | M9 |
+| 00 | Design system | — | [`00 Design System.dc.html`](Design%20files/Prioritizing%20project%20scope/00%20Design%20System.dc.html) | ✅ built | M0 |
+| — | **Accept invitation** *(new, D9)* | Student | — | ✅ built | M1 |
+| 01 | Login | Student | [`01 Login.dc.html`](Design%20files/Prioritizing%20project%20scope/01%20Login.dc.html) | ✅ built — design superseded (email+password, no PIN) | M1 |
+| ~~02~~ | ~~Set your PIN~~ | — | ~~`02 First Login PIN Change.dc.html`~~ | ❌ **dropped 2026-09-16** — no PIN (§9) | — |
+| 03 | Student Home | Student | [`03 Student Home.dc.html`](Design%20files/Prioritizing%20project%20scope/03%20Student%20Home.dc.html) | ✅ built | M2 |
+| 04 | My Tests | Student | [`04 My Tests.dc.html`](Design%20files/Prioritizing%20project%20scope/04%20My%20Tests.dc.html) | ✅ built | M2 |
+| 05 | Pre-test instructions | Student | [`05 Pre-test Instructions.dc.html`](Design%20files/Prioritizing%20project%20scope/05%20Pre-test%20Instructions.dc.html) | ✅ built | M2 |
+| 06 | Test player — Listening | Student | [`06 Test Player Listening.dc.html`](Design%20files/Prioritizing%20project%20scope/06%20Test%20Player%20Listening.dc.html) | ✅ built | M2 |
+| 07 | Test player — Reading | Student | — | ✅ built | M3 |
+| 08 | Submit confirmation | Student | *modal inside 06* | ✅ built | M2 |
+| 09 | Result | Student | [`09 Result.dc.html`](Design%20files/Prioritizing%20project%20scope/09%20Result.dc.html) | ✅ built | M2 |
+| 10 | Review my mistakes | Student | [`10 Review My Mistakes.dc.html`](Design%20files/Prioritizing%20project%20scope/10%20Review%20My%20Mistakes.dc.html) | ✅ built | M4 |
+| 11 | My Progress | Student | [`11 My Progress.dc.html`](Design%20files/Prioritizing%20project%20scope/11%20My%20Progress.dc.html) | ✅ built | M4 |
+| 12 | Practice at home | Student | [`12 Practice at Home.dc.html`](Design%20files/Prioritizing%20project%20scope/12%20Practice%20at%20Home.dc.html) | ✅ built | M4 |
+| 13 | Profile | Student | [`13 Profile.dc.html`](Design%20files/Prioritizing%20project%20scope/13%20Profile.dc.html) | ✅ built | M4 |
+| 14 | Teacher dashboard | Teacher | — | ✅ built | M6 |
+| 15 | Batch view | Teacher | — | ✅ built | M6 |
+| 16 | Assign a test | Teacher | — | ✅ built | M6 |
+| 17 | Live session monitor | Invigilator | — | ✅ built | M7 |
+| 18 | Results & release | Teacher | — | ✅ built | M6 |
+| 19 | Class analytics | Teacher | — | ✅ built | M6 |
+| 20 | Admin overview | Admin | — | ✅ built | M5 |
+| 21 | Students list | Admin | — | ✅ built | M5 |
+| 22 | Invite / bulk invite | Admin | — | ✅ built | M5 |
+| 23 | Student detail *(built as a page, not a drawer — §4)* | Admin | — | ✅ built | M5 |
+| 24 | Plans & validity | Admin | — | ✅ built | M5 |
+| 25 | Batches | Admin | — | ✅ built | M5 |
+| 26 | Test library | Admin | — | ✅ built | M5 |
+| 27 | Answer key editor | Admin | — | ✅ built | M5 |
+| 28 | Users & roles | Admin | — | ✅ built | M9 |
+| 29 | Audit log | Admin | — | ✅ built | M9 |
+| 30 | Error / edge screens | Shared | — | 🟡 partly — not-found and error done; connection-lost, test-not-available, session-expired, browser-unsupported still to do | M9 |
 
-**18 of 31 screens have no rendered design.** Build them from `DESIGN-PROMPT.md` Part C against the design system in [§15](#15-repo-structure-and-design-system). Do not invent new patterns.
+**All 30 screens are built** as of 2026-09-16 (screen 02 dropped with the PIN).
+They render from `lib/view-models/*` — one type per screen — satisfied by
+fixtures in `lib/mock/*` today and by real queries later. Swapping the source
+must not change a screen file; if it has to, the view-model was wrong.
+
+Still to come on these screens: the Server Actions behind them (autosave,
+submit, scoring, invite, extend, release, save-key), plus M2-14 `image_label`,
+M3-04…M3-11's remaining Reading question types, and the M3-11 passage
+highlight.
 
 ---
 
