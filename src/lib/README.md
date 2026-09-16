@@ -25,3 +25,21 @@ Presigning needs `CLOUDFLARE_ACCOUNT_ID`, `R2_ACCESS_KEY_ID` and
 `R2_SECRET_ACCESS_KEY`. Only the latter two are secrets. The API token should
 be scoped to object read access on the two project buckets. Never use the
 account-wide Wrangler OAuth token for application signing.
+
+## Scoring
+
+`scoring.ts` is `server-only` and accepts the private, runtime-validated
+`key.json` shape produced by the importer. It normalises Unicode/case/spacing,
+honours only explicitly authored variants, enforces word limits (hyphenated
+terms count as one), keeps plurals distinct, and emits one zero-or-one mark per
+numbered question. Multi-answer controls can earn partial credit but never a
+negative mark; invalid selection counts earn zero.
+
+`bandFor()` receives the selected `band_scale_rows` from the caller. No IELTS
+conversion chart lives in application code. A `NULL` band row becomes
+`belowBand`, derived from that scale's lowest numeric band.
+
+The scorer returns domain data only. M2-17 will persist its per-question marks,
+section totals and attempt total together with submission in one database RPC.
+Never import this module into a Client Component; `server-only` blocks it and
+the production bundle guard also searches for its exported function names.

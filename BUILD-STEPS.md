@@ -225,9 +225,11 @@ All keys server-generated. No user-controlled path component, ever.
 Plus `scripts/import-test.ts` as the CLI.
 **✅ Done when** importing a test produces a `content.json` containing zero answers — asserted by a test, not by eye.
 
-### 27. `lib/scoring.ts` + Vitest `(M0-18)`
+### 27. `lib/scoring.ts` + Node unit tests `(M0-18)`
 Server-only. The marking rules from [`MVP-1.md` §10](MVP-1.md#10-question-types-d12): case-insensitive · accepted variants · **word limits enforced, over = zero** · hyphenated words count as one · plural mismatch wrong · no negative marking · band from `band_scales`.
 **✅ Done when** tests cover all seven rules, including "twenty" vs "20" and "check-in" as one word.
+
+> ✅ **Implemented 2026-09-16 (OpenAI Codex):** `src/lib/scoring.ts` validates the private key at runtime, emits one mark per numbered question, supports partial credit without negative marks, and looks bands up only from caller-supplied database rows. The existing `npm run test:unit` Node suite covers all marking rules and fail-closed key/scale cases; no second unit-test framework was added.
 
 ### 28. Port the legacy Listening test `(M0-20)`
 Convert [`ielts-data.js`](Design%20files/Prioritizing%20project%20scope/ielts-data.js) into upload JSON, then import it.
