@@ -24,6 +24,7 @@ export function AudioPlayer({
 	elapsed,
 	duration,
 	volume,
+	surface = "light",
 	onPlay,
 	onPause,
 	onVolumeChange,
@@ -41,6 +42,18 @@ export function AudioPlayer({
 	duration: number;
 	/** 0–1 */
 	volume: number;
+	/**
+	 * Which surface it is drawn on.
+	 *
+	 * - `light` (default) — the vertical control stack: practice at home, and
+	 *   the `/dev/components` gallery.
+	 * - `night` — the compact band across the top of the mock player
+	 *   (`06 Test Player Listening.dc.html`): white play button, translucent
+	 *   track, no volume slider. In a lab the volume is on the machine, and an
+	 *   extra control on a screen a student sees once is a control they can get
+	 *   wrong under time pressure.
+	 */
+	surface?: "light" | "night";
 	onPlay: () => void;
 	onPause?: () => void;
 	onVolumeChange: (volume: number) => void;
@@ -54,6 +67,49 @@ export function AudioPlayer({
 	const pct = duration > 0 ? Math.min(100, (elapsed / duration) * 100) : 0;
 	const canPause = mode === "practice";
 	const buttonDisabled = playing && !canPause;
+
+	if (surface === "night") {
+		return (
+			<div className={cn("flex flex-wrap items-center gap-6", className)}>
+				<button
+					type="button"
+					onClick={playing ? onPause : onPlay}
+					disabled={buttonDisabled}
+					aria-label={playing ? (canPause ? "Pause the audio" : "The audio is playing") : "Play the audio"}
+					className="grid size-16 flex-none place-items-center rounded-full bg-white text-h1 text-night hover:bg-brand-soft disabled:cursor-default disabled:bg-white"
+				>
+					<span aria-hidden="true">{playing ? "❚❚" : "▶"}</span>
+				</button>
+
+				<div className="flex min-w-[220px] flex-1 flex-col gap-2">
+					<div className="flex items-baseline justify-between gap-4">
+						<span className="font-semibold text-white">{title ?? "Your test audio"}</span>
+						<span className="font-mono text-[#dce3f5]">
+							{formatClock(elapsed)} / {formatClock(duration)}
+						</span>
+					</div>
+					<div
+						className="h-2 overflow-hidden rounded-full bg-white/18"
+						role="progressbar"
+						aria-label="Audio progress"
+						aria-valuemin={0}
+						aria-valuemax={Math.round(duration)}
+						aria-valuenow={Math.round(elapsed)}
+						aria-valuetext={`${formatClock(elapsed)} of ${formatClock(duration)}`}
+					>
+						<div className="h-full bg-[#7fa0ff]" style={{ width: `${pct}%` }} />
+					</div>
+				</div>
+
+				{mode === "mock" && (
+					<div className="flex items-center gap-2.5 rounded-control bg-white/10 px-4 py-2.5">
+						<span aria-hidden="true">🔒</span>
+						<span className="text-[#dce3f5]">You can&apos;t rewind in a real test.</span>
+					</div>
+				)}
+			</div>
+		);
+	}
 
 	return (
 		<div className={cn("flex flex-col gap-6", className)}>

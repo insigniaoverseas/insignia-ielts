@@ -87,33 +87,33 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M2-01 Student app shell + nav | todo | | | Max 4 labelled tabs |
-| M2-02 Student Home (03) | todo | | | |
-| M2-03 My Tests (04) | todo | | | Locked items must say *why* |
+| M2-01 Student app shell + nav | done | Claude | 2026-09-16 | ✅ `src/app/(student)/layout.tsx` + `components/student/student-nav.tsx`. Top bar ≥768px, sticky bottom tab bar below; four labelled destinations, no hamburger. The player sits **outside** this layout on purpose. Verified in Chrome at 390 + 1280, no overflow at either. |
+| M2-02 Student Home (03) | done | Claude | 2026-09-16 | ✅ `/home` from `03 Student Home.dc.html`: one `NextUpCard` hero (night surface), three quick links, last-band line. Three states: startable · locked-with-reason · nothing-assigned (becomes "Practice at home"). Data via `getStudentHome()` — **fixtures, not queries** (see `lib/mock/README.md`). Verified in Chrome at 390 + 1280. |
+| M2-03 My Tests (04) | done | Claude | 2026-09-16 | ✅ `/tests` with To do / Practice / Done. Tabs are **links** (`?tab=`), not client state, so back works and a tab is linkable. Locked cards dim but stay readable and always print `locked.message`; a held result says the teacher will release it. Empty state per tab. Verified at 390 + 1280. |
 | M2-04 Assignment eligibility resolver | todo | | | Windows, attempts, plan validity, unlocks |
-| M2-05 Pre-test instructions (05) + headphone check | todo | | | Prevents most support calls |
+| M2-05 Pre-test instructions (05) + headphone check | done | Claude | 2026-09-16 | ✅ `/tests/[assignmentId]/start`: facts strip, 4–5 rules, `SoundCheck` for Listening. The check asks a question with a *wrong* answer and the wrong answer leads somewhere (3 ordered fixes, then "tell your teacher"); it never blocks Start, so a student whose lab machine has no sound can still begin if told to. Audio `play()` rejection and "I heard nothing" land on the same help. |
 | M2-06 Audio preload + owner-bound cache purge | todo | | | Highest-value lines in the caching layer |
 | M2-07 Attempt lifecycle server actions | todo | | | start, resume, autosave, submit, expire |
-| M2-08 Server-authoritative timer + countdown | todo | | | |
-| M2-09 Question navigator + flags | todo | | | |
-| M2-10 Widget `text_gap` + 7 containers | todo | | | |
-| M2-11 Widget `radio` | todo | | | |
-| M2-12 Widget `checkbox_n` | todo | | | |
-| M2-13 Widget `dropdown_bank` (Listening) | todo | | | |
+| M2-08 Server-authoritative timer + countdown | in_progress | Claude | 2026-09-16 | ✅ **UI half.** `secondsRemaining` comes from the server and the player ticks it down only to draw the clock; hitting 0 calls `onSubmit("time")` once. ⬜ **Server half** (M2-07): `expires_at`, the submit endpoint ruling on whether time was really up, and reconciliation after a slept tab. The player never decides the deadline. |
+| M2-09 Question navigator + flags | done | Claude | 2026-09-16 | ✅ Wired into the player: answered/flagged/current from live state, jump-to-question scrolls to a per-question anchor. **`PlayerQuestion.covers`** added — one "Choose TWO" control answers two numbered questions, so 40 questions are 38 controls; without it the navigator read 38/40. |
+| M2-10 Widget `text_gap` + 7 containers | done | Claude | 2026-09-16 | ✅ `QuestionGroupBlock` maps widget × container. The widget picks the *control*, the container the *furniture around it* — that split is how six widgets cover fourteen question types. All 7 containers styled. |
+| M2-11 Widget `radio` | done | Claude | 2026-09-16 | ✅ Wired into `QuestionGroupBlock`. |
+| M2-12 Widget `checkbox_n` | done | Claude | 2026-09-16 | ✅ Wired, with `choose` from the group and `covers` for its question numbers. |
+| M2-13 Widget `dropdown_bank` (Listening) | done | Claude | 2026-09-16 | ✅ Wired; the shared bank prints once above the rows that draw from it. |
 | M2-14 Widget `image_label` + asset signing | todo | | | No rendered design |
-| M2-15 Listening player shell (06) | todo | | | |
-| M2-16 Submit confirmation modal (08) | todo | | | |
+| M2-15 Listening player shell (06) | in_progress | Claude | 2026-09-16 | ✅ `/attempt/[attemptId]`, **outside** the `(student)` layout — during a test there is no navigation anywhere. One `<audio>` at the component root, above the section switch, so section changes can't seek or re-fetch it (D8). `AudioPlayer` gained `surface="night"` (§4) to match design 06. Audio-failure banner with a Try again. ⬜ Autosave + submit actions (M2-07); `PlayerShell` is handed no callbacks until then, deliberately. |
+| M2-16 Submit confirmation modal (08) | done | Claude | 2026-09-16 | ✅ Names the count, lists every unanswered number as a chip that jumps to the field, "Go back" primary and "Submit anyway" secondary. Verified over CDP: 8 unanswered listed correctly, chips match state. |
 | M2-17 Scoring on submit + band + section scores | todo | | | |
-| M2-18 Result screen (09) | todo | | | |
+| M2-18 Result screen (09) | done | Claude | 2026-09-16 | ✅ `/results/[attemptId]`: band hero, raw score / time / wrong count, per-section bars, two actions. Three states: released · **held** (a sentence, never an empty score card) · **below the scale** (`band` null → `belowBand` marker in its own card, because `BandScore` would have to invent a number). |
 | M2-19 Crash-recovery E2E | todo | | | V1 in MVP-1 §19 |
 
 ### M3 — Reading player
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M3-01 Reading player shell (07) | todo | | | No rendered design |
-| M3-02 Multi-passage sections + sanitisation | todo | | | GT s1 has 2–3 texts |
-| M3-03 Widget `segmented_3` | todo | | | T/F/NG and Y/N/NG |
+| M3-01 Reading player shell (07) | in_progress | Claude | 2026-09-16 | ✅ `ReadingSplit`: two independently scrolling panes with a draggable divider (keyboard-operable, clamped 25–75%). Below 1024px it collapses to a Passage/Questions toggle — a split view narrower than that gives two unreadable columns, and legibility is the product. ⬜ Same server half as M2-15. |
+| M3-02 Multi-passage sections + sanitisation | in_progress | Claude | 2026-09-16 | ✅ `AttemptSection.passages` is a **list**, so GT section 1's 2–3 texts render. Sanitising happens in `sanitizeAttemptSession` on the server (§4), not in the client player. ⬜ Highlight + note (M3-11). |
+| M3-03 Widget `segmented_3` | done | Claude | 2026-09-16 | ✅ Wired. The group's `bank` chooses the three words, so `identifying_information` gets True/False/Not Given and `identifying_views_claims` gets Yes/No/Not Given; omitted, it falls back to T/F/NG. ⚠️ The player stores the option **value verbatim** — those strings are a contract with `lib/scoring.ts`, not display text. |
 | M3-04 `matching_headings` | todo | | | |
 | M3-05 `matching_features` | todo | | | |
 | M3-06 `matching_information` | todo | | | |
@@ -127,12 +127,12 @@
 
 | Task | Status | Owner | Date | Note |
 |---|---|---|---|---|
-| M4-01 Review my mistakes (10) + release gating | todo | | | |
+| M4-01 Review my mistakes (10) + release gating | done | Claude | 2026-09-16 | ✅ `/review/[attemptId]`: summary strip, per-question cards, "Show why" expander with the explanation and the audio timestamp. Defaults to **mistakes only**. Teacher HTML goes through `sanitizePassageHtml` **again on render** (§8 rule 8) — the write-side pass can be bypassed by anything reaching the table another way. Release gating is server-side; a held or foreign attempt 404s. |
 | M4-02 Transcript + jump to timestamp | todo | | | Offsets into the one audio file |
-| M4-03 My Progress (11) | todo | | | Per-question-type accuracy |
-| M4-04 Practice at home (12) | todo | | | |
+| M4-03 My Progress (11) | done | Claude | 2026-09-16 | ✅ `/progress`: band-over-time line per skill, then "What to practise" worst-first, one sentence of advice, tests-taken + average. No filters, no date pickers. **`BandTrendChart` extended** (§4): `BandPoint.band` may be `null` so a skill not tested on a date breaks the line instead of inventing a score; end labels are laid out top-down with a collision nudge and a surface-coloured halo. Backward compatible — `/dev/components` unchanged. |
+| M4-04 Practice at home (12) | done | Claude | 2026-09-16 | ✅ `/practice`: rule stated once at the top, Listening/Reading filter as links (`?skill=`), each card says how many times it's been done. No "Not started" pill on practice — it can be taken any number of times, so the count *is* the status. |
 | M4-05 Practice instant feedback round-trip | todo | | | One verdict, never the key |
-| M4-06 Profile (13) + device management | todo | | | |
+| M4-06 Profile (13) + device management | done | Claude | 2026-09-16 | ✅ `/profile`: name, phone, batch, teacher, centre; access card with the end date and a bar of time **used** (a full bar reads as "act now"); logged-in devices; Change my PIN; Log out behind a `ConfirmDialog` naming what happens. Sign-out action lands with M1 — the dialog's `onConfirm` is a deliberate no-op until then. |
 
 ### M5 — Admin essentials
 
@@ -258,6 +258,54 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-09-16 — Attempt HTML is sanitised on the server, not in the player  (task: M2-15 / M3-02)
+
+`MVP-1.md` §8 rule 8 says sanitise on write *and* on render. Read literally
+that puts `sanitizePassageHtml` inside the player — which is a client
+component, so it would pull `unified` and three `rehype` packages into the
+browser bundle, on the one screen with a ~200 KB budget (§4).
+
+`lib/security/sanitize-attempt.ts` runs the same sanitiser once per request in
+the server component that loads the attempt, and hands the player HTML that is
+already clean. Same guarantee, no client cost. Everything downstream of that
+call may be trusted; **nothing downstream may import the sanitiser** — wanting
+to means the HTML took a path that skipped the call, and that is the bug.
+
+Verified: `grep -rl rehypeSanitize .next/static` is empty after a production
+build, and `npm run check:bundle` passes.
+
+### 2026-09-16 — `AudioPlayer` gained a `night` surface  (task: M2-15)
+
+The component was built on light tokens (`bg-bg`, `text-ink-2`) for the
+practice layout and the gallery. Design 06 puts the mock player's audio on the
+`--night` band, where those tokens render dark-on-dark — the Volume label was
+invisible and the lock note became a white box.
+
+`surface="night"` renders the compact band the design specifies: white play
+button, translucent track, elapsed/total in mono, lock chip in white/10, and
+**no volume slider**. In a lab the volume is on the machine, and an extra
+control on a screen a student sees once is one they can get wrong under time
+pressure. `surface="light"` is the default, so practice and `/dev/components`
+are unchanged.
+
+### 2026-09-16 — `BandTrendChart` takes gaps, and lays its end labels out  (task: M4-03)
+
+The chart was built against a series where every skill has a point on every
+date. Real students don't sit both skills on the same day, so one line was
+being drawn straight across months it had skipped, and the two direct end
+labels overlapped each other and the other line.
+
+`BandPoint.band` is now `number | null`. A null is a gap: the line breaks
+there, a lone point gets its own dot, and the x position still comes from the
+shared date index so the two skills stay comparable. End labels are collected,
+sorted by y and pushed apart to a minimum gap, then painted with a
+surface-coloured halo so one stays readable where it crosses the other line.
+
+Backward compatible — `number` is assignable to `number | null`, so
+`/dev/components` renders exactly as before. Alternative rejected: a legend.
+Direct labelling is a stated rule in `DESIGN-PROMPT.md` §A5.19, and a legend
+costs the reader a lookup on the screen most likely to be read in a hurry.
 
 ### 2026-09-16 — Staff plan notes are not the student's to read  (task: M0-07 fix / §7 Q12)
 **Chose (user, 2026-09-16):** the student sees every *fact* about their plan — name, start, expiry, quota, tests used, status — and none of the staff commentary. `student_plans.notes` is dropped; the note moves to `public.student_plan_notes` (`plan_id` PK, `body`, `updated_by`, timestamps) with the same RLS audience as `plan_history`: admins in the student's branch, and Owner. Migration `20260916125048_plan_notes.sql`.
