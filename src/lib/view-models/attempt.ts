@@ -1,5 +1,8 @@
 import type { Mode, TestSummary } from "./student";
 
+export type { ContainerKey, WidgetKey } from "../question-types";
+import type { ContainerKey, WidgetKey } from "../question-types";
+
 /**
  * The test player's view-model — everything a running attempt renders.
  *
@@ -13,25 +16,6 @@ import type { Mode, TestSummary } from "./student";
  * `secondsRemaining` with it; the browser counts down from that number purely
  * to draw a timer. It never decides that time is up — submit does, server-side.
  */
-
-/** The six widget keys from `MVP-1.md` §10. One per answer control. */
-export type WidgetKey =
-	| "text_gap"
-	| "radio"
-	| "checkbox_n"
-	| "segmented_3"
-	| "dropdown_bank"
-	| "image_label";
-
-/** How a group of questions is laid out around its inputs (`MVP-1.md` §10). */
-export type ContainerKey =
-	| "plain"
-	| "form"
-	| "note"
-	| "table"
-	| "flow_chart"
-	| "summary"
-	| "sentence";
 
 /** One question, as the player draws it. Answers in, never out. */
 export type PlayerQuestion = {
