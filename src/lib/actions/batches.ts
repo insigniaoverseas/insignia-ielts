@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createBatch, updateBatch } from "@/lib/batches";
+import { addStudentsToBatch, createBatch, removeStudentFromBatch, updateBatch } from "@/lib/batches";
 import { ForbiddenError, requirePermission } from "@/lib/rbac";
 import type { FormState } from "@/lib/actions/types";
 
@@ -75,6 +75,63 @@ export async function updateBatchAction(_previous: FormState, formData: FormData
 		revalidatePath("/admin/batches");
 		revalidatePath(`/admin/batches/${batchId}`);
 		return { ok: true, message: `${result.name} was saved.` };
+	} catch (error) {
+		if (error instanceof ForbiddenError) {
+			return { ok: false, message: "You don't have permission to change this batch." };
+		}
+		throw error;
+	}
+}
+
+/**
+ * Adds students to a batch. `mode` is the difference between a promotion and
+ * a second batch, and it is the admin's choice, not an inference.
+ */
+export async function addStudentsToBatchAction(_previous: FormState, formData: FormData): Promise<FormState> {
+	const batchId = String(formData.get("batchId") ?? "");
+	const mode = String(formData.get("mode") ?? "") === "promote" ? "promote" : "addon";
+	if (!batchId) return { ok: false, message: "That batch couldn't be found." };
+
+	try {
+		const { actor, scope } = await requirePermission("student:manage");
+		const result = await addStudentsToBatch(
+			actor,
+			scope,
+			batchId,
+			formData.getAll("students").map(String).filter(Boolean),
+			mode,
+		);
+
+		if (!result.ok) return { ok: false, message: result.message, field: result.field };
+
+		revalidatePath("/admin/batches");
+		revalidatePath(`/admin/batches/${batchId}`);
+		revalidatePath("/admin/students");
+		return { ok: true, message: result.message ?? "Saved." };
+	} catch (error) {
+		if (error instanceof ForbiddenError) {
+			return { ok: false, message: "You don't have permission to change this batch." };
+		}
+		throw error;
+	}
+}
+
+/** Takes one student out of a batch. Their history and results stay. */
+export async function removeStudentFromBatchAction(_previous: FormState, formData: FormData): Promise<FormState> {
+	const batchId = String(formData.get("batchId") ?? "");
+	const studentId = String(formData.get("studentId") ?? "");
+	if (!batchId || !studentId) return { ok: false, message: "That student couldn't be found." };
+
+	try {
+		const { actor, scope } = await requirePermission("student:manage");
+		const result = await removeStudentFromBatch(actor, scope, batchId, studentId);
+
+		if (!result.ok) return { ok: false, message: result.message, field: result.field };
+
+		revalidatePath("/admin/batches");
+		revalidatePath(`/admin/batches/${batchId}`);
+		revalidatePath("/admin/students");
+		return { ok: true, message: result.message ?? "Saved." };
 	} catch (error) {
 		if (error instanceof ForbiddenError) {
 			return { ok: false, message: "You don't have permission to change this batch." };

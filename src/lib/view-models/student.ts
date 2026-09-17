@@ -63,7 +63,9 @@ export type StudentIdentity = {
 	fullName: string;
 	/** Display form, e.g. "+91 98765 43210". Never raw digits. */
 	phone: string;
-	batchName: string | null;
+	/** Every batch they are currently in. A student can be promoted into one
+	 *  and added to another, so this is a list, not a name. */
+	batchNames: string[];
 	/** Who to ask when something is wrong — the answer to most support calls. */
 	teacherName: string | null;
 	branchName: string;

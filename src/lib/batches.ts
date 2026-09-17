@@ -2,6 +2,12 @@ import "server-only";
 
 import { recordAudit } from "@/lib/audit";
 import { validateBatch, validateBatchEdit, type BatchEdit, type BatchField, type BatchInput } from "@/lib/batch-input";
+import {
+	describeMembershipPlan,
+	planChangesSomething,
+	planMembershipAdd,
+	type JoinMode,
+} from "@/lib/batch-membership-plan";
 import type { Actor, Scope } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -19,9 +25,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export { validateBatch, validateBatchEdit } from "@/lib/batch-input";
 export type { BatchEdit, BatchField, BatchInput } from "@/lib/batch-input";
+export type { JoinMode } from "@/lib/batch-membership-plan";
 
 export type BatchOutcome =
-	| { ok: true; id: string; name: string }
+	/** `name` is the batch's name; `message` is set when the screen should say
+	 *  something more specific than "saved" — how many students moved, say. */
+	| { ok: true; id: string; name: string; message?: string }
 	| { ok: false; message: string; field?: BatchField };
 
 /**
@@ -260,4 +269,198 @@ async function syncBatchTeachers(
 	}
 
 	return true;
+}
+
+/**
+ * Adds students to a batch, either moving them or adding alongside.
+ *
+ * `promote` closes their other active memberships, so "which batch is Priya
+ * in?" has one answer again. `addon` leaves those alone, for the student who
+ * genuinely attends a weekend course as well as their weekday batch.
+ *
+ * Somebody who left this batch before is **reopened**, not re-inserted:
+ * `batch_students` is keyed on `(batch_id, student_id)` and a second row would
+ * fail on the primary key.
+ *
+ * @param actor The signed-in user, from `requirePermission("student:manage")`.
+ * @param scope That permission's scope. `branch` cannot reach another centre.
+ */
+export async function addStudentsToBatch(
+	actor: Actor,
+	scope: Scope,
+	batchId: string,
+	studentIds: string[],
+	mode: JoinMode,
+): Promise<BatchOutcome> {
+	const db = createAdminClient();
+
+	const { data: batch, error: batchError } = await db
+		.from("batches")
+		.select("id, name, branch_id")
+		.eq("id", batchId)
+		.maybeSingle();
+
+	if (batchError) {
+		console.error("batch read failed:", batchError.message);
+		return { ok: false, message: "Something went wrong. Try again." };
+	}
+	if (!batch) return { ok: false, message: "That batch no longer exists." };
+	if (scope !== "all" && batch.branch_id !== actor.branchId) {
+		return { ok: false, message: "You can only change batches at your own centre.", field: "branch" };
+	}
+
+	const wanted = [...new Set(studentIds.filter(Boolean))];
+	if (wanted.length === 0) return { ok: false, message: "Pick at least one student.", field: "students" };
+
+	// Only real, active students at this centre. Nothing else may be put in a
+	// batch — a teacher in a batch roster would quietly gain a student's RLS.
+	const { data: people, error: peopleError } = await db
+		.from("users")
+		.select("id, branch_id, status, roles ( key )")
+		.in("id", wanted);
+
+	if (peopleError) {
+		console.error("batch student lookup failed:", peopleError.message);
+		return { ok: false, message: "Something went wrong. Try again.", field: "students" };
+	}
+
+	const usable = (people ?? []).filter(
+		(person) => person.status === "active" && person.branch_id === batch.branch_id && person.roles?.key === "student",
+	);
+	if (usable.length !== wanted.length) {
+		return { ok: false, message: "Pick an active student at this centre.", field: "students" };
+	}
+
+	const { data: rows, error: rowsError } = await db
+		.from("batch_students")
+		.select("batch_id, student_id, left_at")
+		.in("student_id", wanted);
+
+	if (rowsError) {
+		console.error("membership read failed:", rowsError.message);
+		return { ok: false, message: "Something went wrong. Try again." };
+	}
+
+	const plan = planMembershipAdd(
+		batchId,
+		wanted,
+		(rows ?? []).map((row) => ({ batchId: row.batch_id, studentId: row.student_id, leftAt: row.left_at })),
+		mode,
+	);
+
+	if (!planChangesSomething(plan)) {
+		return { ok: false, message: describeMembershipPlan(plan, mode), field: "students" };
+	}
+
+	const now = new Date().toISOString();
+
+	// Close first. A crash between the two leaves the student in no batch,
+	// which an admin can see and fix; the other order hides them in two.
+	for (const { batchId: fromBatch, studentId } of plan.close) {
+		const { error } = await db
+			.from("batch_students")
+			.update({ left_at: now })
+			.eq("batch_id", fromBatch)
+			.eq("student_id", studentId)
+			.is("left_at", null);
+		if (error) {
+			console.error("membership close failed:", error.message);
+			return { ok: false, message: "Those students couldn't be moved. Try again." };
+		}
+	}
+
+	if (plan.reopen.length > 0) {
+		const { error } = await db
+			.from("batch_students")
+			.update({ left_at: null, joined_at: now })
+			.eq("batch_id", batchId)
+			.in("student_id", plan.reopen);
+		if (error) {
+			console.error("membership reopen failed:", error.message);
+			return { ok: false, message: "Those students couldn't be added. Try again." };
+		}
+	}
+
+	if (plan.insert.length > 0) {
+		const { error } = await db
+			.from("batch_students")
+			.insert(plan.insert.map((studentId) => ({ batch_id: batchId, student_id: studentId, joined_at: now })));
+		if (error) {
+			console.error("membership insert failed:", error.message);
+			return { ok: false, message: "Those students couldn't be added. Try again." };
+		}
+	}
+
+	await recordAudit({
+		actorId: actor.id,
+		branchId: batch.branch_id,
+		action: mode === "promote" ? "batch.promote" : "batch.join",
+		entity: "batch",
+		entityId: batchId,
+		meta: {
+			batch: batch.name,
+			added: plan.insert.length + plan.reopen.length,
+			moved_from: plan.close.length,
+			students: wanted,
+		},
+	});
+
+	return { ok: true, id: batchId, name: batch.name, message: describeMembershipPlan(plan, mode) };
+}
+
+/**
+ * Takes one student out of a batch.
+ *
+ * Sets `left_at` rather than deleting: the row is history, and a result earned
+ * in this batch should still be able to say so.
+ */
+export async function removeStudentFromBatch(
+	actor: Actor,
+	scope: Scope,
+	batchId: string,
+	studentId: string,
+): Promise<BatchOutcome> {
+	const db = createAdminClient();
+
+	const { data: batch, error: batchError } = await db
+		.from("batches")
+		.select("id, name, branch_id")
+		.eq("id", batchId)
+		.maybeSingle();
+
+	if (batchError) {
+		console.error("batch read failed:", batchError.message);
+		return { ok: false, message: "Something went wrong. Try again." };
+	}
+	if (!batch) return { ok: false, message: "That batch no longer exists." };
+	if (scope !== "all" && batch.branch_id !== actor.branchId) {
+		return { ok: false, message: "You can only change batches at your own centre.", field: "branch" };
+	}
+
+	const { data: removed, error } = await db
+		.from("batch_students")
+		.update({ left_at: new Date().toISOString() })
+		.eq("batch_id", batchId)
+		.eq("student_id", studentId)
+		.is("left_at", null)
+		.select("student_id");
+
+	if (error) {
+		console.error("membership remove failed:", error.message);
+		return { ok: false, message: "That student couldn't be removed. Try again." };
+	}
+	if (!removed || removed.length === 0) {
+		return { ok: false, message: "That student isn't in this batch." };
+	}
+
+	await recordAudit({
+		actorId: actor.id,
+		branchId: batch.branch_id,
+		action: "batch.leave",
+		entity: "batch",
+		entityId: batchId,
+		meta: { batch: batch.name, student: studentId },
+	});
+
+	return { ok: true, id: batchId, name: batch.name, message: "Student removed from this batch." };
 }

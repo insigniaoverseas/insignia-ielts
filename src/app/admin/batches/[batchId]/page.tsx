@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BatchRoster } from "@/components/admin/batch-roster";
 import { EditBatchForm } from "@/components/admin/edit-batch-form";
-import { TableCard, TableToolbar } from "@/components/ui/table";
 import { requirePermissionOrRedirect } from "@/lib/auth/guard";
 import { getBatchDetail } from "@/lib/queries/admin";
-import { listTeacherOptions } from "@/lib/queries/batches";
+import { listStudentOptions, listTeacherOptions } from "@/lib/queries/batches";
 
 export const metadata: Metadata = { title: "Batch" };
 
@@ -25,7 +25,11 @@ export default async function BatchPage({ params }: { params: Promise<{ batchId:
 	const { batchId } = await params;
 	await requirePermissionOrRedirect("student:manage", `/admin/batches/${batchId}`);
 
-	const [batch, teachers] = await Promise.all([getBatchDetail(batchId), listTeacherOptions()]);
+	const [batch, teachers, students] = await Promise.all([
+		getBatchDetail(batchId),
+		listTeacherOptions(),
+		listStudentOptions(),
+	]);
 	if (!batch) notFound();
 
 	return (
@@ -41,34 +45,8 @@ export default async function BatchPage({ params }: { params: Promise<{ batchId:
 
 			<EditBatchForm batch={batch} teachers={teachers} />
 
-			<TableCard>
-				<TableToolbar>
-					<div className="flex flex-col gap-1">
-						<h2 className="m-0 text-h3">
-							Students ({batch.students.length})
-						</h2>
-						{/* Honest about the boundary: this screen shows the roster but
-						    does not change it, and saying so beats a control that
-						    silently is not there. */}
-						<p className="m-0 text-small text-ink-2">
-							Students join a batch when they&rsquo;re invited. Moving them between batches isn&rsquo;t built yet.
-						</p>
-					</div>
-				</TableToolbar>
-				{batch.students.length === 0 ? (
-					<p className="m-0 px-6 py-5 text-ink-2">Nobody in this batch yet.</p>
-				) : (
-					<ul className="m-0 flex list-none flex-col gap-0 p-0">
-						{batch.students.map((student) => (
-							<li key={student.id} className="border-t border-line px-6 py-3">
-								<Link href={`/admin/students/${student.id}`} className="font-semibold">
-									{student.name}
-								</Link>
-							</li>
-						))}
-					</ul>
-				)}
-			</TableCard>
+			<BatchRoster batchId={batch.id} members={batch.students} candidates={students} />
+
 		</div>
 	);
 }
