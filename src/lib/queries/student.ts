@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
@@ -94,49 +95,56 @@ function planStatus(
 	};
 }
 
-async function loadStudentContext(supabase: Client, userId: string): Promise<StudentContext> {
-	const [profileResult, planResult, membershipResult] = await Promise.all([
-		supabase.from("users").select("id, name, phone, country_code, branch_id").eq("id", userId).maybeSingle(),
-		supabase
-			.from("student_plans")
-			.select("*")
-			.eq("student_id", userId)
-			.order("expires_on", { ascending: false })
-			.limit(1)
-			.maybeSingle(),
-		supabase.from("batch_students").select("batch_id").eq("student_id", userId).is("left_at", null),
-	]);
+/**
+ * The student's identity and plan — the header every student screen needs.
+ *
+ * **One round trip, and one per request.** Both properties are deliberate and
+ * both were costing real time:
+ *
+ * - It used to be two queries, the second waiting on `branch_id` and the batch
+ *   ids from the first. Supabase answers in ~235 ms regardless of how much a
+ *   query asks for, so a second *sequential* step costs a quarter-second while
+ *   a wider single query costs nothing. `branches`, `batch_students → batches`
+ *   and `student_plans` are now embedded.
+ * - It is wrapped in `cache()` because `getStudentHome` calls it *and* calls
+ *   `getMyTests`, which called it again — the same context fetched twice per
+ *   page load.
+ *
+ * Keyed on `userId` alone, so the Supabase client is created inside rather than
+ * passed in: a fresh client object as an argument would defeat the memoisation.
+ */
+const loadStudentContext = cache(async function loadStudentContext(userId: string): Promise<StudentContext> {
+	const supabase = await createClient();
 
-	if (profileResult.error || !profileResult.data) queryFailed("student profile", profileResult.error);
-	if (planResult.error) queryFailed("student plan", planResult.error);
-	if (membershipResult.error) queryFailed("student batch membership", membershipResult.error);
+	const { data, error } = await supabase
+		.from("users")
+		.select(
+			// `student_plans` reaches `users` twice (student_id and created_by),
+			// so the foreign key is named explicitly or PostgREST refuses.
+			"id, name, phone, country_code, branches ( name ), batch_students ( batches ( name ) ), student_plans!student_plans_student_id_fkey ( * )",
+		)
+		.eq("id", userId)
+		.is("batch_students.left_at", null)
+		.order("expires_on", { ascending: false, referencedTable: "student_plans" })
+		.limit(1, { referencedTable: "student_plans" })
+		.maybeSingle();
 
-	const profile = profileResult.data;
-	const batchIds = (membershipResult.data ?? []).map((row) => row.batch_id);
-	const [branchResult, batchResult] = await Promise.all([
-		supabase.from("branches").select("name").eq("id", profile.branch_id).maybeSingle(),
-		batchIds.length
-			? supabase.from("batches").select("name").in("id", batchIds).order("name")
-			: Promise.resolve({ data: [], error: null }),
-	]);
-
-	if (branchResult.error) queryFailed("student branch", branchResult.error);
-	if (batchResult.error) queryFailed("student batch", batchResult.error);
+	if (error || !data) queryFailed("student profile", error);
 
 	return {
 		student: {
-			id: profile.id,
-			firstName: profile.name.trim().split(/\s+/)[0] ?? profile.name,
-			fullName: profile.name,
-			phone: displayPhone(profile.country_code, profile.phone),
-			batchNames: (batchResult.data ?? []).map((batch) => batch.name),
+			id: data.id,
+			firstName: data.name.trim().split(/\s+/)[0] ?? data.name,
+			fullName: data.name,
+			phone: displayPhone(data.country_code, data.phone),
+			batchNames: data.batch_students.flatMap((row) => row.batches?.name ?? []),
 			// The student RLS policy intentionally hides staff assignments.
 			teacherName: null,
-			branchName: branchResult.data?.name ?? "Your centre",
+			branchName: data.branches?.name ?? "Your centre",
 		},
-		plan: planStatus(planResult.data),
+		plan: planStatus(data.student_plans[0] ?? null),
 	};
-}
+});
 
 function modeFor(kind: string): Mode {
 	return kind === "practice" || kind === "class" ? kind : "mock";
@@ -285,7 +293,7 @@ function completedAttempt(attempt: Attempt, test: TestRow, score: Score | null):
 export async function getMyTests(): Promise<MyTests> {
 	const supabase = await createClient();
 	const userId = await signedInUserId(supabase);
-	const context = await loadStudentContext(supabase, userId);
+	const context = await loadStudentContext(userId);
 	const [assignmentResult, testsResult, attemptsResult, unlocksResult] = await Promise.all([
 		supabase.from("assignments").select("*").order("available_from"),
 		supabase.from("tests").select(TEST_FIELDS).in("skill", ["listening", "reading"]).order("updated_at", { ascending: false }),
@@ -340,7 +348,7 @@ export async function getMyTests(): Promise<MyTests> {
 export async function getStudentHome(): Promise<StudentHome> {
 	const supabase = await createClient();
 	const userId = await signedInUserId(supabase);
-	const context = await loadStudentContext(supabase, userId);
+	const context = await loadStudentContext(userId);
 	const tests = await getMyTests();
 	const released = tests.done.filter((attempt) => attempt.result !== null);
 	const last = released[0] ?? null;
@@ -472,7 +480,7 @@ export async function getPracticeLibrary(): Promise<PracticeLibrary> {
 export async function getStudentProfile(): Promise<StudentProfile> {
 	const supabase = await createClient();
 	const userId = await signedInUserId(supabase);
-	const context = await loadStudentContext(supabase, userId);
+	const context = await loadStudentContext(userId);
 	const { data: sessions, error } = await supabase
 		.from("user_sessions")
 		.select("id, user_agent, last_seen_at, revoked_at")
