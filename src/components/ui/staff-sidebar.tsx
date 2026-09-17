@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import { LogOutButton } from "@/components/auth/log-out-button";
 import { cn } from "@/lib/utils";
 
 export type SidebarGroup = {
@@ -13,6 +15,10 @@ export type SidebarGroup = {
  *
  * Named `staff-sidebar` rather than `sidebar` so it can't collide with the
  * shadcn `sidebar` component (M0-03).
+ *
+ * Ends with Log out. Staff share the office machine the students book tests on,
+ * so leaving them no way to sign out is the same shared-device problem the
+ * student side already solved.
  */
 export function StaffSidebar({
 	groups,
@@ -62,6 +68,9 @@ export function StaffSidebar({
 					</ul>
 				</div>
 			))}
+			<div className="mt-2 border-t border-line pt-2">
+				<LogOutButton variant="ghost" size="admin" className="w-full justify-start px-3" />
+			</div>
 		</nav>
 	);
 }

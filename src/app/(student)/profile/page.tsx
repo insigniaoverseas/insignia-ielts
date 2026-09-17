@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StatusPill } from "@/components/ui/status-pill";
-import { LogOutButton } from "@/components/student/log-out-button";
+import { LogOutButton } from "@/components/auth/log-out-button";
 import { PlanBanner } from "@/components/student/plan-banner";
 import { getStudentProfile } from "@/lib/queries/student";
 
