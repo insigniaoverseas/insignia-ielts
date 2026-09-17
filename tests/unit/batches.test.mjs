@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-import { validateBatch } from "../../src/lib/batch-input.ts";
+import { BATCH_STATUSES, isBatchStatus, validateBatch, validateBatchEdit } from "../../src/lib/batch-input.ts";
 
 /** A batch that passes, so each test can change one thing about it. */
 const valid = {
@@ -68,5 +68,50 @@ describe("batch validation", () => {
     const result = validateBatch({ ...valid, name: "x".repeat(121) });
     assert.equal(result.ok, false);
     assert.equal(result.field, "name");
+  });
+});
+
+describe("batch edit validation", () => {
+  const edit = { ...valid, status: "active" };
+
+  test("accepts every status the database allows", () => {
+    for (const status of BATCH_STATUSES) {
+      const result = validateBatchEdit({ ...edit, status });
+      assert.equal(result.ok, true, status);
+      assert.equal(result.status, status);
+    }
+    assert.deepEqual([...BATCH_STATUSES], ["active", "completed", "archived"]);
+  });
+
+  test("refuses a status the constraint would reject", () => {
+    // Never falls back to "active": quietly reactivating an archived batch is
+    // worse than refusing a value the form should not have sent.
+    for (const status of ["", "ACTIVE", "finished", "deleted", "draft"]) {
+      const result = validateBatchEdit({ ...edit, status });
+      assert.equal(result.ok, false, status);
+      assert.equal(result.field, "status");
+    }
+  });
+
+  test("isBatchStatus is exact about what it accepts", () => {
+    assert.equal(isBatchStatus("completed"), true);
+    assert.equal(isBatchStatus("Completed"), false);
+    assert.equal(isBatchStatus("toString"), false);
+  });
+
+  test("still applies every create rule", () => {
+    const badDates = validateBatchEdit({ ...edit, startsOn: "2026-04-05", endsOn: "2026-01-05" });
+    assert.equal(badDates.ok, false);
+    assert.equal(badDates.field, "endsOn");
+
+    const noName = validateBatchEdit({ ...edit, name: "  " });
+    assert.equal(noName.ok, false);
+    assert.equal(noName.field, "name");
+  });
+
+  test("checks the status before the rest, so a stale dropdown is named first", () => {
+    const result = validateBatchEdit({ ...edit, status: "deleted", name: "" });
+    assert.equal(result.ok, false);
+    assert.equal(result.field, "status");
   });
 });

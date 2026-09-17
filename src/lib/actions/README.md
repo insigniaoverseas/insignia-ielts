@@ -19,7 +19,7 @@ only export async functions.
 | File | Endpoints |
 |---|---|
 | `auth.ts` | `signInAction`, `signOutAction`, `acceptInvitationAction`, `completeFirstRunSetupAction` |
-| `batches.ts` | `createBatchAction` |
+| `batches.ts` | `createBatchAction`, `updateBatchAction` |
 | `invitations.ts` | `inviteAction`, `bulkInviteAction`, `revokeInvitationAction`, `resendInvitationAction` |
 | `types.ts` | `FormState`, `LoginFormState`, `AcceptFormState` — no runtime exports. |
 

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createBatch } from "@/lib/batches";
+import { createBatch, updateBatch } from "@/lib/batches";
 import { ForbiddenError, requirePermission } from "@/lib/rbac";
 import type { FormState } from "@/lib/actions/types";
 
@@ -43,4 +43,42 @@ export async function createBatchAction(_previous: FormState, formData: FormData
 	revalidatePath("/admin/batches");
 	// `redirect` throws to unwind — it must sit outside the try/catch above.
 	redirect(`/admin/batches?created=${encodeURIComponent(created)}`);
+}
+
+/**
+ * Saves an edit to one batch.
+ *
+ * Stays on the screen and reports success there, unlike creating: an admin who
+ * has just corrected a date is usually looking at the thing they corrected, and
+ * throwing them back to the list would hide whether it took.
+ */
+export async function updateBatchAction(_previous: FormState, formData: FormData): Promise<FormState> {
+	const batchId = String(formData.get("batchId") ?? "");
+	if (!batchId) return { ok: false, message: "That batch couldn't be found." };
+
+	try {
+		const { actor, scope } = await requirePermission("student:manage");
+
+		const result = await updateBatch(actor, scope, batchId, {
+			name: String(formData.get("name") ?? ""),
+			startsOn: String(formData.get("startsOn") ?? ""),
+			endsOn: formData.get("endsOn") ? String(formData.get("endsOn")) : null,
+			status: String(formData.get("status") ?? ""),
+			// Not editable here: moving a batch between centres would strand its
+			// students' RLS visibility. `updateBatch` reads the current branch.
+			branchId: null,
+			teacherIds: formData.getAll("teachers").map(String).filter(Boolean),
+		});
+
+		if (!result.ok) return { ok: false, message: result.message, field: result.field };
+
+		revalidatePath("/admin/batches");
+		revalidatePath(`/admin/batches/${batchId}`);
+		return { ok: true, message: `${result.name} was saved.` };
+	} catch (error) {
+		if (error instanceof ForbiddenError) {
+			return { ok: false, message: "You don't have permission to change this batch." };
+		}
+		throw error;
+	}
 }

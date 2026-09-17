@@ -94,6 +94,20 @@ export type BatchRow = {
 	status: "active" | "completed" | "archived";
 };
 
+/** Screen 25b — one batch, as its edit screen needs it. */
+export type BatchDetail = {
+	id: string;
+	name: string;
+	branchName: string;
+	/** ISO `date`, for the form's date inputs — not a display label. */
+	startsOn: string;
+	endsOn: string | null;
+	status: "active" | "completed" | "archived";
+	teacherIds: string[];
+	/** The roster, which this screen shows but does not yet edit. */
+	students: { id: string; name: string }[];
+};
+
 /** Screen 26 — Test library. */
 export type TestLibraryRow = {
 	id: string;

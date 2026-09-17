@@ -8,6 +8,7 @@ import type {
 	AdminOverview,
 	AuditEntry,
 	AuditLog,
+	BatchDetail,
 	BatchRow,
 	PlanState,
 	PlansWorkqueue,
@@ -428,4 +429,41 @@ export async function getAuditLog(query?: { action?: string }): Promise<AuditLog
 		.sort()
 		.map((action) => ({ value: action, label: ACTION_LABEL[action] ?? action.replaceAll(".", " ") }));
 	return { entries, total: entries.length, actions };
+}
+
+/** Screen 25b — one batch, with the fields its edit form posts back. */
+export async function getBatchDetail(batchId: string): Promise<BatchDetail | null> {
+	const supabase = await createClient();
+
+	// RLS decides visibility: an admin sees their own centre's batches, the
+	// Owner sees every one. A batch outside that returns no row, which the page
+	// turns into a 404 rather than "forbidden" — the two are indistinguishable
+	// to someone guessing IDs, and that is the point.
+	const { data: batch, error } = await supabase.from("batches").select("*").eq("id", batchId).maybeSingle();
+	if (error) queryFailed("batch", error);
+	if (!batch) return null;
+
+	const [branchResult, teachersResult, membershipsResult] = await Promise.all([
+		supabase.from("branches").select("name").eq("id", batch.branch_id).maybeSingle(),
+		supabase.from("batch_teachers").select("teacher_id").eq("batch_id", batchId),
+		supabase.from("batch_students").select("student_id, left_at").eq("batch_id", batchId).is("left_at", null),
+	]);
+	if (teachersResult.error) queryFailed("batch teachers", teachersResult.error);
+	if (membershipsResult.error) queryFailed("batch students", membershipsResult.error);
+
+	const studentIds = (membershipsResult.data ?? []).map((row) => row.student_id);
+	const { data: students } = studentIds.length
+		? await supabase.from("users").select("id, name").in("id", studentIds).order("name")
+		: { data: [] };
+
+	return {
+		id: batch.id,
+		name: batch.name,
+		branchName: branchResult.data?.name ?? "Unknown centre",
+		startsOn: batch.starts_on,
+		endsOn: batch.ends_on,
+		status: batch.status === "completed" || batch.status === "archived" ? batch.status : "active",
+		teacherIds: (teachersResult.data ?? []).map((row) => row.teacher_id),
+		students: students ?? [],
+	};
 }
