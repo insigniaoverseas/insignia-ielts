@@ -25,6 +25,15 @@ const PERMISSION_FOR_ROLE: Record<string, Permission> = {
 	admin: "admin:manage",
 };
 
+/**
+ * The list an invitation of this role appears on, so the right one is
+ * revalidated. A colleague invited from screen 28 who then does not show up on
+ * screen 28 reads as a failure, and gets invited again.
+ */
+function listPathFor(roleKey: string): string {
+	return roleKey === "student" ? "/admin/students" : "/admin/users";
+}
+
 /** Reads the plan fields the invite form collects into `invitations.plan_template`. */
 function planTemplateFrom(formData: FormData): { [key: string]: Json | undefined } | null {
 	const months = Number(formData.get("planMonths") ?? 0);
@@ -64,7 +73,7 @@ export async function inviteAction(_previous: FormState, formData: FormData): Pr
 			return { ok: false, message: result.message, field };
 		}
 
-		revalidatePath("/admin/students");
+		revalidatePath(listPathFor(roleKey));
 
 		// An invitation that was created but not delivered is a success with a
 		// caveat, not a failure — the row is valid and Resend can be retried.
@@ -129,7 +138,7 @@ export async function bulkInviteAction(_previous: FormState, formData: FormData)
 			else failures.push(`${result.email || row} — ${result.message}`);
 		}
 
-		revalidatePath("/admin/students");
+		revalidatePath(listPathFor(roleKey));
 
 		if (failures.length === 0) {
 			return { ok: true, message: `${sent} invitation${sent === 1 ? "" : "s"} sent.` };
