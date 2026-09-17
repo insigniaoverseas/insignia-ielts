@@ -51,7 +51,10 @@ export default async function ProfilePage() {
 				</div>
 
 				<div className="flex flex-col">
-					<Row label="Batch" value={student.batchName ?? "Not in a batch yet"} />
+					<Row
+						label={student.batchNames.length > 1 ? "Batches" : "Batch"}
+						value={student.batchNames.length > 0 ? student.batchNames.join(", ") : "Not in a batch yet"}
+					/>
 					<Row label="Your teacher" value={student.teacherName ?? "Ask at the front desk"} />
 					<Row label="Centre" value={student.branchName} />
 				</div>

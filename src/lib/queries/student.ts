@@ -104,13 +104,7 @@ async function loadStudentContext(supabase: Client, userId: string): Promise<Stu
 			.order("expires_on", { ascending: false })
 			.limit(1)
 			.maybeSingle(),
-		supabase
-			.from("batch_students")
-			.select("batch_id")
-			.eq("student_id", userId)
-			.is("left_at", null)
-			.limit(1)
-			.maybeSingle(),
+		supabase.from("batch_students").select("batch_id").eq("student_id", userId).is("left_at", null),
 	]);
 
 	if (profileResult.error || !profileResult.data) queryFailed("student profile", profileResult.error);
@@ -118,10 +112,12 @@ async function loadStudentContext(supabase: Client, userId: string): Promise<Stu
 	if (membershipResult.error) queryFailed("student batch membership", membershipResult.error);
 
 	const profile = profileResult.data;
-	const batchId = membershipResult.data?.batch_id ?? null;
+	const batchIds = (membershipResult.data ?? []).map((row) => row.batch_id);
 	const [branchResult, batchResult] = await Promise.all([
 		supabase.from("branches").select("name").eq("id", profile.branch_id).maybeSingle(),
-		batchId ? supabase.from("batches").select("name").eq("id", batchId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+		batchIds.length
+			? supabase.from("batches").select("name").in("id", batchIds).order("name")
+			: Promise.resolve({ data: [], error: null }),
 	]);
 
 	if (branchResult.error) queryFailed("student branch", branchResult.error);
@@ -133,7 +129,7 @@ async function loadStudentContext(supabase: Client, userId: string): Promise<Stu
 			firstName: profile.name.trim().split(/\s+/)[0] ?? profile.name,
 			fullName: profile.name,
 			phone: displayPhone(profile.country_code, profile.phone),
-			batchName: batchResult.data?.name ?? null,
+			batchNames: (batchResult.data ?? []).map((batch) => batch.name),
 			// The student RLS policy intentionally hides staff assignments.
 			teacherName: null,
 			branchName: branchResult.data?.name ?? "Your centre",

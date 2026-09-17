@@ -17,7 +17,7 @@ export type BatchInput = {
 };
 
 /** A field the admin has to fix, named so the form can point at it. */
-export type BatchField = "name" | "startsOn" | "endsOn" | "branch" | "teachers" | "status";
+export type BatchField = "name" | "startsOn" | "endsOn" | "branch" | "teachers" | "status" | "students";
 
 /** The longest batch name the screens can show without truncating. */
 const NAME_LIMIT = 120;

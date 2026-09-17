@@ -91,3 +91,45 @@ export async function listTeacherOptions(): Promise<TeacherOption[]> {
 		.filter((person) => person.roles?.key === "teacher" || person.roles?.key === "invigilator")
 		.map((person) => ({ id: person.id, name: person.name }));
 }
+
+/** One student who can be put into a batch, with where they already are. */
+export type StudentOption = {
+	id: string;
+	name: string;
+	/** Batches they are currently in — so the picker can say "already in X". */
+	batchNames: string[];
+};
+
+/**
+ * Active students at the signed-in user's centre, for the batch roster picker.
+ *
+ * Scoped by RLS like the other option lists. Includes students who are already
+ * in a batch: putting them in another is the whole point of `promote` and
+ * `addon`, so hiding them would hide the feature.
+ */
+export async function listStudentOptions(): Promise<StudentOption[]> {
+	const supabase = await createClient();
+
+	const [peopleResult, membershipResult, batchResult] = await Promise.all([
+		supabase.from("users").select("id, name, status, roles ( key )").eq("status", "active").order("name"),
+		supabase.from("batch_students").select("batch_id, student_id").is("left_at", null),
+		supabase.from("batches").select("id, name"),
+	]);
+
+	if (peopleResult.error) {
+		console.error("student list failed:", peopleResult.error.message);
+		return [];
+	}
+
+	const batchNames = new Map((batchResult.data ?? []).map((batch) => [batch.id, batch.name]));
+
+	return (peopleResult.data ?? [])
+		.filter((person) => person.roles?.key === "student")
+		.map((person) => ({
+			id: person.id,
+			name: person.name,
+			batchNames: (membershipResult.data ?? [])
+				.filter((row) => row.student_id === person.id)
+				.flatMap((row) => batchNames.get(row.batch_id) ?? []),
+		}));
+}
