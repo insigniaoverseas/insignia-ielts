@@ -52,16 +52,28 @@ export async function proxy(request: NextRequest) {
 		let session: SessionStanding = "unverified";
 
 		if (userId) {
-			// User-scoped on purpose: Proxy is an early gate, while layouts and
-			// actions independently enforce authorization with `lib/rbac.ts`.
-			const { data: profile } = await supabase
-				.from("users")
-				.select("status, roles ( key )")
-				.eq("id", userId)
-				.maybeSingle();
-			role = profile?.status === "active" ? profile.roles?.key ?? null : null;
+			const sessionId = request.cookies.get(SESSION_COOKIE)?.value;
 
-			session = await sessionStanding(supabase, userId, request.cookies.get(SESSION_COOKIE)?.value);
+			// One round trip for both facts. Every one of these costs ~230 ms to
+			// ap-south-1 and sits in front of the first byte, so the role lookup
+			// and the session check are a single query with `user_sessions`
+			// embedded and filtered to the cookie's row.
+			//
+			// User-scoped on purpose: Proxy is an early gate, while layouts and
+			// actions independently enforce authorization with `lib/rbac.ts`. RLS
+			// ("Users read their own sessions") also means a cookie naming
+			// somebody else's session simply comes back empty.
+			const { data: profile, error } = await supabase
+				.from("users")
+				.select("status, roles ( key ), user_sessions ( id, revoked_at )")
+				.eq("id", userId)
+				// A placeholder when there is no cookie keeps one typed query; the
+				// standing below treats a missing cookie as ended regardless.
+				.eq("user_sessions.id", sessionId ?? NO_SESSION)
+				.maybeSingle();
+
+			role = profile?.status === "active" ? profile.roles?.key ?? null : null;
+			session = sessionStandingOf(sessionId, profile?.user_sessions ?? [], error);
 		}
 
 		const decision = routeDecision({ pathname, userId, role, session });
@@ -80,28 +92,25 @@ export async function proxy(request: NextRequest) {
 	return response;
 }
 
+/** A UUID that can never be a session id, for the no-cookie case. */
+const NO_SESSION = "00000000-0000-0000-0000-000000000000";
+
 /**
  * Standing of the application session named by the cookie.
  *
  * A read error returns `unverified` so a database blip cannot sign everyone
  * out; a confirmed missing or revoked row returns `ended`.
  */
-async function sessionStanding(
-	supabase: ReturnType<typeof createServerClient<Database>>,
-	userId: string,
+function sessionStandingOf(
 	sessionId: string | undefined,
-): Promise<SessionStanding> {
+	rows: { id: string; revoked_at: string | null }[],
+	error: { message: string } | null,
+): SessionStanding {
 	if (!sessionId) return "ended";
-
-	const { data, error } = await supabase
-		.from("user_sessions")
-		.select("id, revoked_at")
-		.eq("id", sessionId)
-		.eq("user_id", userId)
-		.maybeSingle();
-
 	if (error) return "unverified";
-	return !data || data.revoked_at !== null ? "ended" : "live";
+
+	const row = rows.find((candidate) => candidate.id === sessionId);
+	return !row || row.revoked_at !== null ? "ended" : "live";
 }
 
 /** Carries refreshed Supabase cookies onto a redirect response. */

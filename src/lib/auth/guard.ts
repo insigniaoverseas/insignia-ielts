@@ -32,7 +32,17 @@ import { homeForRole, signInPath } from "@/lib/auth/access";
  *   instead of on a generic home screen.
  */
 export async function requireUser(currentPath?: string): Promise<Actor> {
-	const actor = await getActor();
+	// The subject comes from the JWT, which this project signs with ES256 — so
+	// verifying it is local work, not a round trip. Having it up front lets the
+	// profile read and the session check run at the same time instead of one
+	// after the other; each is ~230 ms to ap-south-1, in front of the first byte.
+	const { data: claims } = await (await createClient()).auth.getClaims();
+	const userId = claims?.claims?.sub;
+
+	const [actor, state] = await Promise.all([
+		getActor(),
+		userId ? sessionState(userId) : Promise.resolve("missing" as const),
+	]);
 
 	if (!actor) {
 		// A signed-in visitor with no profile row is the bootstrap Owner before
@@ -42,12 +52,14 @@ export async function requireUser(currentPath?: string): Promise<Actor> {
 		redirect(signInPath(currentPath));
 	}
 
-	const state = await sessionState(actor.id);
 	if (state !== "live") {
 		// Proxy clears both cookies on the redirected request. Server Components
 		// cannot mutate cookies themselves.
 		redirect("/login?ended=1");
 	}
+
+	// Both of these are memoised for the request, so a layout and the page it
+	// wraps calling `requireUser` costs one set of queries, not two.
 	await touchSession();
 
 	return actor;

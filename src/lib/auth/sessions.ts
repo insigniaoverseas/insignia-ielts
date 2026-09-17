@@ -1,6 +1,9 @@
 import "server-only";
 
 import { cookies, headers } from "next/headers";
+import { cache } from "react";
+
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { recordAudit } from "@/lib/audit";
 import { SESSION_COOKIE, secureSessionCookie } from "@/lib/auth/session-cookie";
@@ -108,7 +111,9 @@ export async function startSession(userId: string, roleKey: string, origin: Sess
  * not a valid signed-in state: otherwise deleting this cookie would bypass
  * device revocation and the student's single-session rule.
  */
-export async function sessionState(userId: string): Promise<"live" | "revoked" | "missing"> {
+export const sessionState = cache(async function sessionState(
+	userId: string,
+): Promise<"live" | "revoked" | "missing"> {
 	const sessionId = (await cookies()).get(SESSION_COOKIE)?.value;
 	if (!sessionId) return "missing";
 
@@ -122,20 +127,39 @@ export async function sessionState(userId: string): Promise<"live" | "revoked" |
 	// A cookie naming a session that is not this user's is treated as revoked.
 	if (!data || data.revoked_at !== null) return "revoked";
 	return "live";
-}
+});
 
 /** Notes that the session was used, for "last seen" in the device list. */
-export async function touchSession(): Promise<void> {
+export const touchSession = cache(async function touchSession(): Promise<void> {
 	const sessionId = (await cookies()).get(SESSION_COOKIE)?.value;
 	if (!sessionId) return;
 	const staleBefore = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-	await createAdminClient()
+	const write = createAdminClient()
 		.from("user_sessions")
 		.update({ last_seen_at: new Date().toISOString() })
 		.eq("id", sessionId)
 		.is("revoked_at", null)
 		.lt("last_seen_at", staleBefore);
+
+	// Off the critical path. "Last seen" feeds the device list, and nothing on
+	// the page being rendered depends on it — awaiting a ~230 ms round trip
+	// before the first byte, on every navigation, is a poor trade for that.
+	// `waitUntil` keeps the Worker alive until it lands; where there is none
+	// (a plain `next dev`), fall back to awaiting.
+	const waitUntil = cloudflareWaitUntil();
+	if (waitUntil) waitUntil(Promise.resolve(write));
+	else await write;
+});
+
+/** The Worker's `waitUntil`, or `null` outside a Cloudflare request. */
+function cloudflareWaitUntil(): ((promise: Promise<unknown>) => void) | null {
+	try {
+		const ctx = getCloudflareContext().ctx;
+		return typeof ctx?.waitUntil === "function" ? ctx.waitUntil.bind(ctx) : null;
+	} catch {
+		return null;
+	}
 }
 
 /** Closes the browser's own session and clears the cookie. */

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { type Actor, type Permission, type Scope, parsePermissions, scopeOf } from "@/lib/permissions";
@@ -32,7 +34,7 @@ export class ForbiddenError extends Error {
  * Identity comes from `getClaims()` (the verified JWT), never from anything the
  * browser sent. Permissions come from `roles.permissions`.
  */
-export async function getActor(): Promise<Actor | null> {
+export const getActor = cache(async function getActor(): Promise<Actor | null> {
 	const supabase = await createClient();
 	const { data: auth } = await supabase.auth.getClaims();
 	const userId = auth?.claims?.sub;
@@ -52,7 +54,7 @@ export async function getActor(): Promise<Actor | null> {
 		branchId: row.branch_id,
 		permissions: parsePermissions(row.roles.permissions),
 	};
-}
+});
 
 /**
  * Resolves the signed-in actor and the scope in which they hold `permission`,
