@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Banner } from "@/components/ui/banner";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import {
@@ -24,9 +25,9 @@ export const metadata: Metadata = { title: "Batches" };
  * both are easy to create by accident, so the table calls them out in words
  * rather than leaving an empty cell to be noticed.
  */
-export default async function BatchesPage() {
+export default async function BatchesPage({ searchParams }: { searchParams: Promise<{ created?: string }> }) {
 	await requirePermissionOrRedirect("student:manage", "/admin/batches");
-	const batches = await getBatches();
+	const [batches, { created }] = await Promise.all([getBatches(), searchParams]);
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -36,6 +37,10 @@ export default async function BatchesPage() {
 					<Link href="/admin/batches/new">Create batch</Link>
 				</Button>
 			</div>
+
+			{/* Confirmation lands on the list, where the new row is visible, rather
+			    than on the form the admin has just left. */}
+			{created && <Banner tone="success">{created} was created.</Banner>}
 
 			<TableCard>
 				<TableToolbar>

@@ -3,7 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Batch lookups for the screens that need to offer a choice of batch.
+ * Batch and branch lookups for the screens that offer a choice of either.
  *
  * Read through the **user-scoped** client, not the admin one: these are
  * ordinary reads, so RLS should be the thing that decides what comes back. The
@@ -34,4 +34,60 @@ export async function listBatchOptions(): Promise<BatchOption[]> {
 		return [];
 	}
 	return data ?? [];
+}
+
+/** One branch, as a form option. */
+export type BranchOption = {
+	id: string;
+	name: string;
+};
+
+/**
+ * The branches the signed-in user may place someone into.
+ *
+ * Scope comes from RLS exactly as it does for batches: the identity migration
+ * gives an admin their own branch and the Owner every branch, so a second
+ * hand-written filter here could only disagree with the policy.
+ */
+export async function listBranchOptions(): Promise<BranchOption[]> {
+	const supabase = await createClient();
+	const { data, error } = await supabase.from("branches").select("id, name").order("name");
+
+	if (error) {
+		console.error("branch list failed:", error.message);
+		return [];
+	}
+	return data ?? [];
+}
+
+/** One member of staff who can be put in front of a batch. */
+export type TeacherOption = {
+	id: string;
+	name: string;
+};
+
+/**
+ * Staff who can teach, for the batch form's teacher picker.
+ *
+ * Invigilators are included: they are the ones who sit with a live test, and
+ * screen 25 counts a batch with nobody attached as broken. `createBatch`
+ * re-checks the role and centre server-side — this list shapes the screen, it
+ * does not guard the write.
+ */
+export async function listTeacherOptions(): Promise<TeacherOption[]> {
+	const supabase = await createClient();
+	const { data, error } = await supabase
+		.from("users")
+		.select("id, name, status, roles ( key )")
+		.eq("status", "active")
+		.order("name");
+
+	if (error) {
+		console.error("teacher list failed:", error.message);
+		return [];
+	}
+
+	return (data ?? [])
+		.filter((person) => person.roles?.key === "teacher" || person.roles?.key === "invigilator")
+		.map((person) => ({ id: person.id, name: person.name }));
 }
