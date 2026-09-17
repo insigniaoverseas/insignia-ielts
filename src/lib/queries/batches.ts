@@ -59,3 +59,35 @@ export async function listBranchOptions(): Promise<BranchOption[]> {
 	}
 	return data ?? [];
 }
+
+/** One member of staff who can be put in front of a batch. */
+export type TeacherOption = {
+	id: string;
+	name: string;
+};
+
+/**
+ * Staff who can teach, for the batch form's teacher picker.
+ *
+ * Invigilators are included: they are the ones who sit with a live test, and
+ * screen 25 counts a batch with nobody attached as broken. `createBatch`
+ * re-checks the role and centre server-side — this list shapes the screen, it
+ * does not guard the write.
+ */
+export async function listTeacherOptions(): Promise<TeacherOption[]> {
+	const supabase = await createClient();
+	const { data, error } = await supabase
+		.from("users")
+		.select("id, name, status, roles ( key )")
+		.eq("status", "active")
+		.order("name");
+
+	if (error) {
+		console.error("teacher list failed:", error.message);
+		return [];
+	}
+
+	return (data ?? [])
+		.filter((person) => person.roles?.key === "teacher" || person.roles?.key === "invigilator")
+		.map((person) => ({ id: person.id, name: person.name }));
+}
