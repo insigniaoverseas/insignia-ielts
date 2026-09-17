@@ -24,7 +24,8 @@
 | **Last completed** | **Session routing, 2026-09-17 (OpenAI Codex, Claude).** The bare URL and `/login` now route by who you are; a Supabase JWT with no `insignia_session` cookie is signed *out*, closing a revocation bypass; a failed `startSession` refuses the login instead of leaving half of one; the cookie's `Secure` flag follows the request's real protocol, so local HTTP development keeps it. The routing rule is one pure, unit-tested `routeDecision`. Earlier: **Supabase data + route RBAC, 2026-09-17 (OpenAI Codex).** Removed `lib/mock/*` and all production fixture imports; added student, teacher, admin and attempt query modules; implemented assignment eligibility from windows, plan state, attempt limits and unlocks; added role-aware proxy redirects plus layout guards and route-policy tests. R2-dependent player/review/key screens now show explicit unavailable states instead of fabricated content. Earlier: **M1 auth flow, 2026-09-17 (Claude).** Invitations end to end: mint → email → accept → account → sign in → session → guard, plus lockout. |
 | **Next task — back end** | ✅ `/setup` run, scoped R2 token added, Worker name confirmed (2026-09-17). **`public.tests` is empty** — the converted paper in the gitignored `Sample test/` has never been imported to production, so there is no content for any player to load. That is now the first step. Then **JWT expiry 3600 → 7200 s** in the Supabase dashboard (still unverified from here; a 60-minute Reading test outlasts the default). ✅ JWT expiry set to 7200 s and ✅ M1-04 mail authentication verified in DNS (both 2026-09-17). Also open: **M0-21** docs/ADRs. |
 | **Next task — front end** | **Assignment management is the open half of the user's 2026-09-17 request**: `assignment_targets` (batch XOR student) has no writer at all, `/teacher/assign` is an unwired shell, and admins hold `assignment:manage` branch-wide but `roleCanAccess` blocks them from `/teacher/*` — so an `/admin/assignments` screen is needed, sharing one component with the teacher one. Agreed unassign rule: **removing a target removes the test outright, including from a student mid-attempt; results and stats survive.** Then: **two dead internal links remain**, from a sweep of all 31 against the route manifest (2026-09-17): `/admin/library/new` (screen 26's "Add test") and `/profile/password`. Batch membership is unbuilt — the roster on screen 25b is read-only. Staff invitations are sendable but not manageable: screen 28 needs a pending-invitations list, and revoke/resend need to stop being student-only. Then **M2-07 attempt lifecycle**, then connect private R2 content/audio (M2-06/M2-14/M2-15), scoring on submit (M2-17) and the review payload (M4-01/M4-02). Also wire the remaining admin/teacher mutations and Profile device controls; their read models are now Supabase-backed. |
-| **Open PRs** | None recorded. **#18 Supabase RBAC data**, **#17 login bootstrap fix**, **#16 password reset** and **#15 M1 auth flow** are merged; #10–#14 are also merged. `fix/session-routing` is committed locally and **not yet pushed**. |
+| **Open PRs** | None. **#19, #20, #21** (all from `fix/session-routing`) merged 2026-09-17; #10–#18 merged earlier. One commit, `feat(admin): move students between batches`, is local and awaiting the user's final push from that branch. |
+| **⚠️ `fix/session-routing` carried five unrelated tasks** | The branch name describes only its first commit. What actually merged through it, in order: **M1-12** session routing + the missing-session-cookie revocation bypass (`1f7b273`); **M1-12** log out wired up, plus a log-out control for staff, who had none (`3e2fc9a`); **M5-04** the "Invite a colleague" screen, which was a 404 (`fd857d5`); **M5-07** create a batch — no screen, action or write existed (`d9b9539`); **M5-07** edit a batch + the `[batchId]` screen every batch name linked to (`4277ab3`); **M1-04** mail authentication verified in DNS and the first live run recorded (`d5502e6`, `da7f832`); **M5-07** batch membership, promote/add-on/remove (`755dde9`). If you are reading the history and wondering why batch CRUD is on a session-routing branch: that is why. |
 | ~~**Next task**~~ | ~~**M0-13 sanitiser PR**~~ — superseded 2026-09-16: merged (`fb2040f`), M0-13 closed. Old text: (`feat/sanitize-passages`) — once merged, M0-13 is complete. Then Phase 3: M0-15 `lib/question-types.ts` (step 23), M0-16 upload schema, M0-18 `lib/scoring.ts` + unit tests, M0-17 importer (which calls `sanitizePassageHtml` on write). Also open: M0-21 docs/ADRs. Then the rest of the unfinished Phase 0–1 steps: 3 (R2 buckets), 9 (CSP + sanitize), 11 (docs/ADRs), 12 (CI running `test:db`, `test:db:sweep`, `test:unit`) — then Phase 3 (question types, upload schema, importer, scoring) (Supabase clients `server/client/admin.ts`, M0-05) and step 22 (`lib/rbac.ts`). No-DB tasks still open: M0-12 (R2), M0-13 (CSP), M0-14 (secrets), M0-15, M0-18, M0-21, M0-22. No-DB tasks that can run alongside: M0-12 part 1 (R2 buckets), M0-13 (CSP), M0-15 (`question-types.ts`), M0-18 (`scoring.ts`), M0-21 (docs). |
 | ~~**Next task**~~ | ~~M0-06 — waiting on the user's `db push`~~ — superseded 2026-09-15: pushed and verified. |
 | ~~**Next task**~~ | ~~M0-06 — resolve where RLS helpers live first~~ — superseded 2026-09-15: `private` schema, approved by the user. |
@@ -852,6 +853,26 @@ Non-secret settings, in `wrangler.jsonc` `vars` and `.dev.vars.example`:
 | Q13 | Provide the real MP3 and exact section-end timestamps for the legacy Listening test; identify or create an active user with `test:author`. | M0-20 cannot create an honest, audited Listening draft without its recording/timings and attributed author. | **Yes — M0-20 live import** |
 
 ---
+
+## 7b. Working agreement — branches
+
+**One branch per task, from 2026-09-17.** Agreed with the user after
+`fix/session-routing` accumulated five unrelated tasks across three PRs. A
+branch is named for the task it carries and nothing else.
+
+**Each branch gets its own `git worktree`**, not a `switch` in the primary
+working directory. Several agent sessions share that directory — a Codex
+session was live in it while this was being written — and branching in place
+means two sessions editing the same files.
+
+```
+git worktree add ../insignia-<task> -b <type>/<task> main
+```
+
+**Expect `PROJECT-MEMORY.md` conflicts** if two task branches are open at once.
+The rule that this file is updated in the same commit as the work makes that
+unavoidable; it is the cost of the file being trustworthy. Keep branches short
+and land them rather than running several in parallel.
 
 ## 8. Session handoff notes
 
