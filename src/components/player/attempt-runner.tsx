@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PlayerShell } from "@/components/player/player-shell";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { AnswerValue } from "@/components/player/question-group";
 import { heartbeatAction, saveAnswerAction, submitAttemptAction } from "@/lib/actions/attempts";
 import type { SaveAnswerInput } from "@/lib/actions/types";
@@ -50,6 +52,7 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 	const [status, setStatus] = useState<SaveStatus>("saved");
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [clock, setClock] = useState<{ seconds: number; stamp: number }>();
+	const [leaving, setLeaving] = useState(false);
 	const correct = useCallback((seconds: number) => setClock({ seconds, stamp: Date.now() }), []);
 	const router = useRouter();
 	/** The latest `send`, for retry timers set before it was recreated. */
@@ -235,6 +238,18 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 		await finish();
 	}, [check, finish, send]);
 
+	// Back button: the clock doesn't stop, so leaving is never an accident. One
+	// extra history entry means Back lands here first and asks.
+	useEffect(() => {
+		window.history.pushState({ testGuard: true }, "");
+		function onBack() {
+			window.history.pushState({ testGuard: true }, "");
+			setLeaving(true);
+		}
+		window.addEventListener("popstate", onBack);
+		return () => window.removeEventListener("popstate", onBack);
+	}, []);
+
 	// Leaving with unsaved typing: ask the browser to warn.
 	useEffect(() => {
 		function beforeUnload(event: BeforeUnloadEvent) {
@@ -265,6 +280,25 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 				status={statusLabel}
 				clock={clock}
 			/>
+			<Dialog open={leaving} onOpenChange={setLeaving}>
+				<DialogContent showCloseButton={false}>
+					<DialogHeader>
+						<DialogTitle>Leave the test?</DialogTitle>
+						<DialogDescription>
+							Your time keeps running while you&rsquo;re away. Your answers are saved, and you can carry on from My
+							Tests.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button size="modal" onClick={() => setLeaving(false)}>
+							Stay in the test
+						</Button>
+						<Button size="modal" variant="secondary" onClick={() => router.push("/tests")}>
+							Leave anyway
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</>
 	);
 }

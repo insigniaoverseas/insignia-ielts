@@ -144,3 +144,29 @@ export async function loadAttemptSession(
 	};
 	return { session: sanitizeAttemptSession(session), revisions: state.revisions };
 }
+
+/** A test the student started and hasn't finished, for the "still running" banner. */
+export type OpenAttempt = { id: string; title: string; skill: string; kind: string; secondsLeft: number };
+
+/**
+ * The student's in-progress attempts that still have time on the server
+ * clock, soonest deadline first. Read through their own RLS client.
+ */
+export async function getOpenAttempts(studentId: string): Promise<OpenAttempt[]> {
+	const supabase = await createClient();
+	const { data, error } = await supabase
+		.from("attempts")
+		.select("id, kind, expires_at, tests(title, skill)")
+		.eq("student_id", studentId)
+		.eq("status", "in_progress")
+		.gt("expires_at", new Date().toISOString())
+		.order("expires_at");
+	if (error) queryFailed("open attempts", error);
+	return (data ?? []).map((row) => ({
+		id: row.id,
+		title: row.tests?.title ?? "Your test",
+		skill: row.tests?.skill ?? "",
+		kind: row.kind,
+		secondsLeft: secondsLeft(row),
+	}));
+}

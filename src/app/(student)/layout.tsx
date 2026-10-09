@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { RunningTestBanner } from "@/components/student/running-test-banner";
 import { StudentBottomNav, StudentTopNav } from "@/components/student/student-nav";
+import { getOpenAttempts } from "@/lib/attempts/load";
 import { requireRole } from "@/lib/auth/guard";
 
 /**
@@ -13,7 +15,8 @@ import { requireRole } from "@/lib/auth/guard";
  * during a test there is no navigation to anywhere, only the test.
  */
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
-	await requireRole(["student"]);
+	const actor = await requireRole(["student"]);
+	const openAttempts = await getOpenAttempts(actor.id);
 	return (
 		<div className="flex min-h-screen flex-col bg-bg">
 			<header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-6 border-b border-line bg-surface px-4 md:min-h-[72px] md:px-8">
@@ -30,6 +33,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
 			</header>
 
 			<main className="mx-auto w-full max-w-[1120px] flex-1 px-4 pt-6 pb-8 md:px-8 md:pt-12 md:pb-16">
+				<RunningTestBanner attempts={openAttempts} />
 				{children}
 			</main>
 
