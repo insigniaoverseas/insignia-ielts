@@ -107,7 +107,7 @@
 | M2-14 Widget `image_label` + asset signing | in_progress | Claude | 2026-10-09 | ✅ Player renders `image_label`: the picture once per group, then a dropdown per question (letter/label bank) or a text box (no bank). ✅ Images reach the **staff preview** through an access-checked same-origin stream from R2. ⬜ Student attempts still need signed asset URLs, which need an attempt row (M2-07). |
 | M2-15 Listening player shell (06) | in_progress | Claude, OpenAI Codex | 2026-09-17 | `/attempt/[attemptId]` remains outside the student layout. It now verifies an owned/visible Supabase attempt or published practice test, but does not fabricate questions or audio: the real player waits on private R2 content plus M2-07 lifecycle actions. |
 | M2-16 Submit confirmation modal (08) | done | Claude | 2026-09-16 | ✅ Names the count, lists every unanswered number as a chip that jumps to the field, "Go back" primary and "Submit anyway" secondary. Verified over CDP: 8 unanswered listed correctly, chips match state. |
-| M2-17 Scoring on submit + band + section scores | todo | | | |
+| M2-17 Scoring on submit + band + section scores | in_progress | Claude | 2026-10-09 | ✅ `lib/attempts/mark.ts` `ensureMarked`: `key.json` via binding + stored answers → `markAttempt` (split out of `scoreAttempt`, behaviour unchanged) → band from the assignment's chart or the skill/variant default → `answer_marks` then `attempt_scores` (the done marker). Runs in `finishAttempt` for submit and expiry; idempotent; a failure is logged and the result page retries. ✅ Charts are out of 40: other paper sizes are read scaled to 40 (`lib/attempts/band.ts`, tested). ⬜ End-to-end run against a real student account. |
 | M2-18 Result screen (09) | done | Claude | 2026-09-16 | ✅ `/results/[attemptId]`: band hero, raw score / time / wrong count, per-section bars, two actions. Three states: released · **held** (a sentence, never an empty score card) · **below the scale** (`band` null → `belowBand` marker in its own card, because `BandScore` would have to invent a number). |
 | M2-19 Crash-recovery E2E | todo | | | V1 in MVP-1 §19 |
 
@@ -288,6 +288,12 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-10-09 — Band charts are read out of 40, whatever the paper's size  (task: M2-17)
+
+**Chose:** look the band up at the raw score scaled to 40 and rounded (`bandLookupScore`): 41/41 → 40 → 9.0, 39/41 → 38. A 40-question paper is unchanged. The stored `raw_score` is the real one.
+**Because:** every seeded chart covers 0–40, and Easy Test 1 Listening has 41 questions; `bandFor` throws when no row covers the score, so 41/41 would have failed marking outright.
+**Rejected:** a chart per paper size (no source for one), clamping 41 to 40 (40/41 and 41/41 would both be 9.0 but 39/41 would read as 39).
 
 ### 2026-10-09 — Reading is side by side from tablet up; the navigator is a bottom bar  (task: M3-01 / M2-15)
 
