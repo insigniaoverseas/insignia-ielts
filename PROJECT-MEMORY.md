@@ -843,7 +843,7 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 | `SUPABASE_PUBLISHABLE_KEY` | server — RLS-scoped client (`server.ts`) | ✅ 2026-09-15 |
 | `SUPABASE_SECRET_KEY` | **server only**, `admin.ts`, behind `lib/rbac.ts` — bypasses RLS | ✅ 2026-09-15 |
 | `R2_ACCESS_KEY_ID` | **server only**, `lib/r2.ts` — scoped object-read token id | ⬜ provision in M0-14 |
-| `R2_SECRET_ACCESS_KEY` | **server only**, `lib/r2.ts` — scoped object-read token secret | ⬜ provision in M0-14 |
+| `R2_SECRET_ACCESS_KEY` | **server only**, `lib/r2.ts` — scoped object-read token secret | ⬜ provision in M0-14 ⚠️ **Must be the SHA-256 (64 hex) of the R2 API token's value, not the token itself** — the token (53 chars, `_` and non-hex) gives `SignatureDoesNotMatch` (found 2026-10-09; local `.dev.vars` fixed, original token kept as a comment). The Worker secret could not be updated: `wrangler secret put` refuses while a branch preview is the latest version, and `versions secret put` would build from that branch code. Set it right after the next `main` deploy, or in the dashboard. |
 | ~~`SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`~~ | superseded 2026-09-15 by the publishable/secret key names above — Supabase's current key model; IP forwarding for Auth rate limits (§4) requires a secret key | — |
 | `RESEND_API_KEY` | invite email (`lib/mail/mailer.ts`) — **required in production**; unset in dev prints the link to the console | ⬜ awaiting the user |
 | `TURNSTILE_SECRET_KEY` | login + accept-invite (M1-11) | ⬜ awaiting the user |
