@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DifficultyBadge } from "@/components/ui/difficulty-badge";
 import { SoundCheck } from "@/components/student/sound-check";
+import { StartTestForm } from "@/components/student/start-test-form";
 import { MODE_EXPLAINED, SKILL_LABEL } from "@/components/student/labels";
 import { getPreTestBriefing } from "@/lib/queries/student";
 
@@ -84,13 +85,7 @@ export default async function PreTestPage({
 			{soundCheckUrl && <SoundCheck src={soundCheckUrl} />}
 
 			<div className="flex flex-col gap-3">
-				<Link
-					href={`/attempt/${assignment.assignmentId}`}
-					className="flex h-primary items-center justify-center gap-2.5 rounded-control bg-brand text-h3 font-semibold text-white no-underline hover:bg-brand-hover hover:no-underline"
-				>
-					I&rsquo;m ready — Start
-					<span aria-hidden="true">→</span>
-				</Link>
+				<StartTestForm refId={assignment.assignmentId} resume={assignment.resumeAttemptId !== null} />
 				<Link
 					href="/home"
 					className="flex min-h-touch items-center justify-center font-semibold text-ink-2 no-underline hover:text-ink hover:no-underline"

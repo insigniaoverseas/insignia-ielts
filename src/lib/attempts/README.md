@@ -5,6 +5,7 @@
 | File | What it does |
 |---|---|
 | `answers.ts` | Pure. The one mapping between the player's values and `public.answers` rows (one row per numbered question), in all three directions: autosave, resume, and the scorer's input. |
+| `finish.ts` | `server-only`. Closes an attempt as `submitted` or `expired` (secret-key client, after the caller proved ownership); a second close is a no-op. |
 | `load.ts` | `server-only`. Reads the student's own attempt through their RLS client, its pinned `content.json` from R2, their saved answers, and signs five-minute audio/image URLs scoped to the attempt. |
 
 Rules this folder keeps (`CLAUDE.md`, `MVP-1.md` §7):

@@ -32,11 +32,17 @@ import type { AttemptSession } from "@/lib/view-models/attempt";
 export function PlayerShell({
 	session,
 	onSave,
+	onFlag,
 	onSubmit,
+	status,
 }: {
 	session: AttemptSession;
 	/** Autosave. Fired per change, debounced by the caller. */
 	onSave?: (questionId: string, value: AnswerValue) => void;
+	/** A question was marked or unmarked to come back to. */
+	onFlag?: (questionNumber: number, flagged: boolean) => void;
+	/** A short live line for the header — "Saved", "Saving…", "Offline". */
+	status?: React.ReactNode;
 	/** Hand over to the submit Server Action. */
 	onSubmit?: (reason: "student" | "time") => void;
 }) {
@@ -116,12 +122,14 @@ export function PlayerShell({
 	}
 
 	function toggleFlag(n: number) {
+		const nowFlagged = !flagged.has(n);
 		setFlagged((prev) => {
 			const next = new Set(prev);
-			if (next.has(n)) next.delete(n);
-			else next.add(n);
+			if (nowFlagged) next.add(n);
+			else next.delete(n);
 			return next;
 		});
+		onFlag?.(n, nowFlagged);
 	}
 
 	/** The first question of the section on screen — what the flag button acts on. */
@@ -179,8 +187,11 @@ export function PlayerShell({
 			<header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-4 border-b border-line bg-surface px-4 py-3 shadow-soft md:px-8">
 				<span className="text-h3">{session.test.title}</span>
 				<Countdown seconds={seconds} />
-				<span className="font-semibold text-ink-2">
-					{section.label} of {session.sections.length}
+				<span className="flex items-center gap-4 font-semibold text-ink-2">
+					{status}
+					<span>
+						{section.label} of {session.sections.length}
+					</span>
 				</span>
 			</header>
 
