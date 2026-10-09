@@ -9,6 +9,7 @@ subdirectory README.
 |---|---|
 | `r2-keys.ts` | Pure server-generated key builders, strict key parser and attempt-scoped download policy. No credentials or runtime access. |
 | `r2.ts` | `server-only` Cloudflare binding reads and five-minute S3-compatible presigned GET URLs via `aws4fetch`. |
+| `test-content.ts` | Pure, strict parser for a test's private `content.json` and its mapping to the player's `AttemptSection[]`. Refuses a content file carrying an answer. Used by the staff preview; the student player will use it once M2-07 creates attempts. |
 
 Rules from `MVP-1.md` §14 are code, not caller convention:
 

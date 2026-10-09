@@ -101,3 +101,87 @@ export function QuestionNavigator({
 		</div>
 	);
 }
+
+/** One section's questions, for {@link QuestionBar}. */
+export type NavSection = { label: string; questions: NavQuestion[] };
+
+/**
+ * The bottom question bar — the player's navigator laid out in one row, the
+ * way the computer-delivered IELTS does it.
+ *
+ * The section on screen shows every number; the others collapse to one button
+ * ("Passage 2 · 3 of 14") so forty 48px targets never need a second row or a
+ * sideways scroll on a laptop. Same four states as the grid: answered is
+ * filled, not answered is outlined, a dot means marked, a ring means here.
+ */
+export function QuestionBar({
+	sections,
+	currentSection,
+	current,
+	onSelect,
+}: {
+	sections: NavSection[];
+	/** Index into `sections` of the one on screen. */
+	currentSection: number;
+	current?: number;
+	onSelect: (n: number) => void;
+}) {
+	const all = sections.flatMap((s) => s.questions);
+	const answered = all.filter((q) => q.answered).length;
+	return (
+		<nav aria-label="All questions" className="flex w-full min-w-0 items-center gap-4">
+			<div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto py-1">
+				{sections.map((section, index) => {
+					const done = section.questions.filter((q) => q.answered).length;
+					if (index !== currentSection) {
+						const first = section.questions[0]?.n;
+						return (
+							<button
+								key={section.label}
+								type="button"
+								onClick={() => first !== undefined && onSelect(first)}
+								className="min-h-touch flex-none cursor-pointer rounded-control border border-line bg-surface px-4 font-semibold whitespace-nowrap text-ink-2 hover:border-brand hover:text-brand"
+							>
+								{section.label} · {done} of {section.questions.length}
+							</button>
+						);
+					}
+					return (
+						<div key={section.label} className="flex flex-none items-center gap-2">
+							<span className="pr-1 font-semibold whitespace-nowrap text-brand">{section.label}</span>
+							{section.questions.map((q) => {
+								const isCurrent = q.n === current;
+								return (
+									<button
+										key={q.n}
+										type="button"
+										onClick={() => onSelect(q.n)}
+										aria-label={describe(q, isCurrent)}
+										aria-current={isCurrent ? "step" : undefined}
+										className={cn(
+											"relative grid min-h-touch min-w-touch flex-none cursor-pointer place-items-center rounded-control font-semibold",
+											q.answered ? "bg-brand-soft text-brand" : "border border-line bg-surface text-ink-2",
+											isCurrent && "border-2 border-brand font-bold text-brand",
+											"hover:border-brand",
+										)}
+									>
+										{q.n}
+										{q.flagged && (
+											<span
+												aria-hidden="true"
+												className="absolute top-1 right-1 size-2 rounded-full bg-warning"
+											/>
+										)}
+									</button>
+								);
+							})}
+						</div>
+					);
+				})}
+			</div>
+			<span className="flex-none font-mono whitespace-nowrap text-ink-2">
+				{answered}/{all.length} answered
+			</span>
+		</nav>
+	);
+}

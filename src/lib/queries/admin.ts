@@ -35,6 +35,7 @@ const ACTION_LABEL: Record<string, string> = {
 	"results.release": "Results released",
 	"mark.override": "Mark changed",
 	"test.publish": "Test published",
+	"test.unpublish": "Test moved back to draft",
 	"role.change": "Role changed",
 	"session.revoke": "Session revoked",
 };
@@ -363,15 +364,6 @@ export async function getTestLibrary(): Promise<TestLibraryRow[]> {
 			updatedLabel: formatShortDate(test.updated_at),
 		}];
 	});
-}
-
-/** One test's safe metadata for the deferred R2 answer-key screen. */
-export async function getAnswerKeyMetadata(testId: string): Promise<{ id: string; title: string; skill: "listening" | "reading" } | null> {
-	const supabase = await createClient();
-	const { data, error } = await supabase.from("tests").select("id, title, skill").eq("id", testId).maybeSingle();
-	if (error) queryFailed("answer-key test", error);
-	if (!data || (data.skill !== "listening" && data.skill !== "reading")) return null;
-	return { id: data.id, title: data.title, skill: data.skill };
 }
 
 /** Screen 28 — staff and the permission matrix stored in `roles.permissions`. */

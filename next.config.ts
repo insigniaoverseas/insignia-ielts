@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 
 const nextConfig: NextConfig = {
 	experimental: {
@@ -19,9 +20,19 @@ const nextConfig: NextConfig = {
 	},
 };
 
-export default nextConfig;
-
-// Enable calling `getCloudflareContext()` in `next dev`.
-// See https://opennext.js.org/cloudflare/bindings#local-access-to-bindings.
-import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
-initOpenNextCloudflareForDev();
+/**
+ * `getCloudflareContext()` needs a local platform proxy under `next dev`
+ * (https://opennext.js.org/cloudflare/bindings#local-access-to-bindings).
+ *
+ * Only there. The R2 bindings are `remote: true` so local runs read the real
+ * buckets, and a remote proxy has to log in to Cloudflare — which `next build`
+ * in CI cannot, and does not need: every page is dynamic, so nothing reads a
+ * binding at build time.
+ */
+export default async function config(phase: string): Promise<NextConfig> {
+	if (phase === PHASE_DEVELOPMENT_SERVER) {
+		const { initOpenNextCloudflareForDev } = await import("@opennextjs/cloudflare");
+		initOpenNextCloudflareForDev();
+	}
+	return nextConfig;
+}
