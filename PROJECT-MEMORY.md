@@ -289,6 +289,15 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
 
+### 2026-10-09 — `braces` removed from the tree by overriding the Next ESLint plugin's glob  (task: M0-01 / CI)
+
+**Problem:** CI's `npm audit --audit-level=high` failed on GHSA-vfj7-8cjw-p6xm. Every `braces` release is affected and none is fixed; it arrives only via `eslint-config-next` → `@next/eslint-plugin-next` (pins `fast-glob@3.3.1`, still in 16.5 canary) → `micromatch` → `braces`.
+**User's rule:** fix the cause; do not weaken CI (no allow-list, no `--omit=dev`).
+**Chose:** `overrides` → `@next/eslint-plugin-next` gets `fast-glob` as `npm:tinyglobby` (already in the tree via the TS resolver). The plugin's only call is `globSync(pattern, { onlyDirectories })`, and only when `settings.next.rootDir` is set; tinyglobby's results differ slightly there (trailing slash; plain folder expands). `tests/unit/eslint-glob-override.test.mjs` fails if `rootDir` is ever set.
+**Rejected:** a local shim package via `file:` — npm records nested `file:` overrides as `invalid` and installs nothing, which breaks ESLint at load.
+**Also:** Next.js 16.3.4 → 16.3.8 for critical advisories (incl. RCE in `next/og`), and the build no longer starts the Cloudflare platform proxy outside `next dev` (it needed a login CI doesn't have once R2 bindings became remote).
+**Remove** the override and the test once the plugin drops fast-glob or braces ships a fix.
+
 ### 2026-10-09 — Reading is side by side from tablet up; the navigator is a bottom bar  (task: M3-01 / M2-15)
 
 The user found flipping between passage and questions too slow. Now: Reading takes exactly one screen (`h-dvh`), passage left and questions right from **768px** (was 1024px), each pane scrolling on its own. The 260px right-rail navigator is gone; `QuestionBar` sits in the footer for both skills — the current section shows every number as a 48px button, other sections collapse to one "Passage 2 · 3 of 14" button, like computer-delivered IELTS. Phones keep the Passage/Questions toggle. Also: passage paragraph letters (`data-label`) now print in the margin and `h4`/`h5` are styled; a dropdown can no longer widen its pane (`max-w-full`, and both panes are `flex-col` at md — the questions pane was a flex *row* there, which is what let a long option push it off-screen); a picture group whose labels are sentences prints the full label list. Verified with headless-Chrome screenshots at 1440 / 820 / 500px (headless Chrome will not go below 500px wide). `QuestionNavigator` (the grid) is kept for the design-system page.
