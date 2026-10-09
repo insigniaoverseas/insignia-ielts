@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { testContentSchema, toAttemptSections } from "@/lib/test-content";
 import type { AttemptSession } from "@/lib/view-models/attempt";
 import { playerStateFromRows } from "./answers";
+import { secondsLeft } from "./clock";
 
 /** The attempt columns the lifecycle needs. */
 export type OwnedAttempt = {
@@ -47,11 +48,6 @@ export async function getOwnedAttempt(attemptId: string, studentId: string): Pro
 		.maybeSingle();
 	if (error) queryFailed("owned attempt", error);
 	return (data as OwnedAttempt | null) ?? null;
-}
-
-/** Seconds left on the server clock. Never negative. */
-export function secondsLeft(attempt: Pick<OwnedAttempt, "expires_at">, now = Date.now()): number {
-	return Math.max(0, Math.floor((new Date(attempt.expires_at).getTime() - now) / 1000));
 }
 
 /** Why an attempt cannot be shown, in words the page uses. */

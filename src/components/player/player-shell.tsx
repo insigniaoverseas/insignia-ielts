@@ -35,6 +35,7 @@ export function PlayerShell({
 	onFlag,
 	onSubmit,
 	status,
+	clock,
 }: {
 	session: AttemptSession;
 	/** Autosave. Fired per change, debounced by the caller. */
@@ -43,6 +44,12 @@ export function PlayerShell({
 	onFlag?: (questionNumber: number, flagged: boolean) => void;
 	/** A short live line for the header — "Saved", "Saving…", "Offline". */
 	status?: React.ReactNode;
+	/**
+	 * A correction from the server clock. Each new `stamp` replaces the drawn
+	 * countdown with `seconds`; a correction above zero also re-arms time-up,
+	 * for when a fast browser clock reached zero before the server did.
+	 */
+	clock?: { seconds: number; stamp: number };
 	/** Hand over to the submit Server Action. */
 	onSubmit?: (reason: "student" | "time") => void;
 }) {
@@ -85,9 +92,19 @@ export function PlayerShell({
 
 	const unanswered = navQuestions.filter((q) => !q.answered).map((q) => q.n);
 
+	// A server correction replaces the drawn clock (state adjusted during
+	// render when the prop changes, not in an effect).
+	const [appliedStamp, setAppliedStamp] = useState(clock?.stamp);
+	if (clock && clock.stamp !== appliedStamp) {
+		setAppliedStamp(clock.stamp);
+		setSeconds(clock.seconds);
+	}
+
 	// The countdown. It draws the clock; it does not decide the deadline.
 	useEffect(() => {
 		if (seconds <= 0) return;
+		// Time is on the clock again (a server correction): re-arm time-up.
+		submitted.current = false;
 		const t = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
 		return () => clearInterval(t);
 	}, [seconds]);

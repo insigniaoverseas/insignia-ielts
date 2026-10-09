@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PlayerShell } from "@/components/player/player-shell";
 import type { AnswerValue } from "@/components/player/question-group";
-import { saveAnswerAction, submitAttemptAction } from "@/lib/actions/attempts";
+import { heartbeatAction, saveAnswerAction, submitAttemptAction } from "@/lib/actions/attempts";
 import type { SaveAnswerInput } from "@/lib/actions/types";
 import type { AttemptSession } from "@/lib/view-models/attempt";
 
@@ -13,6 +13,8 @@ import type { AttemptSession } from "@/lib/view-models/attempt";
 const TYPING_PAUSE_MS = 1200;
 /** How long to wait before retrying a save that failed in flight. */
 const RETRY_MS = 5000;
+/** How often the server clock and the session are re-checked (MVP-1 §4: 30 s). */
+const HEARTBEAT_MS = 30_000;
 
 type SaveStatus = "saved" | "saving" | "offline";
 
@@ -30,9 +32,12 @@ type SaveStatus = "saved" | "saving" | "offline";
  *   working", never asked to do anything.
  * - Submit first sends everything still pending.
  *
- * Nothing here decides the deadline. The countdown is drawn by the shell from
- * the server's `secondsRemaining`; if a save reports time is up, or the clock
- * reaches zero, the server is asked to close the attempt and it rules.
+ * Nothing here decides the deadline (M2-08). The countdown is drawn by the
+ * shell and corrected from the server every 30 seconds, after every save, and
+ * the moment a sleeping tab wakes. When it reaches zero the server is asked
+ * first: if its clock still has time (a fast browser clock), the countdown is
+ * corrected instead of submitting. The same check notices a session ended
+ * elsewhere and sends the student to sign in.
  */
 export function AttemptRunner({ session, firstRevision }: { session: AttemptSession; firstRevision: number }) {
 	const revision = useRef(firstRevision);
@@ -44,6 +49,8 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 	const finishing = useRef(false);
 	const [status, setStatus] = useState<SaveStatus>("saved");
 	const [submitError, setSubmitError] = useState<string | null>(null);
+	const [clock, setClock] = useState<{ seconds: number; stamp: number }>();
+	const correct = useCallback((seconds: number) => setClock({ seconds, stamp: Date.now() }), []);
 	const router = useRouter();
 	/** The latest `send`, for retry timers set before it was recreated. */
 	const sendRef = useRef<(key: string) => Promise<void>>(async () => {});
@@ -90,6 +97,7 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 			let retry = false;
 			try {
 				const result = await saveAnswerAction(input);
+				if (result.ok) correct(result.secondsRemaining);
 				if (!result.ok) {
 					if (result.reason === "session_ended") {
 						router.replace("/login?ended=1");
@@ -121,11 +129,50 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 			}
 			if (inFlight.current === 0 && pending.current.size === 0) setStatus("saved");
 		},
-		[finish, router],
+		[correct, finish, router],
 	);
 	useEffect(() => {
 		sendRef.current = send;
 	}, [send]);
+
+	/**
+	 * Asks the server for the clock and the session. Seconds left; `null` once
+	 * the attempt is closed; `undefined` when the server couldn't be reached.
+	 */
+	const check = useCallback(async (): Promise<number | null | undefined> => {
+		try {
+			const result = await heartbeatAction(session.attemptId);
+			if (result.ok) {
+				correct(result.secondsRemaining);
+				return result.secondsRemaining;
+			}
+			if (result.reason === "session_ended") router.replace("/login?ended=1");
+			if (result.reason === "time_up" || result.reason === "closed") return null;
+		} catch {
+			// Offline: keep drawing the clock; the next check corrects it.
+		}
+		return undefined;
+	}, [correct, router, session.attemptId]);
+
+	useEffect(() => {
+		const timer = setInterval(() => {
+			void check().then((left) => {
+				if (left === null) void finish();
+			});
+		}, HEARTBEAT_MS);
+		function onVisible() {
+			if (document.visibilityState === "visible") {
+				void check().then((left) => {
+					if (left === null) void finish();
+				});
+			}
+		}
+		document.addEventListener("visibilitychange", onVisible);
+		return () => {
+			clearInterval(timer);
+			document.removeEventListener("visibilitychange", onVisible);
+		};
+	}, [check, finish]);
 
 	const queue = useCallback(
 		(key: string, input: Omit<SaveAnswerInput, "revision" | "attemptId">, delay: number) => {
@@ -173,7 +220,12 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 	);
 
 	/** Sends everything still waiting, then submits. */
-	const onSubmit = useCallback(async () => {
+	const onSubmit = useCallback(async (reason: "student" | "time") => {
+		if (reason === "time") {
+			// The drawn clock reached zero. The server decides whether it really did.
+			const left = await check();
+			if (typeof left === "number" && left > 0) return;
+		}
 		for (const key of [...pending.current.keys()]) {
 			clearTimeout(timers.current.get(key));
 			await send(key);
@@ -181,7 +233,7 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 		// Let anything already on the wire land before closing the attempt.
 		while (inFlight.current > 0) await new Promise((resolve) => setTimeout(resolve, 100));
 		await finish();
-	}, [finish, send]);
+	}, [check, finish, send]);
 
 	// Leaving with unsaved typing: ask the browser to warn.
 	useEffect(() => {
@@ -209,8 +261,9 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 				session={session}
 				onSave={onSave}
 				onFlag={onFlag}
-				onSubmit={() => void onSubmit()}
+				onSubmit={(reason) => void onSubmit(reason)}
 				status={statusLabel}
+				clock={clock}
 			/>
 		</>
 	);

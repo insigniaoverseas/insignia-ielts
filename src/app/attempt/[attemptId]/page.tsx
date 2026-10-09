@@ -4,6 +4,8 @@ import { notFound, redirect } from "next/navigation";
 
 import { AttemptRunner } from "@/components/player/attempt-runner";
 import { Banner } from "@/components/ui/banner";
+import { isOverdue } from "@/lib/attempts/clock";
+import { finishAttempt } from "@/lib/attempts/finish";
 import { getOwnedAttempt, loadAttemptSession } from "@/lib/attempts/load";
 import { requireUser } from "@/lib/auth/guard";
 
@@ -32,6 +34,11 @@ export default async function AttemptPage({ params }: { params: Promise<{ attemp
 	}
 	const attempt = await getOwnedAttempt(attemptId, actor.id);
 	if (!attempt) redirect(`/tests/${attemptId}/start`);
+	if (isOverdue(attempt)) {
+		// The deadline passed with the page closed: the server clock decides.
+		await finishAttempt(attempt, "expired");
+		redirect(`/results/${attempt.id}`);
+	}
 	if (attempt.status !== "in_progress") redirect(`/results/${attempt.id}`);
 
 	const loaded = await loadAttemptSession(attempt);

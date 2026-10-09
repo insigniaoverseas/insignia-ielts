@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 
 import { rowsForValue } from "@/lib/attempts/answers";
 import { finishAttempt } from "@/lib/attempts/finish";
-import { getOwnedAttempt, secondsLeft } from "@/lib/attempts/load";
+import { isOverdue, secondsLeft } from "@/lib/attempts/clock";
+import { getOwnedAttempt } from "@/lib/attempts/load";
 import { sessionState } from "@/lib/auth/sessions";
 import { getPreTestBriefing } from "@/lib/queries/student";
 import { ForbiddenError, requirePermission } from "@/lib/rbac";
@@ -51,6 +52,9 @@ export async function startAttemptAction(_previous: StartAttemptState, formData:
 
 		if (assignment.resumeAttemptId) {
 			attemptId = assignment.resumeAttemptId;
+			// Its time ran out while nobody had it open: close it, show the result.
+			const open = await getOwnedAttempt(attemptId, actor.id);
+			if (open && isOverdue(open)) await finishAttempt(open, "expired");
 		} else {
 			if (assignment.locked) return { message: assignment.locked.message };
 			const practice = ref.startsWith("practice:");
@@ -121,7 +125,7 @@ export async function saveAnswerAction(input: SaveAnswerInput): Promise<AttemptS
 		const attempt = await getOwnedAttempt(input.attemptId, actor.id);
 		if (!attempt) return { ok: false, reason: "invalid" };
 		if (attempt.status !== "in_progress") return { ok: false, reason: "closed" };
-		if (secondsLeft(attempt) <= 0) return { ok: false, reason: "time_up" };
+		if (isOverdue(attempt)) return { ok: false, reason: "time_up" };
 
 		const control = { id: "", number: input.number, covers, sectionNo: input.sectionNo };
 		const writes: { q_number: number; section_no: number; given_answer?: string | null; flagged?: boolean }[] =
@@ -176,6 +180,31 @@ export async function saveAnswerAction(input: SaveAnswerInput): Promise<AttemptS
 	}
 }
 
+/**
+ * The 30-second check (M2-08): the server's seconds left, so the countdown is
+ * corrected rather than trusted; whether the session is still live; and —
+ * if the deadline has passed — the attempt is closed here, on the server
+ * clock, whatever the browser shows.
+ */
+export async function heartbeatAction(attemptId: string): Promise<AttemptSaveResult> {
+	try {
+		const actor = await liveActor();
+		const attempt = await getOwnedAttempt(attemptId, actor.id);
+		if (!attempt) return { ok: false, reason: "invalid" };
+		if (attempt.status !== "in_progress") return { ok: false, reason: "closed" };
+		if (isOverdue(attempt)) {
+			await finishAttempt(attempt, "expired");
+			return { ok: false, reason: "time_up" };
+		}
+		return { ok: true, secondsRemaining: secondsLeft(attempt) };
+	} catch (error) {
+		if (error instanceof SessionEndedError) return { ok: false, reason: "session_ended" };
+		if (error instanceof ForbiddenError) return { ok: false, reason: "invalid" };
+		console.error("heartbeat failed:", error);
+		return { ok: false, reason: "error" };
+	}
+}
+
 /** Maps a database refusal to what the player should do about it. */
 function failure(error: { code?: string; message: string }): AttemptSaveResult {
 	// 42501: the trigger's "time is up" / "attempt is submitted", or RLS.
@@ -194,7 +223,7 @@ export async function submitAttemptAction(attemptId: string): Promise<{ ok: fals
 		const actor = await liveActor();
 		const attempt = await getOwnedAttempt(attemptId, actor.id);
 		if (!attempt) return { ok: false, message: "This test could not be found." };
-		await finishAttempt(attempt, secondsLeft(attempt) > 0 ? "submitted" : "expired");
+		await finishAttempt(attempt, isOverdue(attempt) ? "expired" : "submitted");
 	} catch (error) {
 		if (error instanceof SessionEndedError) redirect("/login?ended=1");
 		if (error instanceof ForbiddenError) {
