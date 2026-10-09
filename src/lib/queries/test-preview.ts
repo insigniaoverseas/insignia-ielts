@@ -3,14 +3,18 @@ import "server-only";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { readContentObject } from "@/lib/r2";
-import { parseR2ObjectKey } from "@/lib/r2-keys";
+import { audioObjectKey, contentObjectKey, parseR2ObjectKey } from "@/lib/r2-keys";
 import { sanitizeAttemptSession } from "@/lib/security/sanitize-attempt";
 import { createClient } from "@/lib/supabase/server";
 import { testContentSchema, toAttemptSections } from "@/lib/test-content";
 import type { AttemptSession } from "@/lib/view-models/attempt";
 import { queryFailed, testSummary } from "./shared";
 
-/** The `tests` row fields a preview needs: identity plus where its R2 objects live. */
+/**
+ * The `tests` row fields a preview needs. The `r2_*` path columns are not
+ * granted to API roles (content migration), so the keys are rebuilt from
+ * `id` + `content_version` with the same builders the importer used.
+ */
 type PreviewRow = {
 	id: string;
 	title: string;
@@ -20,9 +24,6 @@ type PreviewRow = {
 	total_questions: number;
 	duration_seconds: number;
 	content_version: number;
-	r2_content_key: string | null;
-	r2_audio_key: string | null;
-	r2_assets_prefix: string | null;
 	audio_duration_seconds: number | null;
 };
 
@@ -35,7 +36,7 @@ export async function getPreviewRow(testId: string): Promise<PreviewRow | null> 
 	const { data, error } = await supabase
 		.from("tests")
 		.select(
-			"id, title, skill, variant, difficulty, total_questions, duration_seconds, content_version, r2_content_key, r2_audio_key, r2_assets_prefix, audio_duration_seconds",
+			"id, title, skill, variant, difficulty, total_questions, duration_seconds, content_version, audio_duration_seconds",
 		)
 		.eq("id", testId)
 		.maybeSingle();
@@ -69,8 +70,7 @@ export async function getTestPreview(
 	const test = testSummary(row);
 	if (!test) return null;
 
-	if (!row.r2_content_key) return { problem: "missing_content" };
-	const object = await readContentObject(row.r2_content_key);
+	const object = await readContentObject(contentObjectKey(row.id, row.content_version));
 	if (!object) return { problem: "missing_content" };
 
 	const parsed = testContentSchema.safeParse(await object.json());
@@ -88,7 +88,7 @@ export async function getTestPreview(
 		// Display-only: nothing reads it, because a preview never submits.
 		expiresAt: new Date(0).toISOString(),
 		audio:
-			row.r2_audio_key && row.audio_duration_seconds
+			row.skill === "listening" && row.audio_duration_seconds
 				? { url: previewMediaUrl.audio(row.id), durationSeconds: row.audio_duration_seconds }
 				: null,
 		sections: toAttemptSections(content, (asset) => previewMediaUrl.asset(row.id, asset.ordinal)),
@@ -101,8 +101,8 @@ export async function getTestPreview(
 /**
  * Streams one of a test's private media objects — its MP3 or a labelling
  * image — through the Worker binding, honouring `Range` so the audio element
- * can buffer it. The R2 key comes from the test row (audio) or is rebuilt from
- * the row's own asset prefix (images); nothing in the request names a key.
+ * can buffer it. The R2 key is rebuilt from the row's id and content
+ * version; nothing in the request names a key.
  */
 export async function streamPreviewMedia(
 	row: PreviewRow,
@@ -114,15 +114,16 @@ export async function streamPreviewMedia(
 	let key: string;
 
 	if (media.kind === "audio") {
-		if (!row.r2_audio_key) return new Response("Not found", { status: 404 });
-		key = parseR2ObjectKey(row.r2_audio_key).key;
+		if (row.skill !== "listening") return new Response("Not found", { status: 404 });
+		key = audioObjectKey(row.id, row.content_version);
 		bucket = env.AUDIO_BUCKET;
 	} else {
-		if (!row.r2_assets_prefix || !Number.isSafeInteger(media.ordinal) || media.ordinal < 1) {
+		if (!Number.isSafeInteger(media.ordinal) || media.ordinal < 1) {
 			return new Response("Not found", { status: 404 });
 		}
-		// The extension is not stored on the row; the prefix + ordinal is unique.
-		const listing = await env.CONTENT_BUCKET.list({ prefix: `${row.r2_assets_prefix}${media.ordinal}.`, limit: 2 });
+		// The extension is not stored anywhere readable; content key prefix + ordinal is unique.
+		const prefix = contentObjectKey(row.id, row.content_version).replace(/content\.json$/, "assets/");
+		const listing = await env.CONTENT_BUCKET.list({ prefix: `${prefix}${media.ordinal}.`, limit: 2 });
 		const match = listing.objects[0];
 		if (!match) return new Response("Not found", { status: 404 });
 		const parsed = parseR2ObjectKey(match.key);

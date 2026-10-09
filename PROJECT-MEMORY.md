@@ -296,6 +296,7 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 - **Picture MCQs (Listening 1, 2, 4, 5) are `plan_map_diagram_labelling`** with a single cropped image and an A–D bank — the only type that carries an image. Reading figures 1–4 (Q37–40) are `diagram_label_completion` with the A–I label bank.
 - **Decorative photos are dropped.** Passage HTML allows no images, and the importer refuses any file not referenced by an `image_label` group.
 - **Listening key was a photographed handwritten sheet**; transcribed by eye (Q41 = A is squeezed under Q40). Have a teacher check it before publishing.
+- **Never select `tests.r2_*` from a request-scoped client.** Those columns are not granted to `authenticated`, so PostgREST fails the whole query with `permission denied for table tests` (the first preview did exactly this). Rebuild keys with `contentObjectKey` / `audioObjectKey` from `id` + `content_version` — the importer used the same builders.
 - **Section markers came from silence detection**: three ~20–50 s pauses per section (read / read / check), so sections start at 0, 471, 732, 1113 s.
 
 ### 2026-09-17 — First-run deadlocked: sign-in refused the bootstrap Owner  (task: M1-08 / M1-02)
