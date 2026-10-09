@@ -6,6 +6,7 @@ import { rowsForValue } from "@/lib/attempts/answers";
 import { finishAttempt } from "@/lib/attempts/finish";
 import { isOverdue, secondsLeft } from "@/lib/attempts/clock";
 import { getOwnedAttempt } from "@/lib/attempts/load";
+import { checkInPractice } from "@/lib/attempts/pause";
 import { sessionState } from "@/lib/auth/sessions";
 import { getPreTestBriefing } from "@/lib/queries/student";
 import { ForbiddenError, requirePermission } from "@/lib/rbac";
@@ -53,7 +54,8 @@ export async function startAttemptAction(_previous: StartAttemptState, formData:
 		if (assignment.resumeAttemptId) {
 			attemptId = assignment.resumeAttemptId;
 			// Its time ran out while nobody had it open: close it, show the result.
-			const open = await getOwnedAttempt(attemptId, actor.id);
+			const found = await getOwnedAttempt(attemptId, actor.id);
+			const open = found ? await checkInPractice(found) : null;
 			if (open && isOverdue(open)) await finishAttempt(open, "expired");
 		} else {
 			if (assignment.locked) return { message: assignment.locked.message };
@@ -122,9 +124,10 @@ export async function saveAnswerAction(input: SaveAnswerInput): Promise<AttemptS
 			return { ok: false, reason: "invalid" };
 		}
 
-		const attempt = await getOwnedAttempt(input.attemptId, actor.id);
-		if (!attempt) return { ok: false, reason: "invalid" };
-		if (attempt.status !== "in_progress") return { ok: false, reason: "closed" };
+		const owned = await getOwnedAttempt(input.attemptId, actor.id);
+		if (!owned) return { ok: false, reason: "invalid" };
+		if (owned.status !== "in_progress") return { ok: false, reason: "closed" };
+		const attempt = await checkInPractice(owned);
 		if (isOverdue(attempt)) return { ok: false, reason: "time_up" };
 
 		const control = { id: "", number: input.number, covers, sectionNo: input.sectionNo };
@@ -189,9 +192,10 @@ export async function saveAnswerAction(input: SaveAnswerInput): Promise<AttemptS
 export async function heartbeatAction(attemptId: string): Promise<AttemptSaveResult> {
 	try {
 		const actor = await liveActor();
-		const attempt = await getOwnedAttempt(attemptId, actor.id);
-		if (!attempt) return { ok: false, reason: "invalid" };
-		if (attempt.status !== "in_progress") return { ok: false, reason: "closed" };
+		const owned = await getOwnedAttempt(attemptId, actor.id);
+		if (!owned) return { ok: false, reason: "invalid" };
+		if (owned.status !== "in_progress") return { ok: false, reason: "closed" };
+		const attempt = await checkInPractice(owned);
 		if (isOverdue(attempt)) {
 			await finishAttempt(attempt, "expired");
 			return { ok: false, reason: "time_up" };
@@ -221,8 +225,9 @@ function failure(error: { code?: string; message: string }): AttemptSaveResult {
 export async function submitAttemptAction(attemptId: string): Promise<{ ok: false; message: string } | never> {
 	try {
 		const actor = await liveActor();
-		const attempt = await getOwnedAttempt(attemptId, actor.id);
-		if (!attempt) return { ok: false, message: "This test could not be found." };
+		const owned = await getOwnedAttempt(attemptId, actor.id);
+		if (!owned) return { ok: false, message: "This test could not be found." };
+		const attempt = await checkInPractice(owned);
 		await finishAttempt(attempt, isOverdue(attempt) ? "expired" : "submitted");
 	} catch (error) {
 		if (error instanceof SessionEndedError) redirect("/login?ended=1");

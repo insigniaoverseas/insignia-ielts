@@ -25,10 +25,12 @@ export type OwnedAttempt = {
 	started_at: string;
 	expires_at: string;
 	submitted_at: string | null;
+	/** Practice only: seconds left at the last check-in (see `practiceCheckIn`). */
+	time_remaining_seconds: number | null;
 };
 
 const ATTEMPT_FIELDS =
-	"id, test_id, assignment_id, student_id, kind, content_version, status, started_at, expires_at, submitted_at";
+	"id, test_id, assignment_id, student_id, kind, content_version, status, started_at, expires_at, submitted_at, time_remaining_seconds";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -146,7 +148,7 @@ export async function loadAttemptSession(
 }
 
 /** A test the student started and hasn't finished, for the "still running" banner. */
-export type OpenAttempt = { id: string; title: string; skill: string; kind: string; secondsLeft: number };
+export type OpenAttempt = { id: string; title: string; skill: string; kind: string; secondsLeft: number; paused: boolean };
 
 /**
  * The student's in-progress attempts that still have time on the server
@@ -156,17 +158,16 @@ export async function getOpenAttempts(studentId: string): Promise<OpenAttempt[]>
 	const supabase = await createClient();
 	const { data, error } = await supabase
 		.from("attempts")
-		.select("id, kind, expires_at, tests(title, skill)")
+		.select("id, kind, expires_at, time_remaining_seconds, tests(title, skill)")
 		.eq("student_id", studentId)
 		.eq("status", "in_progress")
-		.gt("expires_at", new Date().toISOString())
 		.order("expires_at");
 	if (error) queryFailed("open attempts", error);
-	return (data ?? []).map((row) => ({
-		id: row.id,
-		title: row.tests?.title ?? "Your test",
-		skill: row.tests?.skill ?? "",
-		kind: row.kind,
-		secondsLeft: secondsLeft(row),
-	}));
+	return (data ?? []).flatMap((row) => {
+		// Practice is paused while away: its time is where the last check-in left it.
+		const paused = row.kind === "practice";
+		const left = paused ? (row.time_remaining_seconds ?? secondsLeft(row)) : secondsLeft(row);
+		if (left <= 0) return [];
+		return [{ id: row.id, title: row.tests?.title ?? "Your test", skill: row.tests?.skill ?? "", kind: row.kind, secondsLeft: left, paused }];
+	});
 }

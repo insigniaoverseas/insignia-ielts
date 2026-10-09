@@ -10,8 +10,9 @@ function minutesLeft(seconds: number): string {
 
 /**
  * Shown on every student page while a test is open (beta feedback,
- * 2026-10-09): leaving a test does not stop its clock, so the student must
- * never be somewhere else without knowing it. One sentence, one button.
+ * 2026-10-09). A mock or class test's clock does not stop while the student
+ * is away, so they must never be somewhere else without knowing it; practice
+ * pauses, and says so. One sentence, one button.
  */
 export function RunningTestBanner({ attempts }: { attempts: OpenAttempt[] }) {
 	if (attempts.length === 0) return null;
@@ -24,8 +25,17 @@ export function RunningTestBanner({ attempts }: { attempts: OpenAttempt[] }) {
 					className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-warning bg-warning-soft px-5 py-4"
 				>
 					<span>
-						<strong className="font-semibold">{attempt.title}</strong> is still running —{" "}
-						{minutesLeft(attempt.secondsLeft)} left. The clock doesn&rsquo;t stop while you&rsquo;re away.
+						{attempt.paused ? (
+							<>
+								<strong className="font-semibold">{attempt.title}</strong> is paused with{" "}
+								{minutesLeft(attempt.secondsLeft)} left. Practice waits for you.
+							</>
+						) : (
+							<>
+								<strong className="font-semibold">{attempt.title}</strong> is still running —{" "}
+								{minutesLeft(attempt.secondsLeft)} left. The clock doesn&rsquo;t stop while you&rsquo;re away.
+							</>
+						)}
 					</span>
 					<Link
 						href={`/attempt/${attempt.id}`}

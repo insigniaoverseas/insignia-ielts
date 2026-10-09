@@ -7,6 +7,7 @@ import { Banner } from "@/components/ui/banner";
 import { isOverdue } from "@/lib/attempts/clock";
 import { finishAttempt } from "@/lib/attempts/finish";
 import { getOwnedAttempt, loadAttemptSession } from "@/lib/attempts/load";
+import { checkInPractice } from "@/lib/attempts/pause";
 import { requireUser } from "@/lib/auth/guard";
 
 export const metadata: Metadata = {
@@ -32,8 +33,10 @@ export default async function AttemptPage({ params }: { params: Promise<{ attemp
 		if (attemptId.startsWith("practice:")) redirect(`/tests/${encodeURIComponent(attemptId)}/start`);
 		notFound();
 	}
-	const attempt = await getOwnedAttempt(attemptId, actor.id);
-	if (!attempt) redirect(`/tests/${attemptId}/start`);
+	const owned = await getOwnedAttempt(attemptId, actor.id);
+	if (!owned) redirect(`/tests/${attemptId}/start`);
+	// Practice gives back time spent away before anything checks the deadline.
+	const attempt = await checkInPractice(owned);
 	if (isOverdue(attempt)) {
 		// The deadline passed with the page closed: the server clock decides.
 		await finishAttempt(attempt, "expired");

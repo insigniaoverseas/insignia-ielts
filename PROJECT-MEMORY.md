@@ -289,6 +289,12 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
 
+### 2026-10-09 — Leaving a test: mock keeps running, practice pauses  (task: M2-08 / M2-15)
+
+**Chose (user, after beta testing):** both. (1) Never leave by accident: Back inside a test asks "Leave the test?", and every student page shows a banner while a test is open. (2) Practice pauses while the student is away; mock and class never do.
+**How practice pauses without trusting the browser:** an open, *visible* test checks in every 30 s; `attempts.time_remaining_seconds` (previously unused) holds the seconds left at the last check-in. A gap over 45 s means the student was away: they are charged one 30 s interval and the deadline is moved later by the rest (`practiceCheckIn`, pure + tested; `checkInPractice` writes it). The trigger already allows only later deadlines while in progress — no migration. It runs before every overdue check (page load, Start/Resume, save, heartbeat, submit).
+**Rejected:** pausing mock tests (exam rules; a leave-and-look-it-up loophole); a client-reported pause (trusts the browser); Supabase Realtime presence (user chose no Realtime).
+
 ### 2026-10-09 — Band charts are read out of 40, whatever the paper's size  (task: M2-17)
 
 **Chose:** look the band up at the raw score scaled to 40 and rounded (`bandLookupScore`): 41/41 → 40 → 9.0, 39/41 → 38. A 40-question paper is unchanged. The stored `raw_score` is the real one.

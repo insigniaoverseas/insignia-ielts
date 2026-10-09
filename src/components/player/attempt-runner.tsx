@@ -159,6 +159,9 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 
 	useEffect(() => {
 		const timer = setInterval(() => {
+			// Only a test someone is looking at checks in: for practice, a gap in
+			// check-ins is how the server knows the student was away.
+			if (document.visibilityState !== "visible") return;
 			void check().then((left) => {
 				if (left === null) void finish();
 			});
@@ -285,8 +288,9 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 					<DialogHeader>
 						<DialogTitle>Leave the test?</DialogTitle>
 						<DialogDescription>
-							Your time keeps running while you&rsquo;re away. Your answers are saved, and you can carry on from My
-							Tests.
+							{session.mode === "practice"
+								? "This is practice, so your time pauses while you're away. Your answers are saved, and you can carry on from My Tests."
+								: "Your time keeps running while you're away. Your answers are saved, and you can carry on from My Tests."}
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>
