@@ -97,8 +97,8 @@
 | M2-04 Assignment eligibility resolver | done | OpenAI Codex | 2026-09-17 | ✅ Resolves assignment windows, plan validity, attempt limits, extra-attempt unlocks and resumable attempts from Supabase. Attempt creation remains M2-07. |
 | M2-05 Pre-test instructions (05) + headphone check | done | Claude, OpenAI Codex | 2026-09-17 | ✅ Verifies the visible assignment in Supabase and renders real test facts/rules. Listening sound-check audio is intentionally absent until Cloudflare R2 is implemented. |
 | M2-06 Audio preload + owner-bound cache purge | todo | | | Highest-value lines in the caching layer |
-| M2-07 Attempt lifecycle server actions | todo | | | start, resume, autosave, submit, expire |
-| M2-08 Server-authoritative timer + countdown | in_progress | Claude | 2026-09-16 | ✅ **UI half.** `secondsRemaining` comes from the server and the player ticks it down only to draw the clock; hitting 0 calls `onSubmit("time")` once. ⬜ **Server half** (M2-07): `expires_at`, the submit endpoint ruling on whether time was really up, and reconciliation after a slept tab. The player never decides the deadline. |
+| M2-07 Attempt lifecycle server actions | in_progress | Claude | 2026-10-09 | ✅ **Start/resume** (`startAttemptAction`, form post from screen 05, eligibility from `getPreTestBriefing`; secret-key insert, trigger sets kind/version/clock; double tap resolves to the one open attempt). ✅ **Autosave** (`saveAnswerAction` via the student's RLS client; update-then-insert because upsert would need UPDATE on `section_no`; per-attempt rising revision; one save per control on the wire; flags share the control's queue; retries offline). ✅ **Submit** (flushes pending, closes via `finishAttempt`, `expired` if past `expires_at`). Every action re-checks `attempt:take` + a live session. ⬜ Heartbeat/expiry (M2-08), marking (M2-17). |
+| M2-08 Server-authoritative timer + countdown | in_progress | Claude | 2026-09-16 | ✅ **UI half.** `secondsRemaining` comes from the server and the player ticks it down only to draw the clock; hitting 0 calls `onSubmit("time")` once. ⬜ **Server half** (M2-07): `expires_at`, the submit endpoint ruling on whether time was really up, and reconciliation after a slept tab. The player never decides the deadline. ✅ **Server half (2026-10-09):** `lib/attempts/clock.ts` (pure, tested) over the trigger-set `expires_at`; `heartbeatAction` every 30 s and on tab wake corrects the drawn clock and catches an ended session; saves correct it too; at zero the server is asked first, and a fast browser clock is corrected rather than submitted early; overdue attempts are closed as `expired` wherever touched — page load, Start/Resume, heartbeat, submit. ⬜ An attempt nobody reopens stays `in_progress` past its deadline until touched: a scheduled sweep (Cron Trigger) is a follow-up. |
 | M2-09 Question navigator + flags | done | Claude | 2026-09-16 | ✅ Wired into the player: answered/flagged/current from live state, jump-to-question scrolls to a per-question anchor. **`PlayerQuestion.covers`** added — one "Choose TWO" control answers two numbered questions, so 40 questions are 38 controls; without it the navigator read 38/40. |
 | M2-10 Widget `text_gap` + 7 containers | done | Claude | 2026-09-16 | ✅ `QuestionGroupBlock` maps widget × container. The widget picks the *control*, the container the *furniture around it* — that split is how six widgets cover fourteen question types. All 7 containers styled. |
 | M2-11 Widget `radio` | done | Claude | 2026-09-16 | ✅ Wired into `QuestionGroupBlock`. |
@@ -107,7 +107,7 @@
 | M2-14 Widget `image_label` + asset signing | in_progress | Claude | 2026-10-09 | ✅ Player renders `image_label`: the picture once per group, then a dropdown per question (letter/label bank) or a text box (no bank). ✅ Images reach the **staff preview** through an access-checked same-origin stream from R2. ⬜ Student attempts still need signed asset URLs, which need an attempt row (M2-07). |
 | M2-15 Listening player shell (06) | in_progress | Claude, OpenAI Codex | 2026-09-17 | `/attempt/[attemptId]` remains outside the student layout. It now verifies an owned/visible Supabase attempt or published practice test, but does not fabricate questions or audio: the real player waits on private R2 content plus M2-07 lifecycle actions. |
 | M2-16 Submit confirmation modal (08) | done | Claude | 2026-09-16 | ✅ Names the count, lists every unanswered number as a chip that jumps to the field, "Go back" primary and "Submit anyway" secondary. Verified over CDP: 8 unanswered listed correctly, chips match state. |
-| M2-17 Scoring on submit + band + section scores | todo | | | |
+| M2-17 Scoring on submit + band + section scores | in_progress | Claude | 2026-10-09 | ✅ `lib/attempts/mark.ts` `ensureMarked`: `key.json` via binding + stored answers → `markAttempt` (split out of `scoreAttempt`, behaviour unchanged) → band from the assignment's chart or the skill/variant default → `answer_marks` then `attempt_scores` (the done marker). Runs in `finishAttempt` for submit and expiry; idempotent; a failure is logged and the result page retries. ✅ Charts are out of 40: other paper sizes are read scaled to 40 (`lib/attempts/band.ts`, tested). ⬜ End-to-end run against a real student account. |
 | M2-18 Result screen (09) | done | Claude | 2026-09-16 | ✅ `/results/[attemptId]`: band hero, raw score / time / wrong count, per-section bars, two actions. Three states: released · **held** (a sentence, never an empty score card) · **below the scale** (`band` null → `belowBand` marker in its own card, because `BandScore` would have to invent a number). |
 | M2-19 Crash-recovery E2E | todo | | | V1 in MVP-1 §19 |
 
@@ -289,6 +289,10 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
 
+### 2026-10-09 — Stacked PRs: merge, don't rebase  (task: process)
+
+#27 was stacked on #26 and took #26's fixes by merge. After #26 merged, GitHub's **rebase** replayed #27's commits onto `main` and conflicted on `PROJECT-MEMORY.md` lines #26 already contained; a **merge** of `main` was clean. Land a stacked PR with "Merge" or "Squash and merge", never "Rebase and merge" / "Update with rebase".
+
 ### 2026-10-09 — `braces` removed from the tree by overriding the Next ESLint plugin's glob  (task: M0-01 / CI)
 
 **Problem:** CI's `npm audit --audit-level=high` failed on GHSA-vfj7-8cjw-p6xm. Every `braces` release is affected and none is fixed; it arrives only via `eslint-config-next` → `@next/eslint-plugin-next` (pins `fast-glob@3.3.1`, still in 16.5 canary) → `micromatch` → `braces`.
@@ -297,6 +301,19 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** a local shim package via `file:` — npm records nested `file:` overrides as `invalid` and installs nothing, which breaks ESLint at load.
 **Also:** Next.js 16.3.4 → 16.3.8 for critical advisories (incl. RCE in `next/og`), and the build no longer starts the Cloudflare platform proxy outside `next dev` (it needed a login CI doesn't have once R2 bindings became remote).
 **Remove** the override and the test once the plugin drops fast-glob or braces ships a fix.
+
+### 2026-10-09 — Leaving a test: mock keeps running, practice pauses  (task: M2-08 / M2-15)
+
+**Chose (user, after beta testing):** both. (1) Never leave by accident: Back inside a test asks "Leave the test?", and every student page shows a banner while a test is open. (2) Practice pauses while the student is away; mock and class never do.
+**How practice pauses without trusting the browser:** an open, *visible* test checks in every 30 s; `attempts.time_remaining_seconds` (previously unused) holds the seconds left at the last check-in. A gap over 45 s means the student was away: they are charged one 30 s interval and the deadline is moved later by the rest (`practiceCheckIn`, pure + tested; `checkInPractice` writes it). The trigger already allows only later deadlines while in progress — no migration. It runs before every overdue check (page load, Start/Resume, save, heartbeat, submit).
+**Rejected:** pausing mock tests (exam rules; a leave-and-look-it-up loophole); a client-reported pause (trusts the browser); Supabase Realtime presence (user chose no Realtime).
+
+### 2026-10-09 — Band charts are read out of 40, whatever the paper's size  (task: M2-17)
+
+**Chose:** look the band up at the raw score scaled to 40 and rounded (`bandLookupScore`): 41/41 → 40 → 9.0, 39/41 → 38. A 40-question paper is unchanged. The stored `raw_score` is the real one.
+**Because:** every seeded chart covers 0–40, and Easy Test 1 Listening has 41 questions; `bandFor` throws when no row covers the score, so 41/41 would have failed marking outright.
+**Rejected:** a chart per paper size (no source for one), clamping 41 to 40 (40/41 and 41/41 would both be 9.0 but 39/41 would read as 39).
+
 
 ### 2026-10-09 — Reading is side by side from tablet up; the navigator is a bottom bar  (task: M3-01 / M2-15)
 
@@ -840,7 +857,7 @@ Set via `wrangler secret put`. Local dev values go in `.dev.vars` (gitignored); 
 | `SUPABASE_PUBLISHABLE_KEY` | server — RLS-scoped client (`server.ts`) | ✅ 2026-09-15 |
 | `SUPABASE_SECRET_KEY` | **server only**, `admin.ts`, behind `lib/rbac.ts` — bypasses RLS | ✅ 2026-09-15 |
 | `R2_ACCESS_KEY_ID` | **server only**, `lib/r2.ts` — scoped object-read token id | ⬜ provision in M0-14 |
-| `R2_SECRET_ACCESS_KEY` | **server only**, `lib/r2.ts` — scoped object-read token secret | ⬜ provision in M0-14 |
+| `R2_SECRET_ACCESS_KEY` | **server only**, `lib/r2.ts` — scoped object-read token secret | ⬜ provision in M0-14 ⚠️ **Must be the SHA-256 (64 hex) of the R2 API token's value, not the token itself** — the token (53 chars, `_` and non-hex) gives `SignatureDoesNotMatch` (found 2026-10-09; local `.dev.vars` fixed, original token kept as a comment). ✅ **Worker secrets set 2026-10-09** (hashed value; access key id unchanged), right after #26's `main` deploy — `wrangler secret put` only works while the newest version is the deployed one, so set secrets *before* pushing branches that upload previews. Live version `b6fcb31c` ("Secret Change" on `main`'s code). |
 | ~~`SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`~~ | superseded 2026-09-15 by the publishable/secret key names above — Supabase's current key model; IP forwarding for Auth rate limits (§4) requires a secret key | — |
 | `RESEND_API_KEY` | invite email (`lib/mail/mailer.ts`) — **required in production**; unset in dev prints the link to the console | ⬜ awaiting the user |
 | `TURNSTILE_SECRET_KEY` | login + accept-invite (M1-11) | ⬜ awaiting the user |

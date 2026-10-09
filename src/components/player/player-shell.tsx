@@ -32,17 +32,32 @@ import type { AttemptSession } from "@/lib/view-models/attempt";
 export function PlayerShell({
 	session,
 	onSave,
+	onFlag,
 	onSubmit,
+	status,
+	clock,
 }: {
 	session: AttemptSession;
 	/** Autosave. Fired per change, debounced by the caller. */
 	onSave?: (questionId: string, value: AnswerValue) => void;
+	/** A question was marked or unmarked to come back to. */
+	onFlag?: (questionNumber: number, flagged: boolean) => void;
+	/** A short live line for the header — "Saved", "Saving…", "Offline". */
+	status?: React.ReactNode;
+	/**
+	 * A correction from the server clock. Each new `stamp` replaces the drawn
+	 * countdown with `seconds`; a correction above zero also re-arms time-up,
+	 * for when a fast browser clock reached zero before the server did.
+	 */
+	clock?: { seconds: number; stamp: number };
 	/** Hand over to the submit Server Action. */
 	onSubmit?: (reason: "student" | "time") => void;
 }) {
 	const [answers, setAnswers] = useState<Record<string, AnswerValue>>(session.answers);
 	const [flagged, setFlagged] = useState<Set<number>>(new Set(session.flagged));
 	const [sectionIndex, setSectionIndex] = useState(0);
+	/** The question the student is on: the number they picked, or the field they are in. */
+	const [currentQuestion, setCurrentQuestion] = useState<number | null>(null);
 	const [seconds, setSeconds] = useState(session.secondsRemaining);
 	const [confirming, setConfirming] = useState(false);
 	const [playing, setPlaying] = useState(false);
@@ -79,9 +94,19 @@ export function PlayerShell({
 
 	const unanswered = navQuestions.filter((q) => !q.answered).map((q) => q.n);
 
+	// A server correction replaces the drawn clock (state adjusted during
+	// render when the prop changes, not in an effect).
+	const [appliedStamp, setAppliedStamp] = useState(clock?.stamp);
+	if (clock && clock.stamp !== appliedStamp) {
+		setAppliedStamp(clock.stamp);
+		setSeconds(clock.seconds);
+	}
+
 	// The countdown. It draws the clock; it does not decide the deadline.
 	useEffect(() => {
 		if (seconds <= 0) return;
+		// Time is on the clock again (a server correction): re-arm time-up.
+		submitted.current = false;
 		const t = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
 		return () => clearInterval(t);
 	}, [seconds]);
@@ -108,6 +133,7 @@ export function PlayerShell({
 			s.groups.some((g) => g.questions.some((q) => (q.covers ?? [q.number]).includes(n))),
 		);
 		if (index >= 0) setSectionIndex(index);
+		setCurrentQuestion(n);
 		setConfirming(false);
 		// Let the section render before reaching for the field.
 		requestAnimationFrame(() => {
@@ -116,16 +142,27 @@ export function PlayerShell({
 	}
 
 	function toggleFlag(n: number) {
+		const nowFlagged = !flagged.has(n);
 		setFlagged((prev) => {
 			const next = new Set(prev);
-			if (next.has(n)) next.delete(n);
-			else next.add(n);
+			if (nowFlagged) next.add(n);
+			else next.delete(n);
 			return next;
 		});
+		onFlag?.(n, nowFlagged);
 	}
 
-	/** The first question of the section on screen — what the flag button acts on. */
+	/** The first question of the section on screen. */
 	const firstInSection = section.groups[0]?.questions[0]?.number ?? 1;
+	/**
+	 * What the bar highlights and "Mark to come back" acts on: the question the
+	 * student picked or is answering, if it is in this section; otherwise the
+	 * section's first, so the button never marks a question they can't see.
+	 */
+	const sectionNumbers = new Set(
+		section.groups.flatMap((g) => g.questions.flatMap((q) => q.covers ?? [q.number])),
+	);
+	const current = currentQuestion !== null && sectionNumbers.has(currentQuestion) ? currentQuestion : firstInSection;
 
 	const hasPassage = section.passages.length > 0;
 
@@ -151,7 +188,7 @@ export function PlayerShell({
 		<div className="flex flex-col gap-10">
 			{section.groups.map((group) => (
 				<div key={group.id} className="rounded-card border border-line bg-surface p-6">
-					<QuestionGroupBlock group={group} answers={answers} onAnswer={answer} />
+					<QuestionGroupBlock group={group} answers={answers} onAnswer={answer} onFocusQuestion={setCurrentQuestion} />
 				</div>
 			))}
 		</div>
@@ -179,8 +216,11 @@ export function PlayerShell({
 			<header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-4 border-b border-line bg-surface px-4 py-3 shadow-soft md:px-8">
 				<span className="text-h3">{session.test.title}</span>
 				<Countdown seconds={seconds} />
-				<span className="font-semibold text-ink-2">
-					{section.label} of {session.sections.length}
+				<span className="flex items-center gap-4 font-semibold text-ink-2">
+					{status}
+					<span>
+						{section.label} of {session.sections.length}
+					</span>
 				</span>
 			</header>
 
@@ -276,7 +316,7 @@ export function PlayerShell({
 				<QuestionBar
 					sections={navSections}
 					currentSection={sectionIndex}
-					current={firstInSection}
+					current={current}
 					onSelect={goToQuestion}
 				/>
 				<div className="flex items-center justify-between gap-3">
@@ -290,12 +330,12 @@ export function PlayerShell({
 					</Button>
 
 					<Button
-						variant={flagged.has(firstInSection) ? "primary" : "ghost"}
+						variant={flagged.has(current) ? "primary" : "ghost"}
 						size="modal"
-						onClick={() => toggleFlag(firstInSection)}
-						aria-pressed={flagged.has(firstInSection)}
+						onClick={() => toggleFlag(current)}
+						aria-pressed={flagged.has(current)}
 					>
-						{flagged.has(firstInSection) ? "Marked" : "Mark to come back"}
+						{flagged.has(current) ? `Question ${current} marked` : `Mark question ${current} to come back`}
 					</Button>
 
 					{isLast ? (

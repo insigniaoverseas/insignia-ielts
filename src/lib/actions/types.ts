@@ -38,3 +38,26 @@ export type ResetRequestState = { message: string; sent: boolean } | null;
 
 /** The choose-a-new-password form's state. */
 export type ResetFormState = { message: string } | null;
+
+/** The Start button's state: `null`, or why the test could not start. */
+export type StartAttemptState = { message: string } | null;
+
+/** One control's new value (or one flag), as the player autosaves it. */
+export type SaveAnswerInput = {
+	attemptId: string;
+	sectionNo: number;
+	/** The control's first question number. */
+	number: number;
+	/** Every number a multi-answer control answers; omitted for one. */
+	covers?: number[];
+	value?: string | string[];
+	/** A flag change for one question number. */
+	flag?: { qNumber: number; flagged: boolean };
+	/** Strictly rising per attempt; the database rejects a lower one as stale. */
+	revision: number;
+};
+
+/** What autosave and the heartbeat report back to the player. */
+export type AttemptSaveResult =
+	| { ok: true; secondsRemaining: number }
+	| { ok: false; reason: "time_up" | "closed" | "session_ended" | "invalid" | "error" };

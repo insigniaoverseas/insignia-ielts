@@ -192,8 +192,8 @@ export function bandFor(rawScore: number, rows: readonly BandScaleRow[]): BandRe
 	return { band: null, belowBand: Math.min(...bands) };
 }
 
-/** Scores a complete immutable answer key and returns DB-ready per-question facts. */
-export function scoreAttempt(keyInput: unknown, answers: GivenAnswers, bandRows: readonly BandScaleRow[]): ScoredAttempt {
+/** Marks a complete immutable answer key without a band: per-question facts and section totals. */
+export function markAttempt(keyInput: unknown, answers: GivenAnswers): Omit<ScoredAttempt, keyof BandResult> {
 	const key = answerKeySchema.parse(keyInput);
 	const controls = new Set<number>();
 	for (const section of key.sections) {
@@ -203,7 +203,6 @@ export function scoreAttempt(keyInput: unknown, answers: GivenAnswers, bandRows:
 		const number = Number(rawNumber);
 		if (!Number.isInteger(number) || !controls.has(number)) throw new Error(`Answer supplied for unknown control ${rawNumber}`);
 	}
-
 	const marks: AnswerMark[] = [];
 	const sectionScores = key.sections.map((section) => {
 		const start = marks.length;
@@ -221,5 +220,11 @@ export function scoreAttempt(keyInput: unknown, answers: GivenAnswers, bandRows:
 	});
 	const rawScore = sectionScores.reduce((total, section) => total + section.rawScore, 0);
 	const maxScore = sectionScores.reduce((total, section) => total + section.maxScore, 0);
-	return { rawScore, maxScore, marks, sectionScores, ...bandFor(rawScore, bandRows) };
+	return { rawScore, maxScore, marks, sectionScores };
+}
+
+/** Scores a complete immutable answer key and returns DB-ready per-question facts. */
+export function scoreAttempt(keyInput: unknown, answers: GivenAnswers, bandRows: readonly BandScaleRow[]): ScoredAttempt {
+	const marked = markAttempt(keyInput, answers);
+	return { ...marked, ...bandFor(marked.rawScore, bandRows) };
 }

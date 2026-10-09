@@ -396,7 +396,9 @@ export async function getPreTestBriefing(assignmentId: string): Promise<PreTestB
 	return {
 		assignment,
 		rules: [
-			"The timer starts when you press Start, and it will not stop.",
+			mock
+				? "The timer starts when you press Start, and it will not stop — not even if you leave the page."
+				: "The timer starts when you press Start. It pauses if you leave, and carries on when you come back.",
 			...(listening && mock ? ["The audio plays once. You cannot rewind it, just like the real test."] : []),
 			...(listening && !mock ? ["You can pause and replay the audio as much as you like."] : []),
 			"Your answers save by themselves. If the internet drops, keep working.",

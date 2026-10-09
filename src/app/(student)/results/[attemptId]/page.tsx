@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { BandScore } from "@/components/ui/band-score";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MODE_LABEL, SKILL_LABEL } from "@/components/student/labels";
+import { ensureMarked } from "@/lib/attempts/mark";
 import { getAttemptResult } from "@/lib/queries/student";
 
 export const metadata: Metadata = { title: "Your result" };
@@ -52,8 +53,17 @@ function SectionBar({ label, correct, total }: { label: string; correct: number;
  */
 export default async function ResultPage({ params }: { params: Promise<{ attemptId: string }> }) {
 	const { attemptId } = await params;
-	const attempt = await getAttemptResult(attemptId);
+	let attempt = await getAttemptResult(attemptId);
 	if (!attempt) notFound();
+	// RLS showed it, so the caller owns it (or teaches it). If its marking
+	// failed at submit, do it now; a held result stays held either way.
+	if (!attempt.result) {
+		const outcome = await ensureMarked(attempt.attemptId).catch((error: unknown) => {
+			console.error("marking on the result page failed:", error);
+			return "not_finished" as const;
+		});
+		if (outcome === "marked") attempt = (await getAttemptResult(attemptId)) ?? attempt;
+	}
 
 	const { test, mode, result, submittedAtLabel } = attempt;
 

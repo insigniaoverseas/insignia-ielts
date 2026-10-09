@@ -50,11 +50,14 @@ export function QuestionGroupBlock({
 	group,
 	answers,
 	onAnswer,
+	onFocusQuestion,
 	disabled,
 }: {
 	group: QuestionGroup;
 	answers: Record<string, AnswerValue>;
 	onAnswer: (questionId: string, value: AnswerValue) => void;
+	/** The student moved into a question's control — it becomes "where you are". */
+	onFocusQuestion?: (questionNumber: number) => void;
 	/** True once the attempt is over — the student can read but not change. */
 	disabled?: boolean;
 }) {
@@ -230,7 +233,7 @@ export function QuestionGroupBlock({
 					})();
 
 					return (
-						<div key={q.id} className="relative">
+						<div key={q.id} className="relative" onFocusCapture={() => onFocusQuestion?.(q.number)}>
 							{anchors}
 							{widget}
 						</div>

@@ -1,40 +1,63 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
+import { AttemptRunner } from "@/components/player/attempt-runner";
 import { Banner } from "@/components/ui/banner";
-import { getAttemptPlaceholder } from "@/lib/queries/attempt";
+import { isOverdue } from "@/lib/attempts/clock";
+import { finishAttempt } from "@/lib/attempts/finish";
+import { getOwnedAttempt, loadAttemptSession } from "@/lib/attempts/load";
+import { checkInPractice } from "@/lib/attempts/pause";
+import { requireUser } from "@/lib/auth/guard";
 
 export const metadata: Metadata = {
 	title: "Your test",
 	robots: { index: false, follow: false },
 };
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 /**
- * The route verifies its Supabase attempt/assignment now. The actual question
- * document and Listening audio stay unavailable until the private R2 reader is
- * implemented, instead of silently falling back to a fixture paper.
+ * Screens 06/07 — the running test (M2-07, M2-15).
+ *
+ * Only ever an attempt the student owns, addressed by its own id. An
+ * assignment or `practice:` reference — an old bookmark, or the pre-test
+ * screen before Start existed — goes back to the briefing, where Start
+ * creates or resumes the attempt. A finished attempt goes to its result.
  */
 export default async function AttemptPage({ params }: { params: Promise<{ attemptId: string }> }) {
 	const { attemptId } = await params;
-	const attempt = await getAttemptPlaceholder(attemptId);
-	if (!attempt) notFound();
+	const actor = await requireUser(`/attempt/${attemptId}`);
 
-	return (
-		<main className="mx-auto flex min-h-screen w-full max-w-[760px] flex-col justify-center gap-6 px-4 py-12">
-			<div className="flex flex-col gap-2">
-				<h1 className="m-0 text-h1">{attempt.test.title}</h1>
-				<p className="m-0 text-ink-2">
-					{attempt.test.questionCount} questions · {attempt.test.durationMinutes} minutes
-				</p>
-			</div>
-			<Banner tone="info">
-				This test is assigned in Supabase, but its private questions and audio are not connected yet. The timer has not
-				started and no attempt data has been changed.
-			</Banner>
-			<Link href="/tests" className="font-semibold">
-				← Back to My Tests
-			</Link>
-		</main>
-	);
+	if (!UUID.test(attemptId)) {
+		if (attemptId.startsWith("practice:")) redirect(`/tests/${encodeURIComponent(attemptId)}/start`);
+		notFound();
+	}
+	const owned = await getOwnedAttempt(attemptId, actor.id);
+	if (!owned) redirect(`/tests/${attemptId}/start`);
+	// Practice gives back time spent away before anything checks the deadline.
+	const attempt = await checkInPractice(owned);
+	if (isOverdue(attempt)) {
+		// The deadline passed with the page closed: the server clock decides.
+		await finishAttempt(attempt, "expired");
+		redirect(`/results/${attempt.id}`);
+	}
+	if (attempt.status !== "in_progress") redirect(`/results/${attempt.id}`);
+
+	const loaded = await loadAttemptSession(attempt);
+	if ("problem" in loaded) {
+		return (
+			<main className="mx-auto flex min-h-screen w-full max-w-[760px] flex-col justify-center gap-6 px-4 py-12">
+				<Banner tone="warning">
+					This test can&rsquo;t be opened right now. Your time and answers are safe — tell your teacher.
+				</Banner>
+				<Link href="/tests" className="font-semibold">
+					← Back to My Tests
+				</Link>
+			</main>
+		);
+	}
+
+	const highest = Object.values(loaded.revisions);
+	return <AttemptRunner session={loaded.session} firstRevision={highest.length ? Math.max(...highest) : 0} />;
 }
