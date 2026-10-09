@@ -88,6 +88,16 @@ export function QuestionGroupBlock({
 				</ul>
 			)}
 
+			{/* An image_label group is answered from one picture, shown once above its rows. */}
+			{group.image && (
+				// eslint-disable-next-line @next/next/no-img-element -- a private, access-checked stream; next/image would proxy and cache it
+				<img
+					src={group.image.url}
+					alt={group.image.alt}
+					className="block h-auto w-full max-w-[720px] rounded-card border border-line bg-surface"
+				/>
+			)}
+
 			<div className={CONTAINER_CLASS[group.container]}>
 				{group.questions.map((q) => {
 					const id = `q-${q.id}`;
@@ -165,6 +175,36 @@ export function QuestionGroupBlock({
 									options={group.bank ?? []}
 									value={str(q) || null}
 									onChange={(v) => onAnswer(q.id, v)}
+									disabled={disabled}
+								/>
+							);
+
+						case "image_label":
+							// With a letter bank it's a choice; without one, a word from the passage.
+							if (group.bank) {
+								return (
+									<MatchingSelect
+										id={id}
+										label={
+											<>
+												<strong className="font-semibold">{q.number}.</strong> <Prompt html={q.promptHtml} />
+											</>
+										}
+										options={group.bank}
+										value={str(q) || null}
+										onChange={(v) => onAnswer(q.id, v)}
+										disabled={disabled}
+									/>
+								);
+							}
+							return (
+								<TextAnswer
+									id={id}
+									number={q.number}
+									prompt={<Prompt html={q.promptHtml} />}
+									value={str(q)}
+									onChange={(v) => onAnswer(q.id, v)}
+									hint={q.hint}
 									disabled={disabled}
 								/>
 							);

@@ -62,6 +62,12 @@ export type QuestionGroup = {
 	bank?: { value: string; label: string }[];
 	/** How many boxes `checkbox_n` expects ("Choose TWO"). */
 	choose?: number;
+	/**
+	 * The picture an `image_label` group is answered from. `url` is a
+	 * same-origin route that streams the R2 object after its own access check —
+	 * never an R2 key or a public bucket URL.
+	 */
+	image?: { url: string; alt: string };
 	questions: PlayerQuestion[];
 };
 

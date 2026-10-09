@@ -107,6 +107,9 @@ export default async function LibraryPage({
 										{t.tags.length > 0 && (
 											<div className="text-small text-ink-2">{t.tags.join(" · ")}</div>
 										)}
+										<Link href={`/admin/library/${t.id}/preview`} className="block text-small font-semibold">
+											Preview as a student →
+										</Link>
 									</TableCell>
 									<TableCell className="text-ink-2">{SKILL_LABEL[t.skill]}</TableCell>
 									<TableCell className="text-ink-2">{VARIANT_LABEL[t.variant]}</TableCell>
