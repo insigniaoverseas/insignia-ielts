@@ -10,9 +10,13 @@ import { cn } from "@/lib/utils";
  * divider the student can drag. Independent scrolling is the point — a reader
  * checking paragraph 3 against question 9 must not lose their place in either.
  *
- * Tablet and phone: the two panes become one, behind a Passage/Questions
- * toggle. A split view below about 1024px gives two columns too narrow to read,
- * and legibility is the product on a reading test.
+ * Phone: the two panes become one, behind a Passage/Questions toggle. Two
+ * columns below about 768px are too narrow to read, and legibility is the
+ * product on a reading test. From tablet width up the split stays, because
+ * flipping between passage and questions costs a student real time.
+ *
+ * It fills its parent's height (the player gives Reading exactly one screen),
+ * so each pane scrolls inside itself rather than the page scrolling.
  *
  * The divider is a `separator` with keyboard support, because a student who
  * cannot use a mouse still needs to widen the passage.
@@ -56,8 +60,8 @@ export function ReadingSplit({
 
 	return (
 		<>
-			{/* Below lg, one pane at a time. */}
-			<div className="flex gap-1 self-start rounded-full border border-line bg-surface p-1 lg:hidden">
+			{/* Below md, one pane at a time. */}
+			<div className="flex gap-1 self-start rounded-full border border-line bg-surface p-1 md:hidden">
 				{(["passage", "questions"] as const).map((p) => (
 					<button
 						key={p}
@@ -74,12 +78,12 @@ export function ReadingSplit({
 				))}
 			</div>
 
-			<div ref={frame} className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row lg:gap-0">
+			<div ref={frame} className="flex min-h-0 flex-1 flex-col gap-6 md:flex-row md:gap-0">
 				<div
 					className={cn(
-						"min-w-0 lg:overflow-y-auto lg:pr-6",
+						"min-w-0 md:overflow-y-auto md:pr-6",
 						pane === "passage" ? "flex flex-col" : "hidden",
-						"lg:flex lg:max-h-[calc(100vh-15rem)]",
+						"md:flex md:h-full md:flex-col",
 					)}
 					style={{ flexBasis: `${split}%` }}
 				>
@@ -103,16 +107,16 @@ export function ReadingSplit({
 						if (e.key === "ArrowLeft") setSplit((s) => Math.max(25, s - 5));
 						if (e.key === "ArrowRight") setSplit((s) => Math.min(75, s + 5));
 					}}
-					className="hidden w-3 flex-none cursor-col-resize items-center justify-center lg:flex"
+					className="hidden w-3 flex-none cursor-col-resize items-center justify-center md:flex"
 				>
 					<span className="h-16 w-1 rounded-full bg-line" aria-hidden="true" />
 				</div>
 
 				<div
 					className={cn(
-						"min-w-0 flex-1 lg:overflow-y-auto lg:pl-6",
+						"min-w-0 flex-1 md:overflow-y-auto md:pl-6",
 						pane === "questions" ? "flex flex-col" : "hidden",
-						"lg:flex lg:max-h-[calc(100vh-15rem)]",
+						"md:flex md:h-full md:flex-col",
 					)}
 				>
 					{questions}

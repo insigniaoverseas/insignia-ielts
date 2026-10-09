@@ -42,7 +42,7 @@ export function MatchingSelect({
 				disabled={disabled}
 				onChange={(e) => onChange(e.target.value)}
 				className={cn(
-					"h-primary min-w-45 rounded-control border px-3 text-passage",
+					"h-primary max-w-full min-w-45 rounded-control border px-3 text-passage",
 					chosen ? "border-brand bg-brand-soft font-semibold text-ink" : "border-line bg-surface text-ink-3",
 				)}
 			>

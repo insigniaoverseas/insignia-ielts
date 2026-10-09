@@ -289,6 +289,10 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
 
+### 2026-10-09 — Reading is side by side from tablet up; the navigator is a bottom bar  (task: M3-01 / M2-15)
+
+The user found flipping between passage and questions too slow. Now: Reading takes exactly one screen (`h-dvh`), passage left and questions right from **768px** (was 1024px), each pane scrolling on its own. The 260px right-rail navigator is gone; `QuestionBar` sits in the footer for both skills — the current section shows every number as a 48px button, other sections collapse to one "Passage 2 · 3 of 14" button, like computer-delivered IELTS. Phones keep the Passage/Questions toggle. Also: passage paragraph letters (`data-label`) now print in the margin and `h4`/`h5` are styled; a dropdown can no longer widen its pane (`max-w-full`, and both panes are `flex-col` at md — the questions pane was a flex *row* there, which is what let a long option push it off-screen); a picture group whose labels are sentences prints the full label list. Verified with headless-Chrome screenshots at 1440 / 820 / 500px (headless Chrome will not go below 500px wide). `QuestionNavigator` (the grid) is kept for the design-system page.
+
 ### 2026-10-09 — Converting the Daily Exercise Book papers: what didn't fit cleanly  (task: M0-20 / M2-14)
 
 - **Listening has 41 questions** (Section 4 runs 32–41). Kept: the upload schema requires contiguous numbering, not exactly 40; publish-time completeness (M8-06) will have to decide whether 41 is allowed.

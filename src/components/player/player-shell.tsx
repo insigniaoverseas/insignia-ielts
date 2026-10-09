@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AudioPlayer } from "@/components/player/audio-player";
 import { Countdown } from "@/components/player/countdown";
-import { QuestionNavigator, type NavQuestion } from "@/components/player/question-navigator";
+import { QuestionBar, type NavQuestion, type NavSection } from "@/components/player/question-navigator";
 import { QuestionGroupBlock, type AnswerValue } from "@/components/player/question-group";
 import { ReadingSplit } from "@/components/player/reading-split";
 import { Button } from "@/components/ui/button";
@@ -57,11 +57,12 @@ export function PlayerShell({
 	const isLast = sectionIndex === session.sections.length - 1;
 	const mock = session.mode !== "practice";
 
-	/** Every question in the test, in order, with its state for the navigator. */
-	const navQuestions: NavQuestion[] = useMemo(
+	/** Every question in the test, by section, with its state for the bottom bar. */
+	const navSections: NavSection[] = useMemo(
 		() =>
-			session.sections.flatMap((s) =>
-				s.groups.flatMap((g) =>
+			session.sections.map((s) => ({
+				label: s.label,
+				questions: s.groups.flatMap((g) =>
 					g.questions.flatMap((q) =>
 						// One control can answer several numbered questions.
 						(q.covers ?? [q.number]).map((n) => ({
@@ -71,9 +72,10 @@ export function PlayerShell({
 						})),
 					),
 				),
-			),
+			})),
 		[session.sections, answers, flagged],
 	);
+	const navQuestions: NavQuestion[] = navSections.flatMap((s) => s.questions);
 
 	const unanswered = navQuestions.filter((q) => !q.answered).map((q) => q.n);
 
@@ -134,7 +136,12 @@ export function PlayerShell({
 					<h2 className="m-0 text-h2">{p.title}</h2>
 					{/* Sanitised on the server — see sanitizeAttemptSession. Text
 					    selection stays on: highlighting is how people read a passage. */}
-					<div className="max-w-[70ch] text-passage [&_p]:mb-4" dangerouslySetInnerHTML={{ __html: p.html }} />
+					{/* Paragraph letters (data-label, kept by the sanitiser) are printed in
+					    the margin: "Which paragraph contains…" questions depend on them. */}
+					<div
+						className="max-w-[70ch] text-passage [&_h4]:mt-2 [&_h4]:mb-3 [&_h4]:text-h3 [&_h5]:mt-2 [&_h5]:mb-2 [&_h5]:font-semibold [&_p]:mb-4 [&_p[data-label]]:relative [&_p[data-label]]:pl-8 [&_p[data-label]]:before:absolute [&_p[data-label]]:before:left-0 [&_p[data-label]]:before:font-bold [&_p[data-label]]:before:content-[attr(data-label)]"
+						dangerouslySetInnerHTML={{ __html: p.html }}
+					/>
 				</article>
 			))}
 		</div>
@@ -151,7 +158,9 @@ export function PlayerShell({
 	);
 
 	return (
-		<div className="flex min-h-screen flex-col bg-bg">
+		// Reading fills exactly one screen so its two panes scroll on their own
+		// and the question bar never scrolls away; Listening scrolls as a page.
+		<div className={hasPassage ? "flex h-dvh flex-col bg-bg" : "flex min-h-screen flex-col bg-bg"}>
 			{/* One audio element for the whole attempt. Never remounted. */}
 			{session.audio && (
 				<audio
@@ -250,59 +259,58 @@ export function PlayerShell({
 				</div>
 			)}
 
-			<div className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-6 px-4 py-6 md:flex-row md:px-8 md:py-8">
-				<main className="flex min-w-0 flex-1 flex-col gap-6">
-					{hasPassage ? (
-						// Screen 07: two panes that scroll independently, so checking
-						// paragraph 3 against question 9 loses neither place.
-						<ReadingSplit passage={passagePane} questions={questionPane} />
-					) : (
-						questionPane
-					)}
+			{hasPassage ? (
+				// Screen 07: passage and questions side by side, each scrolling on
+				// its own, so checking paragraph 3 against question 9 loses neither
+				// place. The full width is theirs — the navigator lives in the footer.
+				<main className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 md:overflow-hidden md:px-8">
+					<ReadingSplit passage={passagePane} questions={questionPane} />
 				</main>
+			) : (
+				<main className="mx-auto flex w-full max-w-[960px] flex-1 flex-col gap-6 px-4 py-6 md:px-8 md:py-8">
+					{questionPane}
+				</main>
+			)}
 
-				<aside className="md:w-[260px] md:flex-none">
-					<div className="md:sticky md:top-28">
-						<QuestionNavigator
-							questions={navQuestions}
-							current={firstInSection}
-							onSelect={goToQuestion}
-						/>
-					</div>
-				</aside>
-			</div>
-
-			<footer className="sticky bottom-0 z-20 flex items-center justify-between gap-3 border-t border-line bg-surface px-4 py-3 shadow-soft md:px-8">
-				<Button
-					variant="secondary"
-					size="modal"
-					disabled={sectionIndex === 0}
-					onClick={() => setSectionIndex((i) => Math.max(0, i - 1))}
-				>
-					Previous
-				</Button>
-
-				<Button
-					variant={flagged.has(firstInSection) ? "primary" : "ghost"}
-					size="modal"
-					onClick={() => toggleFlag(firstInSection)}
-					aria-pressed={flagged.has(firstInSection)}
-				>
-					{flagged.has(firstInSection) ? "Marked" : "Mark to come back"}
-				</Button>
-
-				{isLast ? (
-					<Button size="modal" onClick={() => setConfirming(true)}>
-						Finish Test
-					</Button>
-				) : (
+			<footer className="sticky bottom-0 z-20 flex min-w-0 flex-col gap-3 border-t border-line bg-surface px-4 py-3 shadow-soft md:px-8">
+				<QuestionBar
+					sections={navSections}
+					currentSection={sectionIndex}
+					current={firstInSection}
+					onSelect={goToQuestion}
+				/>
+				<div className="flex items-center justify-between gap-3">
 					<Button
+						variant="secondary"
 						size="modal"
-						onClick={() => setSectionIndex((i) => Math.min(session.sections.length - 1, i + 1))}
+						disabled={sectionIndex === 0}
+						onClick={() => setSectionIndex((i) => Math.max(0, i - 1))}
 					>
-						Next
+						Previous
 					</Button>
-				)}
+
+					<Button
+						variant={flagged.has(firstInSection) ? "primary" : "ghost"}
+						size="modal"
+						onClick={() => toggleFlag(firstInSection)}
+						aria-pressed={flagged.has(firstInSection)}
+					>
+						{flagged.has(firstInSection) ? "Marked" : "Mark to come back"}
+					</Button>
+
+					{isLast ? (
+						<Button size="modal" onClick={() => setConfirming(true)}>
+							Finish Test
+						</Button>
+					) : (
+						<Button
+							size="modal"
+							onClick={() => setSectionIndex((i) => Math.min(session.sections.length - 1, i + 1))}
+						>
+							Next
+						</Button>
+					)}
+				</div>
 			</footer>
 
 			{/* Screen 08 — never let a student submit blind. */}

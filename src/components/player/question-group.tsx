@@ -79,8 +79,12 @@ export function QuestionGroupBlock({
 				/>
 			</div>
 
-			{/* The shared bank is printed once, above the rows that draw from it. */}
-			{group.widget === "dropdown_bank" && group.bank && (
+			{/* The shared bank is printed once, above the rows that draw from it —
+			    also for a picture whose labels are sentences, not just letters,
+			    because a dropdown cuts a long label short. */}
+			{group.bank &&
+				(group.widget === "dropdown_bank" ||
+					(group.widget === "image_label" && group.bank.some((o) => o.label.length > 3))) && (
 				<ul className="m-0 flex list-none flex-col gap-2 rounded-card border border-line bg-bg p-6 text-passage">
 					{group.bank.map((o) => (
 						<li key={o.value}>{o.label}</li>
