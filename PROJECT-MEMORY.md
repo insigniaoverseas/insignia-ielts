@@ -150,7 +150,7 @@
 | M5-06 Plans & validity workqueue (24) | done | Claude, OpenAI Codex | 2026-09-17 | ✅ `/admin/plans` grouping is computed from Supabase plan rows. ⬜ Extend-plan mutation remains separate work. |
 | M5-07 Batches (25) | done | Claude, OpenAI Codex | 2026-09-17 | ✅ `/admin/batches` reads branches, teachers and active membership counts from Supabase. |
 | M5-08 Test library (26) | done | Claude, OpenAI Codex | 2026-09-17 | ✅ `/admin/library` reads API-safe test metadata from Supabase. Private key contents and completeness are shown as deferred until Cloudflare work resumes. |
-| M5-09 Answer key editor (27) | in_progress | Claude, OpenAI Codex | 2026-09-17 | ✅ Permission and test-metadata gates are Supabase-backed. ⬜ Private `key.json` read/write is deferred with Cloudflare R2; the route explains that dependency and exposes no dummy answers. |
+| M5-09 Answer key editor (27) | in_progress | Claude, OpenAI Codex | 2026-10-09 | ✅ Permission and test-metadata gates are Supabase-backed. ✅ **Read half (2026-10-09):** `lib/queries/answer-key.ts` reads `key.json` + `content.json` through the binding (keys rebuilt from `id` + `content_version`), validates with `answerKeySchema`, and the page renders every question beside its answer, accepted variants, marks and word limit, with "N of M answers entered". Server component only; bundle scan clean. ⬜ Editing: must write a **new content version**, never overwrite `key.json` under an attempt in progress; 40-row keyboard grid + autosave per spec. |
 
 ### M6 — Teacher
 
