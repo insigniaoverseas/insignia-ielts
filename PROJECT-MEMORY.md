@@ -289,6 +289,15 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
 
+### 2026-10-09 — `braces` removed from the tree by overriding the Next ESLint plugin's glob  (task: M0-01 / CI)
+
+**Problem:** CI's `npm audit --audit-level=high` failed on GHSA-vfj7-8cjw-p6xm. Every `braces` release is affected and none is fixed; it arrives only via `eslint-config-next` → `@next/eslint-plugin-next` (pins `fast-glob@3.3.1`, still in 16.5 canary) → `micromatch` → `braces`.
+**User's rule:** fix the cause; do not weaken CI (no allow-list, no `--omit=dev`).
+**Chose:** `overrides` → `@next/eslint-plugin-next` gets `fast-glob` as `npm:tinyglobby` (already in the tree via the TS resolver). The plugin's only call is `globSync(pattern, { onlyDirectories })`, and only when `settings.next.rootDir` is set; tinyglobby's results differ slightly there (trailing slash; plain folder expands). `tests/unit/eslint-glob-override.test.mjs` fails if `rootDir` is ever set.
+**Rejected:** a local shim package via `file:` — npm records nested `file:` overrides as `invalid` and installs nothing, which breaks ESLint at load.
+**Also:** Next.js 16.3.4 → 16.3.8 for critical advisories (incl. RCE in `next/og`), and the build no longer starts the Cloudflare platform proxy outside `next dev` (it needed a login CI doesn't have once R2 bindings became remote).
+**Remove** the override and the test once the plugin drops fast-glob or braces ships a fix.
+
 ### 2026-10-09 — Leaving a test: mock keeps running, practice pauses  (task: M2-08 / M2-15)
 
 **Chose (user, after beta testing):** both. (1) Never leave by accident: Back inside a test asks "Leave the test?", and every student page shows a banner while a test is open. (2) Practice pauses while the student is away; mock and class never do.
@@ -300,6 +309,7 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Chose:** look the band up at the raw score scaled to 40 and rounded (`bandLookupScore`): 41/41 → 40 → 9.0, 39/41 → 38. A 40-question paper is unchanged. The stored `raw_score` is the real one.
 **Because:** every seeded chart covers 0–40, and Easy Test 1 Listening has 41 questions; `bandFor` throws when no row covers the score, so 41/41 would have failed marking outright.
 **Rejected:** a chart per paper size (no source for one), clamping 41 to 40 (40/41 and 41/41 would both be 9.0 but 39/41 would read as 39).
+
 
 ### 2026-10-09 — Reading is side by side from tablet up; the navigator is a bottom bar  (task: M3-01 / M2-15)
 
