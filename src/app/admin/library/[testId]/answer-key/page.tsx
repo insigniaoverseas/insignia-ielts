@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { TestStatusControl } from "@/components/admin/test-status-control";
 import { SKILL_LABEL } from "@/components/student/labels";
 import { Banner } from "@/components/ui/banner";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import {
 	TableToolbar,
 } from "@/components/ui/table";
 import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { can } from "@/lib/rbac";
 import { getAnswerKeyView } from "@/lib/queries/answer-key";
 
 export const metadata: Metadata = {
@@ -34,15 +36,16 @@ const PROBLEM_TEXT = {
  * Screen 27 — the answer key, read from the test's private `key.json` in R2
  * and shown beside each question (M5-09, read half).
  *
- * Server-rendered for staff holding `test:author` only. Nothing here is a
- * client component, so the key is never in a JavaScript bundle; students are
+ * Server-rendered for staff holding `test:author` only. The key is rendered
+ * here as HTML and never handed to a client component — the one client piece,
+ * the publish control, receives only the test id and status. Students are
  * stopped at the proxy, the admin layout, this permission check and RLS.
  * Editing is the other half of M5-09: it must write a new content version,
  * never overwrite `key.json` under an attempt in progress.
  */
 export default async function AnswerKeyPage({ params }: { params: Promise<{ testId: string }> }) {
 	const { testId } = await params;
-	await requirePermissionOrRedirect("test:author", `/admin/library/${testId}/answer-key`);
+	const actor = await requirePermissionOrRedirect("test:author", `/admin/library/${testId}/answer-key`);
 	if (!UUID.test(testId)) notFound();
 	const view = await getAnswerKeyView(testId);
 	if (!view) notFound();
@@ -57,7 +60,7 @@ export default async function AnswerKeyPage({ params }: { params: Promise<{ test
 					<h1 className="m-0 text-h1">{view.test.title}</h1>
 					<p className="m-0 text-ink-2">{SKILL_LABEL[view.test.skill]} · answer key</p>
 				</div>
-				<Button asChild>
+				<Button asChild variant="secondary">
 					<Link href={`/admin/library/${view.test.id}/preview`}>Preview as a student</Link>
 				</Button>
 			</div>
@@ -77,6 +80,21 @@ export default async function AnswerKeyPage({ params }: { params: Promise<{ test
 	return (
 		<div className="flex flex-col gap-6">
 			{header}
+			<div className="flex flex-wrap items-start justify-between gap-4 rounded-card border border-line bg-surface p-6">
+				<div className="flex flex-col gap-1">
+					<span className="font-semibold">
+						{view.test.status === "published" ? "Published" : view.test.status === "draft" ? "Draft" : "Archived"}
+					</span>
+					<span className="text-ink-2">
+						{view.test.status === "published"
+							? "Teachers can assign this test."
+							: "Only staff can see it. Check the answers below and the preview, then publish."}
+					</span>
+				</div>
+				{can(actor, "test:publish") && view.test.status !== "archived" && (
+					<TestStatusControl testId={view.test.id} status={view.test.status} />
+				)}
+			</div>
 			<Banner tone={complete ? "info" : "warning"}>
 				{view.entered} of {view.total} answers entered. Read-only for now — to change an answer, fix the test file and
 				import it again.

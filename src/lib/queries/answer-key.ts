@@ -25,7 +25,7 @@ export type AnswerKeyRow = {
 /** What screen 27 shows, or why it can't. */
 export type AnswerKeyView =
 	| {
-			test: { id: string; title: string; skill: "listening" | "reading"; contentVersion: number };
+			test: { id: string; title: string; skill: "listening" | "reading"; contentVersion: number; status: string };
 			rows: AnswerKeyRow[];
 			/** Numbered questions with an answer — what "34 of 40 entered" counts. */
 			entered: number;
@@ -110,5 +110,5 @@ export async function getAnswerKeyView(testId: string): Promise<AnswerKeyView | 
 		}
 	}
 
-	return { test: { ...test, contentVersion: row.content_version }, rows, entered, total };
+	return { test: { ...test, contentVersion: row.content_version, status: row.status }, rows, entered, total };
 }

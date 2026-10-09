@@ -35,6 +35,7 @@ const ACTION_LABEL: Record<string, string> = {
 	"results.release": "Results released",
 	"mark.override": "Mark changed",
 	"test.publish": "Test published",
+	"test.unpublish": "Test moved back to draft",
 	"role.change": "Role changed",
 	"session.revoke": "Session revoked",
 };

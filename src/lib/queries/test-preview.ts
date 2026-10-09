@@ -24,6 +24,7 @@ type PreviewRow = {
 	total_questions: number;
 	duration_seconds: number;
 	content_version: number;
+	status: string;
 	audio_duration_seconds: number | null;
 };
 
@@ -36,7 +37,7 @@ export async function getPreviewRow(testId: string): Promise<PreviewRow | null> 
 	const { data, error } = await supabase
 		.from("tests")
 		.select(
-			"id, title, skill, variant, difficulty, total_questions, duration_seconds, content_version, audio_duration_seconds",
+			"id, title, skill, variant, difficulty, total_questions, duration_seconds, content_version, status, audio_duration_seconds",
 		)
 		.eq("id", testId)
 		.maybeSingle();

@@ -110,6 +110,11 @@ export default async function LibraryPage({
 										<Link href={`/admin/library/${t.id}/preview`} className="block text-small font-semibold">
 											Preview as a student →
 										</Link>
+										{t.status === "draft" && (
+											<Link href={`/admin/library/${t.id}/answer-key`} className="block text-small font-semibold">
+												Review and publish →
+											</Link>
+										)}
 									</TableCell>
 									<TableCell className="text-ink-2">{SKILL_LABEL[t.skill]}</TableCell>
 									<TableCell className="text-ink-2">{VARIANT_LABEL[t.variant]}</TableCell>
