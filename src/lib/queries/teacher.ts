@@ -191,36 +191,47 @@ export async function getBatchView(batchId: string): Promise<BatchView | null> {
 	};
 }
 
-/** Screen 16 — assignable tests and RLS-visible people. */
+/**
+ * Screen 16 — what the Assign steps can offer.
+ *
+ * Scope is RLS's, not a hand-written filter: a teacher sees the batches they
+ * teach and those batches' students, an admin their centre, the Owner every
+ * centre. Students outside any batch are included — an admin assigning to one
+ * person should not have to put them in a batch first. `createAssignment`
+ * re-checks all of it server-side; this list only shapes the screen.
+ */
 export async function getAssignOptions(): Promise<AssignOptions> {
-	const { supabase, id } = await actorId();
-	const batchIds = await visibleBatchIds(supabase, id);
-	const [testsResult, batchesResult, membershipsResult] = await Promise.all([
+	const supabase = await createClient();
+	const [testsResult, batchesResult, membershipsResult, usersResult] = await Promise.all([
 		supabase.from("tests").select("id, title, skill, variant, difficulty, total_questions, duration_seconds").eq("status", "published").in("skill", ["listening", "reading"]).order("title"),
-		batchIds.length ? supabase.from("batches").select("id, name").in("id", batchIds).order("name") : Promise.resolve({ data: [], error: null }),
-		batchIds.length ? supabase.from("batch_students").select("batch_id, student_id, left_at").in("batch_id", batchIds) : Promise.resolve({ data: [], error: null }),
+		supabase.from("batches").select("id, name").eq("status", "active").order("name"),
+		supabase.from("batch_students").select("batch_id, student_id").is("left_at", null),
+		supabase.from("users").select("id, name, status, roles ( key )").eq("status", "active").order("name"),
 	]);
 	if (testsResult.error) queryFailed("assignable tests", testsResult.error);
 	if (batchesResult.error) queryFailed("assignable batches", batchesResult.error);
 	if (membershipsResult.error) queryFailed("assignable students", membershipsResult.error);
-	const memberships = (membershipsResult.data ?? []).filter((row) => row.left_at === null);
-	const studentIds = [...new Set(memberships.map((row) => row.student_id))];
-	const usersResult = studentIds.length
-		? await supabase.from("users").select("id, name").in("id", studentIds).order("name")
-		: { data: [], error: null };
 	if (usersResult.error) queryFailed("assignable student names", usersResult.error);
 	const batches = batchesResult.data ?? [];
 	const batchNames = new Map(batches.map((batch) => [batch.id, batch.name]));
+	const memberships = (membershipsResult.data ?? []).filter((row) => batchNames.has(row.batch_id));
 	return {
 		tests: (testsResult.data ?? []).flatMap((test) => {
 			const summary = testSummary(test);
 			return summary ? [summary] : [];
 		}),
 		batches: batches.map((batch) => ({ id: batch.id, name: batch.name, studentCount: memberships.filter((row) => row.batch_id === batch.id).length })),
-		students: (usersResult.data ?? []).map((user) => {
-			const membership = memberships.find((row) => row.student_id === user.id);
-			return { id: user.id, name: user.name, batchName: membership ? batchNames.get(membership.batch_id) ?? null : null };
-		}),
+		students: (usersResult.data ?? [])
+			.filter((user) => user.roles?.key === "student")
+			.map((user) => {
+				const membership = memberships.find((row) => row.student_id === user.id);
+				return {
+					id: user.id,
+					name: user.name,
+					batchId: membership?.batch_id ?? null,
+					batchName: membership ? batchNames.get(membership.batch_id) ?? null : null,
+				};
+			}),
 	};
 }
 
