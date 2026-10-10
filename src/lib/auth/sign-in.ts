@@ -2,6 +2,7 @@ import "server-only";
 
 import { headers } from "next/headers";
 
+import { safeRelativePath } from "@/lib/auth/access";
 import { checkSignInAllowed, clearSignInFailures, recordFailedSignIn, type SignInVerdict } from "@/lib/auth/lockout";
 import { startSession } from "@/lib/auth/sessions";
 import { recordAudit } from "@/lib/audit";
@@ -160,6 +161,6 @@ export async function signIn(email: string, password: string, nextPath?: string 
 		meta: { role: roleKey },
 	});
 
-	const safeNext = nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : null;
+	const safeNext = safeRelativePath(nextPath);
 	return { ok: true, redirectTo: safeNext ?? landingPathFor(roleKey) };
 }

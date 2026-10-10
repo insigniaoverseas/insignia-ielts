@@ -7,6 +7,7 @@ import {
   routeArea,
   routeDecision,
   routeNeedsIdentity,
+  safeRelativePath,
   signInPath,
 } from "../../src/lib/auth/access.ts";
 
@@ -107,5 +108,27 @@ describe("entry and login routing", () => {
   test("public routes are left alone", () => {
     assert.deepEqual(routeDecision({ pathname: "/forgot", ...anon }), { kind: "pass" });
     assert.deepEqual(routeDecision({ pathname: "/invite/abc", ...student }), { kind: "pass" });
+  });
+});
+
+describe("after sign-in, only ever back to this site (open redirect)", () => {
+  test("keeps a real path, with its query and hash", () => {
+    assert.equal(safeRelativePath("/review/abc?show=all#q3"), "/review/abc?show=all#q3");
+    assert.equal(safeRelativePath("/home"), "/home");
+  });
+
+  test("refuses everything a browser would send elsewhere", () => {
+    for (const bad of [
+      "https://evil.com", "//evil.com", "/\\evil.com", "/\\/evil.com", "\\\\evil.com",
+      "/\t/evil.com", "/\n/evil.com", "/\r//evil.com", "/\u0000/evil.com",
+      "javascript:alert(1)", "evil.com", "", null, undefined,
+    ]) {
+      assert.equal(safeRelativePath(bad), null, JSON.stringify(bad));
+    }
+  });
+
+  test("the sign-in link never carries a foreign destination", () => {
+    assert.equal(signInPath("/\\evil.com"), "/login");
+    assert.equal(signInPath("/tests?tab=done"), "/login?next=%2Ftests%3Ftab%3Ddone");
   });
 });

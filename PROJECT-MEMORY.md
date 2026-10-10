@@ -195,7 +195,7 @@
 | M9-04 Error / edge screens (30) | in_progress | Claude | 2026-09-16 | ✅ `app/not-found.tsx` and `app/error.tsx`. The error page's first line is **"Your answers are saved"** — that's the difference between a student who retries and one who panics mid-test. No stack trace or error code; `digest` is present but quiet, for support. ⬜ Connection-lost banner in the player, test-not-available, session-expired, browser-unsupported. |
 | M9-05 Load test at **200** concurrent | todo | | | ~~40~~ → 200 (user, 2026-09-15). Throwaway free Supabase project. First run right after M2-07 |
 | M9-06 Backups + restore drill | todo | | | The drill must actually restore. Free has no backups → nightly `db dump` to private R2. **Before the first real student** |
-| M9-07 Full security review | todo | | | |
+| M9-07 Full security review | in_progress | Claude | 2026-10-10 | Code review pass done 2026-10-10 (see changelog): open redirect + revoked-session gap fixed; pre-listening risk accepted. Playwright suite in PR #36. ⬜ V3, V18 reuse/revoked, V20, V21–22. ⬜ Tell the institute about pre-listening (residual risk below). |
 | M9-08 DPDP retention + deletion path | todo | | | |
 | M9-09 Docs completeness pass | todo | | | |
 
@@ -207,6 +207,7 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-10-10 | M9-07 | **Security review pass; open redirect fixed.** Reviewed every Server Action, Route Handler, HTML sink, redirect, cookie, token and upload path. **Fixed (medium):** `/login?next=/%5Cevil.com` (and `/%09/…`) sent a just-signed-in user off-site — confirmed in a browser, then closed with pure `safeRelativePath` (refuses backslash + control chars, then must resolve to our origin), used by sign-in and `signInPath`; 3 unit checks; confirmed closed. **Fixed (low):** `requirePermission` now also requires a live `user_sessions` row — Proxy lets a request through when it cannot *read* the session, and Server Actions have no layout to re-check. **Accepted, documented:** pre-test audio can be played from DevTools before Start (by design of §12 — download before the clock). Clean: actions/routes all guard first; every `dangerouslySetInnerHTML` is server-sanitised; cookie httpOnly/Secure/Lax; 256-bit tokens; uploads PNG/JPEG/WebP/MP3 only (no SVG) with size caps + `nosniff`. Full E2E 39/39 after the change. | `src/lib/auth/{access,sign-in}.ts`, `src/lib/rbac.ts`, `tests/unit/auth-access.test.mjs`, `PROJECT-MEMORY.md` | Claude |
 | 2026-10-10 | M1-11 | **Turnstile reappears after Log out.** Log out is a client-side navigation back to `/login`; the script was already loaded, and `next/script` fires `onLoad` only once, so the widget never rendered and sign-in was refused until a full reload. Switched to `onReady`, which fires on every mount (Next 16 docs, `script.md`). Same fix covers the invite page. | `src/components/auth/turnstile.tsx`, `PROJECT-MEMORY.md` | Claude |
 | 2026-10-10 | M1-11 | **Turnstile works on localhost.** Sign-in failed locally twice over: the real site key is bound to production hostnames, and with Cloudflare's test keys the reply has no `action`, which the action check refused. `isAcceptedSiteverify` (pure, tested) now accepts a missing action only on replies flagged `result_with_testing_key`; the test keys are documented in `.dev.vars.example`. Production checking unchanged. | `src/lib/turnstile.ts`, `.dev.vars.example`, `tests/unit/turnstile.test.mjs`, `PROJECT-MEMORY.md` | Claude |
 | 2026-10-10 | M7-03 | **+5 minutes and Finish for them work.** The confirm dialogs used to just close. New `extendAttemptAction` / `forceSubmitAttemptAction`: permission + live session + RLS-scoped read of the attempt, secret-key write under the clock trigger, `attempt_events` + audit. No migration — `expires_at` growth and both event types were already allowed. Audit screen labels added. | `src/lib/actions/{invigilation,types}.ts`, `src/components/staff/live-monitor.tsx`, `src/lib/queries/admin.ts`, `PROJECT-MEMORY.md` | Claude |
@@ -296,6 +297,10 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 **Rejected:** ... — because ...
 **ADR:** docs/adr/NNNN-....md  (if architectural)
 ```
+
+### 2026-10-10 — Residual risk: a student can pre-listen at home  (task: M9-07 / M2-06)
+
+Downloading the whole recording before Start (§12, so the clock never runs during a download) means it sits in the browser before the attempt exists. A student with DevTools can play it from Cache Storage, take notes, then press Start. Accepted: the alternative — streaming after Start — is the failure §12 exists to prevent in a 200-seat lab. Mitigations: in the lab an invigilator sees DevTools; mock results are reviewed by teachers; anti-cheat flags (M9-01) can record time on the pre-test screen. **Tell the institute** this is not a secure exam browser.
 
 ### 2026-10-10 — Pre-test audio comes through the Worker, not a signed R2 URL  (task: M2-06)
 

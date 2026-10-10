@@ -38,8 +38,32 @@ export function homeForRole(role: string): string {
 
 /** Login URL that safely preserves a local destination. */
 export function signInPath(pathname?: string): string {
-	if (!pathname || !pathname.startsWith("/") || pathname.startsWith("//")) return "/login";
-	return `/login?next=${encodeURIComponent(pathname)}`;
+	const next = safeRelativePath(pathname);
+	return next ? `/login?next=${encodeURIComponent(next)}` : "/login";
+}
+
+/**
+ * `path` if it is a path on **this** site, else `null` — the guard on every
+ * "go back where you were" link, so the login form cannot be used as an open
+ * redirect (`MVP-1.md` §8).
+ *
+ * "Starts with `/` and not `//`" is not enough: browsers read `/\evil.com` as
+ * `//evil.com`, and drop tabs and newlines, so `/<tab>/evil.com` is the same.
+ * Those characters are refused outright; the rest is resolved against a dummy
+ * origin and must still be on it.
+ */
+export function safeRelativePath(path: string | null | undefined): string | null {
+	if (!path || !path.startsWith("/") || path.startsWith("//")) return null;
+	// Backslash, and every control character (tab, newline, NUL, DEL…).
+	if (/[\\\u0000-\u001f\u007f]/.test(path)) return null;
+	try {
+		const base = "https://insignia.invalid";
+		const url = new URL(path, base);
+		if (url.origin !== base) return null;
+		return `${url.pathname}${url.search}${url.hash}`;
+	} catch {
+		return null;
+	}
 }
 
 /**
