@@ -54,8 +54,7 @@ function Step({
  * separate fields are not.
  */
 export function AssignFlow({ options, initialBatch }: { options: AssignOptions; initialBatch?: string }) {
-	const [state, formAction, pending] = useActionState(assignTestAction, null);
-	const [testId, setTestId] = useState<string | null>(null);
+	const [testIds, setTestIds] = useState<Set<string>>(new Set());
 	const [search, setSearch] = useState("");
 	const [batchIds, setBatchIds] = useState<Set<string>>(new Set(initialBatch ? [initialBatch] : []));
 	const [studentIds, setStudentIds] = useState<Set<string>>(new Set());
@@ -67,7 +66,36 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 	const [release, setRelease] = useState<"manual" | "immediate" | "scheduled">("manual");
 	const [releaseAt, setReleaseAt] = useState("");
 
-	const test = options.tests.find((t) => t.id === testId) ?? null;
+	/** Back to an empty form after a successful assign, so the next one starts clean. */
+	function reset() {
+		setTestIds(new Set());
+		setSearch("");
+		setBatchIds(new Set());
+		setStudentIds(new Set());
+		setOpensAt("");
+		setDueBy("");
+		setAttempts(1);
+		setAllowReview(true);
+		setRelease("manual");
+		setReleaseAt("");
+	}
+
+	// The reset happens here, once the server has said yes — never on a refusal,
+	// where the teacher needs their choices to fix and try again.
+	const [state, formAction, pending] = useActionState(
+		async (previous: Awaited<ReturnType<typeof assignTestAction>>, formData: FormData) => {
+			const result = await assignTestAction(previous, formData);
+			if (result?.ok) reset();
+			return result;
+		},
+		null,
+	);
+
+	const picked = options.tests.filter((t) => testIds.has(t.id));
+	const pickedTitles =
+		picked.length <= 1
+			? (picked[0]?.title ?? "")
+			: `these ${picked.length} tests: ${picked.slice(0, -1).map((t) => t.title).join(", ")} and ${picked.at(-1)!.title}`;
 
 	const visibleTests = useMemo(() => {
 		const q = search.trim().toLowerCase();
@@ -96,11 +124,11 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 		apply(next);
 	}
 
-	const ready = test !== null && reached > 0 && (release !== "scheduled" || releaseAt !== "");
+	const ready = picked.length > 0 && reached > 0 && (release !== "scheduled" || releaseAt !== "");
 
 	const summary = !ready
 		? null
-		: `${reached} ${reached === 1 ? "student" : "students"} will take ${test.title}, ${opensAt ? `from ${opensAt}` : "starting as soon as you assign it"}${
+		: `${reached} ${reached === 1 ? "student" : "students"} will take ${pickedTitles}, ${opensAt ? `from ${opensAt}` : "starting as soon as you assign it"}${
 				dueBy ? ` until ${dueBy}` : ", with no closing date"
 			}. They get ${attempts === 1 ? "one attempt" : `${attempts} attempts`}, and ${
 				allowReview ? "can review their mistakes afterwards" : "cannot review their answers afterwards"
@@ -114,10 +142,10 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 
 	return (
 		<form action={formAction} className="flex flex-col gap-6">
-			<input type="hidden" name="testId" value={testId ?? ""} />
+			{[...testIds].map((id) => <input key={id} type="hidden" name="tests" value={id} />)}
 			{[...batchIds].map((id) => <input key={id} type="hidden" name="batches" value={id} />)}
 			{[...studentIds].map((id) => <input key={id} type="hidden" name="students" value={id} />)}
-			<Step n={1} title="Pick a test" hint="Search by name.">
+			<Step n={1} title="Pick tests" hint="Tick one or more — each becomes its own assignment with the same students and rules.">
 				<Input
 					size="admin"
 					value={search}
@@ -127,17 +155,25 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 				/>
 				<ul className="m-0 flex max-h-[320px] list-none flex-col gap-2 overflow-y-auto p-0">
 					{visibleTests.map((t) => {
-						const on = t.id === testId;
+						const on = testIds.has(t.id);
 						return (
 							<li key={t.id}>
 								<button
 									type="button"
-									onClick={() => setTestId(t.id)}
+									onClick={() => toggle(testIds, t.id, setTestIds)}
 									aria-pressed={on}
 									className={`flex w-full cursor-pointer flex-wrap items-center gap-3 rounded-control border px-4 py-3 text-left ${
 										on ? "border-brand bg-brand-soft" : "border-line bg-surface hover:border-ink-3"
 									}`}
 								>
+									<span
+										className={`grid size-5 flex-none place-items-center rounded border text-small font-bold ${
+											on ? "border-brand bg-brand text-white" : "border-line bg-surface"
+										}`}
+										aria-hidden="true"
+									>
+										{on ? "✓" : ""}
+									</span>
 									<span className="min-w-[200px] flex-1 font-semibold">{t.title}</span>
 									<span className="text-small text-ink-2">{SKILL_LABEL[t.skill]}</span>
 									<DifficultyBadge level={t.difficulty} />
@@ -149,6 +185,9 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 						);
 					})}
 				</ul>
+				<p className="m-0 font-semibold" aria-live="polite">
+					{picked.length === 0 ? "No test picked yet." : `${picked.length} ${picked.length === 1 ? "test" : "tests"} picked`}
+				</p>
 			</Step>
 
 			<Step n={2} title="Pick who takes it" hint="Whole batches, plus anyone else you name.">
