@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 import { getMyReviewAction } from "@/lib/actions/attempts";
+import { endedSignInPath } from "@/lib/auth/access";
 import type { MistakesLoad, StudentBundle } from "@/lib/view-models/student";
 
 /*
@@ -69,7 +70,7 @@ export function StudentDataProvider({ bundle, children }: { bundle: StudentBundl
 					// sign in (which clears the cookies) rather than show "not found".
 					if (value === "session_ended") {
 						reviews.delete(key);
-						router.replace("/login?ended=1");
+						router.replace(endedSignInPath(`/review/${attemptId}`));
 					}
 				},
 				// A failed load is forgotten, so the next ask tries again.

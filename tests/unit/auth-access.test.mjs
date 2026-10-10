@@ -2,6 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  endedSignInPath,
   homeForRole,
   roleCanAccess,
   routeArea,
@@ -93,9 +94,25 @@ describe("entry and login routing", () => {
 
   test("a dead session outranks every other outcome", () => {
     const ended = { kind: "endSession", to: "/login?ended=1" };
-    assert.deepEqual(routeDecision({ pathname: "/home", userId: "u1", role: "student", session: "ended" }), ended);
+    assert.deepEqual(routeDecision({ pathname: "/home", userId: "u1", role: "student", session: "ended" }), {
+      kind: "endSession",
+      to: "/login?ended=1&next=%2Fhome",
+    });
     assert.deepEqual(routeDecision({ pathname: "/login", userId: "u1", role: "student", session: "ended" }), ended);
     assert.deepEqual(routeDecision({ pathname: "/", userId: "u1", role: "student", session: "ended" }), ended);
+  });
+
+  test("a session ended at /login keeps where they were going (M9-04)", () => {
+    // The guard sends a student pulled out of a test to /login?ended=1&next=…;
+    // Proxy ends the session there and must not drop the way back.
+    assert.deepEqual(
+      routeDecision({ pathname: "/login", userId: "u1", role: "student", session: "ended", next: "/attempt/a1" }),
+      { kind: "endSession", to: "/login?ended=1&next=%2Fattempt%2Fa1" },
+    );
+    assert.deepEqual(
+      routeDecision({ pathname: "/login", userId: "u1", role: "student", session: "ended", next: "//evil.com" }),
+      { kind: "endSession", to: "/login?ended=1" },
+    );
   });
 
   test("a database blip does not sign the institute out", () => {
@@ -142,5 +159,17 @@ describe("after sign-in, only ever back to this site (open redirect)", () => {
   test("the sign-in link never carries a foreign destination", () => {
     assert.equal(signInPath("/\\evil.com"), "/login");
     assert.equal(signInPath("/tests?tab=done"), "/login?next=%2Ftests%3Ftab%3Ddone");
+  });
+});
+
+describe("endedSignInPath", () => {
+  test("keeps a path on this site and nothing else", () => {
+    assert.equal(endedSignInPath("/attempt/a1"), "/login?ended=1&next=%2Fattempt%2Fa1");
+    assert.equal(endedSignInPath(undefined), "/login?ended=1");
+    assert.equal(endedSignInPath(null), "/login?ended=1");
+    assert.equal(endedSignInPath("/"), "/login?ended=1");
+    assert.equal(endedSignInPath("/login"), "/login?ended=1");
+    assert.equal(endedSignInPath("https://evil.com/x"), "/login?ended=1");
+    assert.equal(endedSignInPath("/\\evil.com"), "/login?ended=1");
   });
 });

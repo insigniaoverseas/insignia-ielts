@@ -87,7 +87,13 @@ export async function proxy(request: NextRequest) {
 
 		// A signed-in visitor inside an app area passes; their layout decides.
 		const decision: RouteDecision =
-			userId && !routeNeedsRole(pathname) ? { kind: "pass" } : routeDecision({ pathname, userId, role, session });
+			userId && !routeNeedsRole(pathname) ? { kind: "pass" } : routeDecision({
+						pathname,
+						userId,
+						role,
+						session,
+						next: request.nextUrl.searchParams.get("next"),
+					});
 
 		if (decision.kind === "endSession") {
 			await supabase.auth.signOut();
