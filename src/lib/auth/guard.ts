@@ -7,7 +7,7 @@ import { getActor } from "@/lib/rbac";
 import { can, type Actor, type Permission } from "@/lib/permissions";
 import { sessionState, touchSession } from "@/lib/auth/sessions";
 import { createClient } from "@/lib/supabase/server";
-import { homeForRole, signInPath } from "@/lib/auth/access";
+import { endedSignInPath, homeForRole, signInPath } from "@/lib/auth/access";
 
 /**
  * Route guards (M1-13) — the layout-level half of the second gate.
@@ -68,7 +68,7 @@ export async function requireUser(currentPath?: string): Promise<Actor> {
 	if (state !== "live") {
 		// Proxy clears both cookies on the redirected request. Server Components
 		// cannot mutate cookies themselves.
-		redirect("/login?ended=1");
+		redirect(endedSignInPath(currentPath));
 	}
 
 	// Both of these are memoised for the request, so a layout and the page it
