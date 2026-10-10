@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AudioCacheGuard } from "@/components/student/audio-cache-guard";
 import { RunningTestBanner } from "@/components/student/running-test-banner";
 import { StudentBottomNav, StudentTopNav } from "@/components/student/student-nav";
 import { getOpenAttempts } from "@/lib/attempts/load";
@@ -19,6 +20,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
 	const openAttempts = await getOpenAttempts(actor.id);
 	return (
 		<div className="flex min-h-screen flex-col bg-bg">
+			<AudioCacheGuard ownerId={actor.id} />
 			<header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-6 border-b border-line bg-surface px-4 md:min-h-[72px] md:px-8">
 				<Link href="/home" className="flex items-center gap-3 text-ink no-underline hover:no-underline">
 					<span

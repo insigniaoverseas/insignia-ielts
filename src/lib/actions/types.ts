@@ -45,6 +45,12 @@ export type ChangePasswordState = { message: string; ok: boolean; field?: "curre
 /** What signing a device out from Profile returns. */
 export type SignOutDeviceResult = { ok: true } | { ok: false; message: string };
 
+/**
+ * What +5 minutes and Finish for them return to the live monitor (M7-03).
+ * `secondsRemaining` is the server's figure after the change; `null` once handed in.
+ */
+export type InvigilatorActionResult = { ok: true; secondsRemaining: number | null } | { ok: false; message: string };
+
 /** The choose-a-new-password form's state. */
 export type ResetFormState = { message: string } | null;
 

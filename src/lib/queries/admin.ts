@@ -40,6 +40,8 @@ const ACTION_LABEL: Record<string, string> = {
 	"test.unpublish": "Test moved back to draft",
 	"role.change": "Role changed",
 	"session.revoke": "Session revoked",
+	"attempt.extra_time": "Gave a student extra time",
+	"attempt.force_submit": "Handed in a student's test",
 };
 
 const PERMISSION_LABEL: Record<string, string> = {

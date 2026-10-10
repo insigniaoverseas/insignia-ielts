@@ -5,15 +5,23 @@ import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
+import { buildReview } from "@/lib/attempts/review";
+import { audioCacheKey } from "@/lib/audio-cache-key";
 import { deviceLabel } from "@/lib/auth/device-label";
 import { QUESTION_TYPES, isQuestionType } from "@/lib/question-types";
 import type { Database, Json } from "@/lib/supabase/database.types";
+import { readAnswerKeyObject, readContentObject } from "@/lib/r2";
+import { answerKeyObjectKey, contentObjectKey } from "@/lib/r2-keys";
+import { answerKeySchema } from "@/lib/scoring";
+import { sanitizePassageHtml } from "@/lib/security/sanitize";
 import { createClient } from "@/lib/supabase/server";
+import { testContentSchema } from "@/lib/test-content";
 import { formatDate, formatDateTime, formatTime, INSTITUTE_TIME_ZONE } from "@/lib/time";
 import type {
 	AssignedTest,
 	AttemptResult,
 	CompletedAttempt,
+	MyMistakes,
 	LockedReason,
 	Mode,
 	MyProgress,
@@ -411,6 +419,54 @@ export async function getPreTestBriefing(assignmentId: string): Promise<PreTestB
 	};
 }
 
+/** The audio a student may download on screen 05, before Start (M2-06). */
+export type PreStartAudio = {
+	/** The R2 object's identity. Never sent to the browser as a key. */
+	testId: string;
+	contentVersion: number;
+	/** Where the browser caches it — names the student, so it purges per owner. */
+	cacheKey: string;
+	ownerId: string;
+};
+
+/**
+ * Which audio file a student may download from the pre-test screen, or `null`.
+ *
+ * Only for a Listening test they may start now (or resume), so the download
+ * is gated exactly like Start is. The version is the one Start will pin: the
+ * test's current `content_version`, or the open attempt's when resuming.
+ *
+ * @param briefing The result of {@link getPreTestBriefing} for the same ref.
+ */
+export async function getPreStartAudio(briefing: PreTestBriefing): Promise<PreStartAudio | null> {
+	const { assignment } = briefing;
+	if (assignment.test.skill !== "listening") return null;
+	if (assignment.locked && !assignment.resumeAttemptId) return null;
+	const supabase = await createClient();
+	const ownerId = await signedInUserId(supabase);
+	const [testResult, attemptResult] = await Promise.all([
+		supabase.from("tests").select("content_version, audio_duration_seconds").eq("id", assignment.test.id).maybeSingle(),
+		assignment.resumeAttemptId
+			? supabase
+					.from("attempts")
+					.select("content_version")
+					.eq("id", assignment.resumeAttemptId)
+					.eq("student_id", ownerId)
+					.maybeSingle()
+			: Promise.resolve({ data: null, error: null }),
+	]);
+	if (testResult.error) queryFailed("pre-start audio test", testResult.error);
+	if (attemptResult.error) queryFailed("pre-start audio attempt", attemptResult.error);
+	if (!testResult.data?.audio_duration_seconds) return null;
+	const contentVersion = attemptResult.data?.content_version ?? testResult.data.content_version;
+	return {
+		testId: assignment.test.id,
+		contentVersion,
+		cacheKey: audioCacheKey(ownerId, assignment.test.id, contentVersion),
+		ownerId,
+	};
+}
+
 /** Screen 09 — one owned finished attempt; score visibility is decided by RLS. */
 export async function getAttemptResult(attemptId: string): Promise<CompletedAttempt | null> {
 	const supabase = await createClient();
@@ -500,6 +556,61 @@ export async function getStudentProfile(): Promise<StudentProfile> {
 			lastUsedLabel: relativeActivity(session.last_seen_at),
 			current: session.id === currentId,
 		})),
+	};
+}
+
+/** Screen 10, or why it cannot be shown. */
+export type MistakesLoad = { mistakes: MyMistakes } | { problem: "content_missing"; attempt: CompletedAttempt };
+
+/**
+ * Screen 10 — Review my mistakes (M4-01).
+ *
+ * The gate is {@link getReviewAvailability}: this student's own finished
+ * attempt, its result released, its assignment allowing review. Only then is
+ * `key.json` read — through the R2 binding, at the attempt's pinned
+ * `content_version` — and joined to the student's answers and the marks the
+ * score was built from. Rendered on the server; the page hands a client
+ * component only these rows, never the key.
+ *
+ * @returns `null` when the student may not review this attempt.
+ */
+export async function getMyMistakes(attemptId: string): Promise<MistakesLoad | null> {
+	const review = await getReviewAvailability(attemptId);
+	if (!review || !review.allowed) return null;
+	const supabase = await createClient();
+	const userId = await signedInUserId(supabase);
+
+	const [attemptResult, answersResult, marksResult] = await Promise.all([
+		supabase
+			.from("attempts")
+			.select("test_id, content_version")
+			.eq("id", attemptId)
+			.eq("student_id", userId)
+			.maybeSingle(),
+		supabase.from("answers").select("q_number, given_answer").eq("attempt_id", attemptId),
+		supabase.from("answer_marks").select("q_number, is_correct").eq("attempt_id", attemptId),
+	]);
+	if (attemptResult.error) queryFailed("review attempt row", attemptResult.error);
+	if (answersResult.error) queryFailed("review answers", answersResult.error);
+	if (marksResult.error) queryFailed("review marks", marksResult.error);
+	const attempt = attemptResult.data;
+	if (!attempt) return null;
+
+	const [keyObject, contentObject] = await Promise.all([
+		readAnswerKeyObject(answerKeyObjectKey(attempt.test_id, attempt.content_version)),
+		readContentObject(contentObjectKey(attempt.test_id, attempt.content_version)),
+	]);
+	if (!keyObject || !contentObject) return { problem: "content_missing", attempt: review.attempt };
+	const key = answerKeySchema.safeParse(await keyObject.json());
+	const content = testContentSchema.safeParse(await contentObject.json());
+	if (!key.success || !content.success) {
+		console.error("review:", key.success ? content.error?.message : key.error.message);
+		return { problem: "content_missing", attempt: review.attempt };
+	}
+
+	const built = buildReview(content.data, key.data, answersResult.data ?? [], marksResult.data ?? [], sanitizePassageHtml);
+	return {
+		mistakes: { attemptId, test: review.attempt.test, summary: built.summary, questions: built.questions },
 	};
 }
 

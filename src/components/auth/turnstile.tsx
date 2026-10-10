@@ -9,7 +9,13 @@ declare global {
 	}
 }
 
-/** Browser half only; the Server Action verifies the submitted token. */
+/**
+ * Browser half only; the Server Action verifies the submitted token.
+ *
+ * `onReady`, not `onLoad`: Next runs `onLoad` once per page load, so after Log
+ * out — a client-side navigation back to `/login` with the script already
+ * present — the widget would never render. `onReady` fires on every mount.
+ */
 export function Turnstile({ siteKey, action, resetKey }: { siteKey: string; action: string; resetKey?: string }) {
 	const container = useRef<HTMLDivElement>(null);
 	const [loaded, setLoaded] = useState(false);
@@ -22,5 +28,5 @@ export function Turnstile({ siteKey, action, resetKey }: { siteKey: string; acti
 		});
 		return () => window.turnstile?.remove(widgetId);
 	}, [action, loaded, resetKey, siteKey]);
-	return <><Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onLoad={() => setLoaded(true)} /><div ref={container} /><input type="hidden" name="cf-turnstile-response" value={token} /></>;
+	return <><Script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" strategy="afterInteractive" onReady={() => setLoaded(true)} /><div ref={container} /><input type="hidden" name="cf-turnstile-response" value={token} /></>;
 }

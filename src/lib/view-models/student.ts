@@ -259,8 +259,12 @@ export type MyMistakes = {
 
 /** One question in the review list. */
 export type ReviewQuestion = {
-	/** 1-based question number as the student saw it. */
+	/** 1-based question number as the student saw it — the control's first. */
 	number: number;
+	/** "7", or "29–30" for one control that answers several numbers. */
+	label: string;
+	/** Section (Listening) or passage (Reading) number. */
+	sectionNo: number;
 	/** Sanitised HTML — already through `sanitizePassageHtml` on write and render. */
 	promptHtml: string;
 	questionType: string;

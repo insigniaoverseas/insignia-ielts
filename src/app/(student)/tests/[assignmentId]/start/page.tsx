@@ -5,7 +5,7 @@ import { DifficultyBadge } from "@/components/ui/difficulty-badge";
 import { SoundCheck } from "@/components/student/sound-check";
 import { StartTestForm } from "@/components/student/start-test-form";
 import { MODE_EXPLAINED, SKILL_LABEL } from "@/components/student/labels";
-import { getPreTestBriefing } from "@/lib/queries/student";
+import { getPreStartAudio, getPreTestBriefing } from "@/lib/queries/student";
 
 export const metadata: Metadata = { title: "Before you start" };
 
@@ -27,6 +27,10 @@ function Fact({ value, caption }: { value: string; caption: string }) {
  * people, and — for Listening — proves the headphones work *before* a one-shot
  * timer starts.
  *
+ * For Listening, the whole audio file downloads here, while the rules are
+ * read, and Start waits for it (M2-06): the clock must never run while a lab
+ * connection is still fetching the recording.
+ *
  * Two ways out, and the safe one is not hidden: "I'm ready — Start" is the
  * single primary action, and "Not now, go back" sits under it as plain text.
  */
@@ -38,6 +42,7 @@ export default async function PreTestPage({
 	const { assignmentId } = await params;
 	const briefing = await getPreTestBriefing(assignmentId);
 	if (!briefing) notFound();
+	const audio = await getPreStartAudio(briefing);
 
 	const { assignment, rules, soundCheckUrl } = briefing;
 	const t = assignment.test;
@@ -85,7 +90,17 @@ export default async function PreTestPage({
 			{soundCheckUrl && <SoundCheck src={soundCheckUrl} />}
 
 			<div className="flex flex-col gap-3">
-				<StartTestForm refId={assignment.assignmentId} resume={assignment.resumeAttemptId !== null} />
+				<StartTestForm
+					refId={assignment.assignmentId}
+					resume={assignment.resumeAttemptId !== null}
+					audio={
+						audio && {
+							src: `/tests/${encodeURIComponent(assignment.assignmentId)}/start/audio`,
+							cacheKey: audio.cacheKey,
+							ownerId: audio.ownerId,
+						}
+					}
+				/>
 				<Link
 					href="/home"
 					className="flex min-h-touch items-center justify-center font-semibold text-ink-2 no-underline hover:text-ink hover:no-underline"

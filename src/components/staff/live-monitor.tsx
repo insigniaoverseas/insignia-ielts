@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { StatusPill } from "@/components/ui/status-pill";
 import { formatClock } from "@/components/player/countdown";
+import { extendAttemptAction, forceSubmitAttemptAction } from "@/lib/actions/invigilation";
 import type { LiveSession, LiveStudent } from "@/lib/view-models/teacher";
 
 /** How often the monitor asks the server for fresh state. */
@@ -40,6 +41,39 @@ export function LiveMonitor({ initial }: { initial: LiveSession }) {
 	const [secondsSincePoll, setSecondsSincePoll] = useState(0);
 	const [gone, setGone] = useState(false);
 	const [acting, setActing] = useState<{ student: LiveStudent; action: "extend" | "submit" } | null>(null);
+	const [actionError, setActionError] = useState<string | null>(null);
+	const [actionPending, startAction] = useTransition();
+
+	/**
+	 * Runs +5 minutes or Finish for them (M7-03), then shows the server's
+	 * answer on the tile at once rather than waiting up to 10 s for the poll.
+	 */
+	function confirmAction() {
+		if (!acting) return;
+		const { student, action } = acting;
+		startAction(async () => {
+			const result =
+				action === "extend"
+					? await extendAttemptAction(student.attemptId)
+					: await forceSubmitAttemptAction(student.attemptId);
+			setActing(null);
+			if (!result.ok) {
+				setActionError(`${student.name}: ${result.message}`);
+				return;
+			}
+			setActionError(null);
+			setSession((prev) => ({
+				...prev,
+				students: prev.students.map((st) =>
+					st.attemptId !== student.attemptId
+						? st
+						: action === "extend"
+							? { ...st, secondsRemaining: result.secondsRemaining }
+							: { ...st, state: "submitted", secondsRemaining: null },
+				),
+			}));
+		});
+	}
 
 	// The one-second tick: the "updated" stamp and the cosmetic countdowns.
 	useEffect(() => {
@@ -150,6 +184,12 @@ export function LiveMonitor({ initial }: { initial: LiveSession }) {
 				)}
 			</div>
 
+			{actionError && (
+				<p className="m-0 rounded-card border border-danger-line bg-danger-soft px-5 py-4 font-semibold text-danger" role="alert">
+					{actionError}
+				</p>
+			)}
+
 			<ul className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
 				{session.students.map((s) => {
 					const meta = STATE[s.state];
@@ -213,12 +253,13 @@ export function LiveMonitor({ initial }: { initial: LiveSession }) {
 				}
 				description={
 					acting?.action === "extend"
-						? "Their timer goes up by five minutes. This is recorded against the attempt."
+						? "Their timer goes up by five minutes. It's recorded against the test, with your name."
 						: `Their answers are submitted as they stand — ${acting?.student.answered} of ${acting?.student.total} answered. They can't go back in.`
 				}
 				confirmLabel={acting?.action === "extend" ? "Give 5 minutes" : "Yes, finish it"}
 				cancelLabel="Cancel"
-				onConfirm={() => setActing(null)}
+				loading={actionPending}
+				onConfirm={confirmAction}
 			/>
 		</div>
 	);

@@ -78,7 +78,10 @@ R2_SECRET_ACCESS_KEY=
 # workers.dev hostname. It gives two keys:
 #   public · site key   → wrangler.jsonc `vars` (it is rendered into the page)
 #   secret · secret key → here
-# Nothing reads these yet; the sign-in action has the hook ready.
+# The real site key only works on the hostnames listed there, so on
+# localhost use Cloudflare's published test keys, which always pass:
+#   TURNSTILE_SITE_KEY=1x00000000000000000000AA
+#   TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 TURNSTILE_SITE_KEY=
 TURNSTILE_SECRET_KEY=
 

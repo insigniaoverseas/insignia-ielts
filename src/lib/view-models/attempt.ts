@@ -104,7 +104,16 @@ export type AttemptSession = {
 	 * never seeks it and never re-requests it — there is one `<audio>` element
 	 * for the whole attempt, mounted at the player root.
 	 */
-	audio: { url: string; durationSeconds: number } | null;
+	audio: {
+		/** Fallback when this browser has no cached copy: a signed or same-origin URL. */
+		url: string;
+		durationSeconds: number;
+		/**
+		 * Where the pre-test screen cached the whole file (M2-06), and whose it
+		 * is. Absent in the staff preview, which never caches.
+		 */
+		cache?: { key: string; ownerId: string; dropAfterSubmit: boolean };
+	} | null;
 
 	sections: AttemptSection[];
 

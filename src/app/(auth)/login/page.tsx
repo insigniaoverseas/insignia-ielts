@@ -4,6 +4,7 @@ import { Banner } from "@/components/ui/banner";
 import Link from "next/link";
 
 import { LoginForm } from "@/components/auth/login-form";
+import { AudioCacheGuard } from "@/components/student/audio-cache-guard";
 import { homeForRole } from "@/lib/auth/access";
 import { isFirstRunPending } from "@/lib/auth/guard";
 import { sessionState } from "@/lib/auth/sessions";
@@ -41,6 +42,8 @@ export default async function LoginPage({
 
 	return (
 		<>
+			{/* Whoever signs in next starts with no one else's audio cached (M2-06). */}
+			<AudioCacheGuard />
 			<div className="flex flex-col items-center gap-4 text-center">
 				<span
 					className="grid size-12 place-items-center rounded-card bg-night text-h2 font-bold text-white"

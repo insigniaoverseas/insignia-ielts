@@ -18,6 +18,7 @@ export function PillTabs({
 	basePath,
 	paramName = "tab",
 	extraParams,
+	label = "Which tests to show",
 }: {
 	tabs: PillTab[];
 	active: string;
@@ -26,6 +27,8 @@ export function PillTabs({
 	paramName?: string;
 	/** Optional query values that should survive a tab change. */
 	extraParams?: Record<string, string | undefined>;
+	/** What the row chooses, for screen readers. */
+	label?: string;
 }) {
 	const extra = Object.entries(extraParams ?? {})
 		.filter(([, v]) => v)
@@ -35,7 +38,7 @@ export function PillTabs({
 	return (
 		<div
 			role="tablist"
-			aria-label="Which tests to show"
+			aria-label={label}
 			className="flex gap-1 self-start rounded-full border border-line bg-surface p-1"
 		>
 			{tabs.map((tab) => {

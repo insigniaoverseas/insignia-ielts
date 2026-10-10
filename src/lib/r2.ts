@@ -102,3 +102,32 @@ export function readContentObject(key: string): Promise<R2ObjectBody | null> {
 export function readAnswerKeyObject(key: string): Promise<R2ObjectBody | null> {
 	return readExpectedObject(key, "answer_key");
 }
+
+/**
+ * Streams one R2 object as an HTTP response, honouring `Range`.
+ *
+ * For same-origin media routes that have already decided the caller may have
+ * the object — the staff preview and the pre-test audio download. Never cached
+ * by anything shared: these are private test materials.
+ */
+export async function streamR2Object(bucket: R2Bucket, key: string, request: Request): Promise<Response> {
+	const object = await bucket.get(key, { range: request.headers });
+	if (!object) return new Response("Not found", { status: 404 });
+
+	const headers = new Headers();
+	object.writeHttpMetadata(headers);
+	headers.set("etag", object.httpEtag);
+	headers.set("accept-ranges", "bytes");
+	headers.set("cache-control", "private, no-store");
+
+	const range = object.range as { offset?: number; length?: number; suffix?: number } | undefined;
+	if (range && request.headers.has("range")) {
+		const offset = range.suffix !== undefined ? object.size - range.suffix : (range.offset ?? 0);
+		const length = range.suffix ?? range.length ?? object.size - offset;
+		headers.set("content-range", `bytes ${offset}-${offset + length - 1}/${object.size}`);
+		headers.set("content-length", String(length));
+		return new Response(object.body, { status: 206, headers });
+	}
+	headers.set("content-length", String(object.size));
+	return new Response(object.body, { status: 200, headers });
+}

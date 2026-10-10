@@ -8,6 +8,7 @@ import { QuestionGroupBlock, type AnswerValue } from "@/components/player/questi
 import { ReadingSplit } from "@/components/player/reading-split";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { readAudio } from "@/lib/audio-cache";
 import type { AttemptSession } from "@/lib/view-models/attempt";
 
 /**
@@ -67,6 +68,7 @@ export function PlayerShell({
 
 	const audioRef = useRef<HTMLAudioElement>(null);
 	const submitted = useRef(false);
+	const audioSrc = useAudioSource(session.audio);
 
 	const section = session.sections[sectionIndex];
 	const isLast = sectionIndex === session.sections.length - 1;
@@ -199,10 +201,10 @@ export function PlayerShell({
 		// and the question bar never scrolls away; Listening scrolls as a page.
 		<div className={hasPassage ? "flex h-dvh flex-col bg-bg" : "flex min-h-screen flex-col bg-bg"}>
 			{/* One audio element for the whole attempt. Never remounted. */}
-			{session.audio && (
+			{session.audio && audioSrc && (
 				<audio
 					ref={audioRef}
-					src={session.audio.url}
+					src={audioSrc}
 					preload="auto"
 					onTimeUpdate={(e) => setElapsed(e.currentTarget.currentTime)}
 					onEnded={() => setPlaying(false)}
@@ -412,4 +414,34 @@ export function PlayerShell({
 function isAnswered(value: AnswerValue | undefined): boolean {
 	if (value == null) return false;
 	return Array.isArray(value) ? value.length > 0 : value.trim() !== "";
+}
+
+/**
+ * Where the one `<audio>` element gets its file (M2-06): the copy the pre-test
+ * screen downloaded, as a `blob:` URL, so playing never touches the network.
+ * Only when this browser has no copy — a resumed test on another machine, a
+ * private window that was reloaded — does it fall back to the URL from the
+ * server. Resolved once; the element mounts when it is known and never again.
+ */
+function useAudioSource(audio: AttemptSession["audio"]): string | null {
+	const [src, setSrc] = useState<string | null>(audio && !audio.cache ? audio.url : null);
+	useEffect(() => {
+		if (!audio?.cache) return;
+		let objectUrl: string | null = null;
+		let cancelled = false;
+		readAudio(audio.cache.ownerId, audio.cache.key)
+			.then((blob) => {
+				if (cancelled) return;
+				if (blob) objectUrl = URL.createObjectURL(blob);
+				setSrc(objectUrl ?? audio.url);
+			})
+			.catch(() => !cancelled && setSrc(audio.url));
+		return () => {
+			cancelled = true;
+			if (objectUrl) URL.revokeObjectURL(objectUrl);
+		};
+		// One attempt, one file: resolving again would remount the element.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+	return src;
 }
