@@ -77,7 +77,7 @@ export function ForgotPasswordForm() {
 function SubmitButton() {
 	const { pending } = useFormStatus();
 	return (
-		<Button type="submit" size="student" disabled={pending}>
+		<Button type="submit" size="student" loading={pending}>
 			{pending ? "Sending…" : "Send me a link"}
 		</Button>
 	);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { PlayerShell } from "@/components/player/player-shell";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,10 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [clock, setClock] = useState<{ seconds: number; stamp: number }>();
 	const [leaving, setLeaving] = useState(false);
+	/** "Leave anyway" was tapped and My Tests is loading. */
+	const [goingHome, startGoingHome] = useTransition();
+	/** Handing in: from the tap (or time-up) until the result page loads or it fails. */
+	const [submitting, setSubmitting] = useState(false);
 	/** The browser's own word that the network is gone, ahead of a failed save. */
 	const [browserOffline, setBrowserOffline] = useState(false);
 	const correct = useCallback((seconds: number) => setClock({ seconds, stamp: Date.now() }), []);
@@ -88,12 +92,14 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 	const finish = useCallback(async () => {
 		if (finishing.current) return;
 		finishing.current = true;
+		setSubmitting(true);
 		// A mock or class recording must not stay replayable once handed in (§12).
 		const cached = session.audio?.cache;
 		if (cached?.dropAfterSubmit) await dropAudio(cached.key);
 		const result = await submitAttemptAction(session.attemptId);
 		// On success the action redirects and this line is never reached.
 		finishing.current = false;
+		setSubmitting(false);
 		if (result && !result.ok) setSubmitError(result.message);
 	}, [session.attemptId, session.audio]);
 
@@ -241,6 +247,7 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 			const left = await check();
 			if (typeof left === "number" && left > 0) return;
 		}
+		setSubmitting(true);
 		for (const key of [...pending.current.keys()]) {
 			clearTimeout(timers.current.get(key));
 			await send(key);
@@ -326,6 +333,7 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 				onSubmit={(reason) => void onSubmit(reason)}
 				status={statusLabel}
 				clock={clock}
+				submitting={submitting}
 			/>
 			<Dialog open={leaving} onOpenChange={setLeaving}>
 				<DialogContent showCloseButton={false}>
@@ -341,7 +349,12 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 						<Button size="modal" onClick={() => setLeaving(false)}>
 							Stay in the test
 						</Button>
-						<Button size="modal" variant="secondary" onClick={() => router.push("/tests")}>
+						<Button
+							size="modal"
+							variant="secondary"
+							loading={goingHome}
+							onClick={() => startGoingHome(() => router.push("/tests"))}
+						>
 							Leave anyway
 						</Button>
 					</DialogFooter>

@@ -175,7 +175,7 @@ function AddButton({ mode }: { mode: "promote" | "addon" }) {
 	const { pending } = useFormStatus();
 	const label = mode === "promote" ? "Move into this batch" : "Add to this batch";
 	return (
-		<Button type="submit" disabled={pending}>
+		<Button type="submit" loading={pending}>
 			{pending ? "Saving…" : label}
 		</Button>
 	);
@@ -185,7 +185,7 @@ function AddButton({ mode }: { mode: "promote" | "addon" }) {
 function RemoveButton() {
 	const { pending } = useFormStatus();
 	return (
-		<Button type="submit" variant="secondary" size="admin" disabled={pending}>
+		<Button type="submit" variant="secondary" size="admin" loading={pending}>
 			{pending ? "Removing…" : "Remove"}
 		</Button>
 	);

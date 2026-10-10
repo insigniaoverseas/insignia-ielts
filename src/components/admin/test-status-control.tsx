@@ -37,7 +37,7 @@ export function TestStatusControl({ testId, status }: { testId: string; status: 
 					<Button variant="secondary" onClick={() => setConfirming(false)} disabled={pending}>
 						Cancel
 					</Button>
-					<Button onClick={run} disabled={pending}>
+					<Button onClick={run} loading={pending}>
 						{pending ? "Working…" : published ? "Yes, move to draft" : "Yes, publish"}
 					</Button>
 				</div>

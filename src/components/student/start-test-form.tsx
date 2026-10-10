@@ -93,11 +93,7 @@ export function StartTestForm({ refId, resume, audio }: { refId: string; resume:
 			)}
 
 			{state && <Banner tone="warning">{state.message}</Banner>}
-			<button
-				type="submit"
-				disabled={pending || !ready}
-				className="flex h-primary cursor-pointer items-center justify-center gap-2.5 rounded-control bg-brand text-h3 font-semibold text-white hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-70"
-			>
+			<Button type="submit" size="student" className="text-h3" disabled={!ready} loading={pending}>
 				{pending
 					? "Starting…"
 					: !ready
@@ -105,8 +101,8 @@ export function StartTestForm({ refId, resume, audio }: { refId: string; resume:
 						: resume
 							? "Carry on with your test"
 							: "I’m ready — Start"}
-				{ready && <span aria-hidden="true">→</span>}
-			</button>
+				{ready && !pending && <span aria-hidden="true">→</span>}
+			</Button>
 		</form>
 	);
 }

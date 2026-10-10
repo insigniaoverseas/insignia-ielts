@@ -133,7 +133,7 @@ export function InviteColleagueForm({ roles, branches }: { roles: InvitableRole[
 function SubmitButton() {
 	const { pending } = useFormStatus();
 	return (
-		<Button type="submit" disabled={pending}>
+		<Button type="submit" loading={pending}>
 			{pending ? "Sending…" : "Send the invitation"}
 		</Button>
 	);

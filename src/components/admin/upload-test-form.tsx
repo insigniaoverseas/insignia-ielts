@@ -182,7 +182,7 @@ function Preview({ preview }: { preview: Extract<TestUploadState, { objects: unk
 function CheckButton({ formAction }: { formAction: (formData: FormData) => void }) {
 	const { pending } = useFormStatus();
 	return (
-		<Button type="submit" variant="secondary" formAction={formAction} disabled={pending}>
+		<Button type="submit" variant="secondary" formAction={formAction} loading={pending}>
 			{pending ? "Checking…" : "Check it"}
 		</Button>
 	);
@@ -192,7 +192,7 @@ function CheckButton({ formAction }: { formAction: (formData: FormData) => void 
 function ImportButton({ formAction }: { formAction: (formData: FormData) => void }) {
 	const { pending } = useFormStatus();
 	return (
-		<Button type="submit" formAction={formAction} disabled={pending}>
+		<Button type="submit" formAction={formAction} loading={pending}>
 			{pending ? "Importing…" : "Import as a draft"}
 		</Button>
 	);
