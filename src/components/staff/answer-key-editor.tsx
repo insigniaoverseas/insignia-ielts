@@ -124,12 +124,17 @@ export function AnswerKeyEditor({
 										/>
 									</TableCell>
 									<TableCell>
-										<Input
-											size="admin"
-											value={value.also}
-											onChange={(e) => set(row.n, "also", e.target.value)}
-											aria-label={`Also accepted for question ${row.label}`}
-										/>
+										{/* A choice is right or wrong — the key rejects spellings for one. */}
+										{!row.textEntry ? (
+											<span className="text-small text-ink-3">Not for choice questions</span>
+										) : (
+											<Input
+												size="admin"
+												value={value.also}
+												onChange={(e) => set(row.n, "also", e.target.value)}
+												aria-label={`Also accepted for question ${row.label}`}
+											/>
+										)}
 									</TableCell>
 									<TableCell className="text-right font-mono">{row.marks}</TableCell>
 								</TableRow>

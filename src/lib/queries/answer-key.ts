@@ -22,6 +22,8 @@ export type AnswerKeyRow = {
 	acceptedVariants: string[];
 	marks: number;
 	wordLimit: number | null;
+	/** Typed answers can list other accepted spellings; choices can't (`answerKeySchema`'s rule). */
+	textEntry: boolean;
 };
 
 /** What screen 27 shows, or why it can't. */
@@ -108,6 +110,9 @@ export async function getAnswerKeyView(testId: string): Promise<AnswerKeyView | 
 					acceptedVariants: question.accepted_variants ?? [],
 					marks: question.marks,
 					wordLimit: group.word_limit ?? null,
+					textEntry:
+						QUESTION_TYPES[group.type].widget === "text_gap" ||
+						(QUESTION_TYPES[group.type].widget === "image_label" && group.word_limit !== undefined),
 				});
 			}
 		}
