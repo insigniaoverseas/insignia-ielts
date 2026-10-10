@@ -92,7 +92,7 @@ export async function acceptInvitationAction(_previous: AcceptFormState, formDat
 		return { message: "We couldn't verify that check. Please try again." };
 	}
 
-	const result = await acceptInvitation(token, password);
+	const result = await acceptInvitation(token, password, String(formData.get("privacyAccepted") ?? ""));
 	if (!result.ok) return { message: result.message, dead: result.dead };
 
 	// Sign in with the credentials just created. If this somehow fails, the

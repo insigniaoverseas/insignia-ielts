@@ -196,7 +196,7 @@
 | M9-05 Load test at **200** concurrent | todo | | | ~~40~~ → 200 (user, 2026-09-15). Throwaway free Supabase project. First run right after M2-07 |
 | M9-06 Backups + restore drill | todo | | | The drill must actually restore. Free has no backups → nightly `db dump` to private R2. **Before the first real student** |
 | M9-07 Full security review | todo | | | |
-| M9-08 DPDP retention + deletion path | todo | | | |
+| M9-08 DPDP retention + deletion path | in_progress | Claude, goverdhan-gaur | 2026-10-10 | **Decided 2026-10-10 (user):** no guardian-consent flow (educational-institution exemption in the DPDP Rules 2025; families enrol in person); **keep data 12 months after plan ends**; contact = the institute's main email (`PRIVACY_CONTACT_EMAIL`, ⬜ address not yet given). ✅ **Notice + consent:** `lib/privacy.ts` (one definition, versioned), public `/privacy`, 3-line summary + "I have read this and I agree" on the accept screen; the action refuses without the current version and writes `privacy.accept` {notice_version} to the append-only audit log. 4 unit checks. `users.dob`/`guardian_*` stay unused. ⬜ Deletion action for admins (the notice now **promises** deletion at 12 months — first due late 2027). ⬜ Grievance handling written down. Not legal advice; have it read once. |
 | M9-09 Docs completeness pass | todo | | | |
 
 ---
@@ -207,6 +207,7 @@ Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-10-10 | M9-08 | **Privacy notice and recorded consent.** Accepting an invitation now shows what is kept, why, who sees it and for how long, links the full notice at `/privacy`, and needs "I agree" ticked; the server refuses otherwise and records `privacy.accept` with the notice version in `audit_log` (survives erasure as proof). Retention 12 months after plan ends; contact from `PRIVACY_CONTACT_EMAIL` (front desk if unset). No schema change. | `src/lib/privacy.ts`, `src/app/privacy/page.tsx`, `src/app/(auth)/invite/[token]/page.tsx`, `src/components/auth/set-password-form.tsx`, `src/lib/auth/acceptance.ts`, `src/lib/actions/auth.ts`, `src/lib/queries/admin.ts`, `tests/unit/privacy.test.mjs`, `.dev.vars.example`, `PROJECT-MEMORY.md` | Claude |
 | 2026-10-10 | M1-11 | **Turnstile reappears after Log out.** Log out is a client-side navigation back to `/login`; the script was already loaded, and `next/script` fires `onLoad` only once, so the widget never rendered and sign-in was refused until a full reload. Switched to `onReady`, which fires on every mount (Next 16 docs, `script.md`). Same fix covers the invite page. | `src/components/auth/turnstile.tsx`, `PROJECT-MEMORY.md` | Claude |
 | 2026-10-10 | M1-11 | **Turnstile works on localhost.** Sign-in failed locally twice over: the real site key is bound to production hostnames, and with Cloudflare's test keys the reply has no `action`, which the action check refused. `isAcceptedSiteverify` (pure, tested) now accepts a missing action only on replies flagged `result_with_testing_key`; the test keys are documented in `.dev.vars.example`. Production checking unchanged. | `src/lib/turnstile.ts`, `.dev.vars.example`, `tests/unit/turnstile.test.mjs`, `PROJECT-MEMORY.md` | Claude |
 | 2026-10-10 | M7-03 | **+5 minutes and Finish for them work.** The confirm dialogs used to just close. New `extendAttemptAction` / `forceSubmitAttemptAction`: permission + live session + RLS-scoped read of the attempt, secret-key write under the clock trigger, `attempt_events` + audit. No migration — `expires_at` growth and both event types were already allowed. Audit screen labels added. | `src/lib/actions/{invigilation,types}.ts`, `src/components/staff/live-monitor.tsx`, `src/lib/queries/admin.ts`, `PROJECT-MEMORY.md` | Claude |
@@ -300,6 +301,10 @@ Anything not already in `MVP-1.md` §3. Record **the choice, the reason, and the
 ### 2026-10-10 — Pre-test audio comes through the Worker, not a signed R2 URL  (task: M2-06)
 
 `MVP-1.md` §12 says "fetched from a 5-minute signed URL". The pre-test screen has to `fetch()` the bytes into the Cache API, and a cross-origin fetch of a presigned R2 URL needs a CORS rule on the private audio bucket plus the R2 origin in `connect-src`. Instead `GET /tests/[ref]/start/audio` streams from the binding after the same eligibility check as Start. A Worker piping a body costs one request and almost no CPU; R2 egress is free either way. The in-player fallback still uses the signed URL in `<audio src>`, which needs neither. Ownership lives in the cache key (`/audio-cache/{ownerId}/…`) instead of an IndexedDB record — same guarantee, one store.
+
+### 2026-10-10 — DPDP: notice + recorded consent, no guardian flow  (task: M9-08)
+
+**Chose (user):** no verifiable-guardian-consent screen — the DPDP Rules 2025 exempt educational institutions from s.9(1) for educational activities, and families enrol in person. But an invitation is not consent: s.5–6 need a notice first and an affirmative act, so the accept screen shows the notice and requires "I agree", recorded in `audit_log` against a versioned notice. Retention: 12 months after the plan ends. **Bump `PRIVACY_NOTICE_VERSION` whenever the text or the facts behind it change** (new field, new processor, new region).
 
 ### 2026-10-09 — Stacked PRs: merge, don't rebase  (task: process)
 

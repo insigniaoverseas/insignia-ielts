@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SetPasswordForm } from "@/components/auth/set-password-form";
 import { lookupInvitation } from "@/lib/auth/acceptance";
+import { PRIVACY_NOTICE_VERSION, privacySummary } from "@/lib/privacy";
 import { turnstileSiteKey } from "@/lib/turnstile";
 
 export const metadata: Metadata = {
@@ -78,7 +79,12 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 				))}
 			</dl>
 
-			<SetPasswordForm token={invite.token} email={invite.email} turnstileSiteKey={turnstileSiteKey()} />
+			<SetPasswordForm
+				token={invite.token}
+				email={invite.email}
+				turnstileSiteKey={turnstileSiteKey()}
+				privacy={{ summary: privacySummary(), version: PRIVACY_NOTICE_VERSION }}
+			/>
 
 			<p className="m-0 text-center text-ink-2">
 				Not you, or something looks wrong? Tell your teacher before you carry on.
