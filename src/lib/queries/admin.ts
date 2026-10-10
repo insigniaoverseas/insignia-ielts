@@ -41,6 +41,9 @@ const ACTION_LABEL: Record<string, string> = {
 	"test.unpublish": "Test moved back to draft",
 	"role.change": "Role changed",
 	"session.revoke": "Session revoked",
+	"test.key_edit": "Answer key changed",
+	"auth.reset_sent": "Password reset link sent",
+	"user.phone_change": "Phone number changed",
 	"attempt.extra_time": "Gave a student extra time",
 	"attempt.force_submit": "Handed in a student's test",
 };
@@ -132,6 +135,7 @@ async function allStudentRows(): Promise<{
 			return {
 				id: user.id,
 				name: user.name,
+				email: user.email,
 				phone: displayPhone(user.country_code, user.phone),
 				batchName: batchId ? batchById.get(batchId) ?? null : null,
 				status: user.status === "inactive" || user.status === "suspended" ? user.status : "active",

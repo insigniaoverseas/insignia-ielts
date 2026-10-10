@@ -19,6 +19,8 @@ export type PlanState = "active" | "expiring" | "expired" | "suspended";
 export type StudentRow = {
 	id: string;
 	name: string;
+	/** Their sign-in address — named in the reset-link confirm on screen 23. */
+	email: string;
 	/** Display form, e.g. "+91 98765 43210". */
 	phone: string;
 	batchName: string | null;
