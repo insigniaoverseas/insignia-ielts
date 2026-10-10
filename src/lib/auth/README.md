@@ -40,6 +40,7 @@ returning student
 | `acceptance.ts` | Token lookup and turning an invitation into an account. |
 | `sign-in.ts` | Verifying a password; one message for every failure. |
 | `sessions.ts` | `user_sessions` records, the session cookie, revocation. |
+| `device-label.ts` | **Pure.** "Chrome on Android" from a user-agent, for Profile's device list. |
 | `lockout.ts` | Five wrong passwords → a fifteen-minute lock, by account **and** IP. |
 | `password-reset.ts` | `/forgot` and `/reset/[token]`. Same answer whether or not the account exists. |
 | `guard.ts` | Page-level guards that redirect, rather than throw. |

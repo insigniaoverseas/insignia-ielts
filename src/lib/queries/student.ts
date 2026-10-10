@@ -5,6 +5,7 @@ import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
+import { deviceLabel } from "@/lib/auth/device-label";
 import { QUESTION_TYPES, isQuestionType } from "@/lib/question-types";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
@@ -495,7 +496,7 @@ export async function getStudentProfile(): Promise<StudentProfile> {
 		...context,
 		devices: (sessions ?? []).map((session) => ({
 			id: session.id,
-			label: session.user_agent ? session.user_agent.split(" ").slice(0, 4).join(" ") : "Unknown browser",
+			label: deviceLabel(session.user_agent),
 			lastUsedLabel: relativeActivity(session.last_seen_at),
 			current: session.id === currentId,
 		})),

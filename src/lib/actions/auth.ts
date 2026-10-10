@@ -1,16 +1,26 @@
 "use server";
 
-import { headers } from "next/headers";
+import { revalidatePath } from "next/cache";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { acceptInvitation } from "@/lib/auth/acceptance";
 import { completePasswordReset, requestPasswordReset, RESET_REQUESTED_MESSAGE } from "@/lib/auth/password-reset";
+import { requireUser } from "@/lib/auth/guard";
 import { signIn } from "@/lib/auth/sign-in";
-import { endSession, startSession } from "@/lib/auth/sessions";
+import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
+import { endSession, revokeSession, startSession } from "@/lib/auth/sessions";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
 import { verifyTurnstile } from "@/lib/turnstile";
-import type { AcceptFormState, FormState, LoginFormState, ResetFormState, ResetRequestState } from "@/lib/actions/types";
+import type {
+	AcceptFormState,
+	FormState,
+	LoginFormState,
+	ResetFormState,
+	ResetRequestState,
+	SignOutDeviceResult,
+} from "@/lib/actions/types";
 
 /**
  * Server Actions for signing in, signing out, accepting an invitation and the
@@ -174,4 +184,28 @@ export async function completePasswordResetAction(
 	// if this was an intruder being locked out, theirs. Handing back a fresh
 	// session here would undo that for whoever just used the link.
 	redirect("/login?reset=1");
+}
+
+/**
+ * Signs one of your *other* devices out, from Profile's device list (M1-14).
+ *
+ * The owner is the signed-in user, never something the browser sent, so a
+ * session id belonging to someone else matches nothing in `revokeSession`.
+ * This device is refused: the way out of here is Log out, which also clears
+ * the cookies.
+ */
+export async function signOutDeviceAction(sessionId: string): Promise<SignOutDeviceResult> {
+	const actor = await requireUser("/profile");
+	if (typeof sessionId !== "string" || !sessionId) {
+		return { ok: false, message: "We couldn't find that device. Please refresh and try again." };
+	}
+	if ((await cookies()).get(SESSION_COOKIE)?.value === sessionId) {
+		return { ok: false, message: "To sign out of this device, use Log out." };
+	}
+
+	const revoked = await revokeSession(actor.id, actor.id, sessionId);
+	revalidatePath("/profile");
+	// Not revoked usually means it was already signed out — from another tab,
+	// or by signing in somewhere new. Either way it is gone from the list now.
+	return revoked ? { ok: true } : { ok: false, message: "That device was already signed out." };
 }
