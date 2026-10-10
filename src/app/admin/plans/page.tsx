@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ExtendPlansPanel } from "@/components/staff/extend-plans-panel";
 import { requirePermissionOrRedirect } from "@/lib/auth/guard";
 import { getPlansWorkqueue } from "@/lib/queries/admin";
+import { instituteToday } from "@/lib/queries/shared";
 
 export const metadata: Metadata = { title: "Plans & validity" };
 
@@ -21,6 +22,7 @@ export const metadata: Metadata = { title: "Plans & validity" };
 export default async function PlansPage() {
 	await requirePermissionOrRedirect("student:manage", "/admin/plans");
 	const data = await getPlansWorkqueue();
+	const today = instituteToday();
 	const empty =
 		data.expired.length === 0 && data.expiringThisWeek.length === 0 && data.expiringThisMonth.length === 0;
 
@@ -56,18 +58,21 @@ export default async function PlansPage() {
 						note="These students cannot start a test right now."
 						tone="danger"
 						rows={data.expired}
+						today={today}
 					/>
 					<ExtendPlansPanel
 						title="Expiring this week"
 						note="Act on these before the weekend."
 						tone="warning"
 						rows={data.expiringThisWeek}
+						today={today}
 					/>
 					<ExtendPlansPanel
 						title="Expiring this month"
 						note="No rush, but worth a look."
 						tone="neutral"
 						rows={data.expiringThisMonth}
+						today={today}
 					/>
 				</div>
 			)}

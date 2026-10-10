@@ -22,6 +22,7 @@ only export async functions.
 | `batches.ts` | `createBatchAction`, `updateBatchAction` |
 | `invigilation.ts` | `extendAttemptAction`, `forceSubmitAttemptAction` — the live monitor's buttons; scope is the invigilator's own RLS read of the attempt |
 | `invitations.ts` | `inviteAction`, `bulkInviteAction`, `revokeInvitationAction`, `resendInvitationAction` |
+| `plans.ts` | `extendPlansAction` — screen 24; scope is the admin's own RLS read of the plans |
 | `types.ts` | `FormState`, `LoginFormState`, `AcceptFormState` — no runtime exports. |
 
 The logic these call lives in `lib/auth/`, which is plain server-only code and is
