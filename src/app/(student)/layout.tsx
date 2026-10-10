@@ -4,6 +4,7 @@ import { RunningTestBanner } from "@/components/student/running-test-banner";
 import { StudentBottomNav, StudentTopNav } from "@/components/student/student-nav";
 import { getOpenAttempts } from "@/lib/attempts/load";
 import { requireRole } from "@/lib/auth/guard";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 /**
  * The student app shell (M2-01) — screens 03, 04, 11, 12, 13.
@@ -23,12 +24,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
 			<AudioCacheGuard ownerId={actor.id} />
 			<header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-6 border-b border-line bg-surface px-4 md:min-h-[72px] md:px-8">
 				<Link href="/home" className="flex items-center gap-3 text-ink no-underline hover:no-underline">
-					<span
-						className="grid size-8 place-items-center rounded-control bg-night font-bold text-white"
-						aria-hidden="true"
-					>
-						I
-					</span>
+					<BrandMark />
 					<span className="text-h3">Insignia IELTS</span>
 				</Link>
 				<StudentTopNav />

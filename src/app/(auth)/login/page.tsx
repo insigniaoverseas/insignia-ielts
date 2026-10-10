@@ -10,6 +10,7 @@ import { isFirstRunPending } from "@/lib/auth/guard";
 import { sessionState } from "@/lib/auth/sessions";
 import { getActor } from "@/lib/rbac";
 import { turnstileSiteKey } from "@/lib/turnstile";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -45,12 +46,7 @@ export default async function LoginPage({
 			{/* Whoever signs in next starts with no one else's audio cached (M2-06). */}
 			<AudioCacheGuard />
 			<div className="flex flex-col items-center gap-4 text-center">
-				<span
-					className="grid size-12 place-items-center rounded-card bg-night text-h2 font-bold text-white"
-					aria-hidden="true"
-				>
-					I
-				</span>
+				<BrandMark size={64} />
 				<div className="flex flex-col gap-1">
 					<h1 className="m-0 text-h1">Sign in</h1>
 					<p className="m-0 text-ink-2">Use the email and password you set up.</p>

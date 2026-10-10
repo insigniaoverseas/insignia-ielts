@@ -5,6 +5,7 @@ import { SetPasswordForm } from "@/components/auth/set-password-form";
 import { lookupInvitation } from "@/lib/auth/acceptance";
 import { PRIVACY_NOTICE_VERSION, privacySummary } from "@/lib/privacy";
 import { turnstileSiteKey } from "@/lib/turnstile";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 export const metadata: Metadata = {
 	title: "Set up your account",
@@ -53,12 +54,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 	return (
 		<>
 			<div className="flex flex-col items-center gap-4 text-center">
-				<span
-					className="grid size-12 place-items-center rounded-card bg-night text-h2 font-bold text-white"
-					aria-hidden="true"
-				>
-					I
-				</span>
+				<BrandMark size={64} />
 				<div className="flex flex-col gap-1">
 					<h1 className="m-0 text-h1">Welcome, {invite.fullName.split(" ")[0]}</h1>
 					<p className="m-0 text-ink-2">Pick a password and you&rsquo;re in. This takes a minute.</p>
