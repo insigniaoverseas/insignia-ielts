@@ -12,7 +12,9 @@ import {
 	TableRow,
 	TableToolbar,
 } from "@/components/ui/table";
+import { PendingInviteControls, StaffRowControls } from "@/components/admin/staff-controls";
 import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { can, canInviteRole } from "@/lib/rbac";
 import { getUsersAndRoles } from "@/lib/queries/admin";
 
 export const metadata: Metadata = { title: "Users & roles" };
@@ -37,8 +39,12 @@ const SCOPE_LABEL: Record<string, string> = {
  * a different answer from "Everywhere", and both are different from "No".
  */
 export default async function UsersPage() {
-	await requirePermissionOrRedirect("staff:manage", "/admin/users");
+	const actor = await requirePermissionOrRedirect("staff:manage", "/admin/users");
 	const data = await getUsersAndRoles();
+	// What this viewer may do — the server checks every action again.
+	const roleChoices = can(actor, "role:change")
+		? data.roles.filter((r) => r.key !== "super_admin").map((r) => ({ key: r.key, label: r.label }))
+		: [];
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -70,6 +76,7 @@ export default async function UsersPage() {
 							<TableHead>Centre</TableHead>
 							<TableHead>Status</TableHead>
 							<TableHead>Last active</TableHead>
+							<TableHead>Manage</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -93,11 +100,70 @@ export default async function UsersPage() {
 									)}
 								</TableCell>
 								<TableCell className="text-ink-2">{u.lastActiveLabel}</TableCell>
+								<TableCell>
+									{u.id === actor.id || u.roleKey === "super_admin" ? (
+										<span className="text-small text-ink-3">{u.id === actor.id ? "You" : "Owner"}</span>
+									) : (
+										<StaffRowControls
+											userId={u.id}
+											name={u.name}
+											status={u.status}
+											roleKey={u.roleKey}
+											canManage={canInviteRole(actor, u.roleKey)}
+											roleChoices={roleChoices}
+										/>
+									)}
+								</TableCell>
 							</TableRow>
 						))}
 					</TableBody>
 				</Table>
 			</TableCard>
+
+			{data.pendingInvites.length > 0 && (
+				<TableCard>
+					<TableToolbar>
+						<div className="flex flex-col gap-1">
+							<h2 className="m-0 text-h3">Waiting to accept</h2>
+							<p className="m-0 text-small text-ink-2">
+								Invited, but they haven&rsquo;t set a password yet. An invitation link lasts seven days.
+							</p>
+						</div>
+					</TableToolbar>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Name</TableHead>
+								<TableHead>Role</TableHead>
+								<TableHead>Sent</TableHead>
+								<TableHead>Manage</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{data.pendingInvites.map((invite) => (
+								<TableRow key={invite.id}>
+									<TableCell>
+										<span className="font-semibold">{invite.name}</span>
+										<div className="text-small text-ink-2">{invite.email}</div>
+									</TableCell>
+									<TableCell className="text-ink-2">{invite.roleLabel}</TableCell>
+									<TableCell className="text-ink-2">
+										{invite.sentLabel}
+										{invite.expired && <StatusPill status="expired" size="sm" label="Link expired" />}
+									</TableCell>
+									<TableCell>
+										{canInviteRole(actor, invite.roleKey) ? (
+											<PendingInviteControls invitationId={invite.id} email={invite.email} />
+										) : (
+											<span className="text-ink-3">—</span>
+										)}
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</TableCard>
+			)}
 
 			<TableCard>
 				<TableToolbar>

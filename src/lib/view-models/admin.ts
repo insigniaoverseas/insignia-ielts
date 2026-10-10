@@ -128,6 +128,8 @@ export type TestLibraryRow = {
 /** Screen 28 — Users & roles (M9-03). */
 export type UsersAndRoles = {
 	users: StaffUserRow[];
+	/** Staff invitations not yet accepted, newest first — resend or revoke them here. */
+	pendingInvites: { id: string; name: string; email: string; roleKey: string; roleLabel: string; sentLabel: string; expired: boolean }[];
 	/** The matrix, read from `roles.permissions` — not hardcoded in the UI. */
 	roles: { key: string; label: string; userCount: number }[];
 	/** One row per permission, with the scope each role holds it at (or null). */

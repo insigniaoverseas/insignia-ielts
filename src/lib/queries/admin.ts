@@ -41,6 +41,8 @@ const ACTION_LABEL: Record<string, string> = {
 	"test.unpublish": "Test moved back to draft",
 	"role.change": "Role changed",
 	"session.revoke": "Session revoked",
+	"user.suspend": "Staff member suspended",
+	"user.reactivate": "Staff member reactivated",
 	"test.key_edit": "Answer key changed",
 	"auth.reset_sent": "Password reset link sent",
 	"user.phone_change": "Phone number changed",
@@ -378,13 +380,15 @@ export async function getTestLibrary(): Promise<TestLibraryRow[]> {
 /** Screen 28 — staff and the permission matrix stored in `roles.permissions`. */
 export async function getUsersAndRoles(): Promise<UsersAndRoles> {
 	const supabase = await createClient();
-	const [rolesResult, usersResult, branchesResult, sessionsResult] = await Promise.all([
+	const [rolesResult, usersResult, branchesResult, sessionsResult, invitesResult] = await Promise.all([
 		supabase.from("roles").select("id, key, name, permissions").order("created_at"),
 		supabase.from("users").select("id, name, email, role_id, branch_id, status").order("name"),
 		supabase.from("branches").select("id, name"),
 		supabase.from("user_sessions").select("user_id, last_seen_at"),
+		supabase.from("invitations").select("id, email, name, role_id, expires_at, created_at").eq("status", "pending").order("created_at", { ascending: false }),
 	]);
 	if (rolesResult.error) queryFailed("roles", rolesResult.error);
+	if (invitesResult.error) queryFailed("staff invitations", invitesResult.error);
 	if (usersResult.error) queryFailed("staff users", usersResult.error);
 	if (branchesResult.error) queryFailed("staff branches", branchesResult.error);
 	if (sessionsResult.error) queryFailed("staff sessions", sessionsResult.error);
@@ -411,6 +415,20 @@ export async function getUsersAndRoles(): Promise<UsersAndRoles> {
 				lastActiveLabel: relativeActivity(lastSeen.get(user.id) ?? null),
 			};
 		}),
+		pendingInvites: (invitesResult.data ?? [])
+			.filter((invite) => {
+				const key = roleById.get(invite.role_id)?.key;
+				return key !== undefined && key !== "student";
+			})
+			.map((invite) => ({
+				id: invite.id,
+				name: invite.name ?? invite.email,
+				email: invite.email,
+				roleKey: roleById.get(invite.role_id)?.key ?? "unknown",
+				roleLabel: roleById.get(invite.role_id)?.name ?? "Unknown",
+				sentLabel: relativeActivity(invite.created_at),
+				expired: new Date(invite.expires_at) <= new Date(),
+			})),
 		roles: roles
 			.filter((role) => role.key !== "student")
 			.map((role) => ({ key: role.key, label: role.name, userCount: staff.filter((user) => user.role_id === role.id).length })),

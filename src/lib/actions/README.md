@@ -23,6 +23,9 @@ only export async functions.
 | `invigilation.ts` | `extendAttemptAction`, `forceSubmitAttemptAction` — the live monitor's buttons; scope is the invigilator's own RLS read of the attempt |
 | `invitations.ts` | `inviteAction`, `bulkInviteAction`, `revokeInvitationAction`, `resendInvitationAction` |
 | `marks.ts` | `giveMarkAction` — screen 18's re-mark |
+| `staff.ts` | screen 28: suspend/reactivate, change role, resend/cancel staff invitations |
+| `students.ts` | screen 23: reset link, change phone |
+| `answer-key.ts` | screen 27: save edited answers (re-marks finished attempts) |
 | `plans.ts` | `extendPlansAction` — screen 24; scope is the admin's own RLS read of the plans |
 | `types.ts` | `FormState`, `LoginFormState`, `AcceptFormState` — no runtime exports. |
 
