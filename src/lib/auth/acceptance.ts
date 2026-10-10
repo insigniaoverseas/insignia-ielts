@@ -3,6 +3,7 @@ import "server-only";
 import { hashInvitationToken, isPlausibleToken } from "@/lib/auth/tokens";
 import { firstPasswordProblem } from "@/lib/auth/password";
 import { recordAudit } from "@/lib/audit";
+import { PRIVACY_NOTICE_VERSION } from "@/lib/privacy";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { InviteAcceptance } from "@/lib/view-models/auth";
 
@@ -87,8 +88,20 @@ export type AcceptOutcome =
  * `accept_invitation` call — and if that call fails, delete the auth user
  * again. Without that rollback a retry would hit "email already registered"
  * on an account the student cannot sign in to.
+ *
+ * **Consent first** (DPDP Act 2023). `privacyAccepted` must name the notice
+ * version currently in force, or nothing is created. The acceptance is then
+ * written to the append-only audit log as `privacy.accept`, with that version,
+ * so the record survives the person's later erasure as proof it was given.
  */
-export async function acceptInvitation(token: string, password: string): Promise<AcceptOutcome> {
+export async function acceptInvitation(
+	token: string,
+	password: string,
+	privacyAccepted: string,
+): Promise<AcceptOutcome> {
+	if (privacyAccepted !== PRIVACY_NOTICE_VERSION) {
+		return { ok: false, message: "Please read the privacy notice and tick “I agree” to carry on." };
+	}
 	if (!isPlausibleToken(token)) {
 		return { ok: false, dead: "unknown", message: "We don't recognise this link." };
 	}
@@ -162,6 +175,14 @@ export async function acceptInvitation(token: string, password: string): Promise
 		entity: "invitation",
 		entityId: invite.id,
 		meta: { email: invite.email },
+	});
+	await recordAudit({
+		actorId: created.user.id,
+		branchId: invite.branch_id,
+		action: "privacy.accept",
+		entity: "user",
+		entityId: created.user.id,
+		meta: { notice_version: PRIVACY_NOTICE_VERSION },
 	});
 
 	return { ok: true, roleKey: roleKey ?? "student" };
