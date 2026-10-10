@@ -18,8 +18,9 @@ only export async functions.
 
 | File | Endpoints |
 |---|---|
-| `auth.ts` | `signInAction`, `signOutAction`, `acceptInvitationAction`, `completeFirstRunSetupAction` |
+| `auth.ts` | `signInAction`, `signOutAction`, `acceptInvitationAction`, `completeFirstRunSetupAction`, password reset/change, `signOutDeviceAction` |
 | `batches.ts` | `createBatchAction`, `updateBatchAction` |
+| `invigilation.ts` | `extendAttemptAction`, `forceSubmitAttemptAction` — the live monitor's buttons; scope is the invigilator's own RLS read of the attempt |
 | `invitations.ts` | `inviteAction`, `bulkInviteAction`, `revokeInvitationAction`, `resendInvitationAction` |
 | `types.ts` | `FormState`, `LoginFormState`, `AcceptFormState` — no runtime exports. |
 
