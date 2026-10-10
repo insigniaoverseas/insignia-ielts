@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AccuracyBars } from "@/components/ui/accuracy-bars";
 import { formatBand } from "@/components/ui/band-score";
-import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getClassAnalytics } from "@/lib/queries/teacher";
 
 export const metadata: Metadata = { title: "What to teach" };
@@ -18,8 +18,7 @@ export const metadata: Metadata = { title: "What to teach" };
  */
 export default async function AnalyticsPage({ params }: { params: Promise<{ batchId: string }> }) {
 	const { batchId } = await params;
-	await requirePermissionOrRedirect("assignment:manage", `/teacher/batches/${batchId}/analytics`);
-	const data = await getClassAnalytics(batchId);
+	const data = await withGuard(requirePermissionOrRedirect("assignment:manage", `/teacher/batches/${batchId}/analytics`), getClassAnalytics(batchId));
 	if (!data) notFound();
 
 	const maxCount = Math.max(...data.bandDistribution.map((b) => b.count), 1);

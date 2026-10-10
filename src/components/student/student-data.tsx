@@ -1,10 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 import { getMyReviewAction } from "@/lib/actions/attempts";
-import { REFRESH_MS, shouldRefreshOnActivity, shouldRefreshOnTick } from "@/lib/refresh-policy";
 import type { MistakesLoad, StudentBundle } from "@/lib/view-models/student";
 
 /*
@@ -17,7 +16,8 @@ import type { MistakesLoad, StudentBundle } from "@/lib/view-models/student";
  *
  * The bundle is rebuilt whenever the layout renders again:
  *   - after any Server Action that calls `revalidatePath` (every save);
- *   - by `StudentAutoRefresh` below, while the student is using the app.
+ *   - by `AutoRefresh` (`components/auto-refresh.tsx`), while the student is
+ *     using the app.
  */
 
 /** One attempt's mistakes review: the request, and its answer once it lands. */
@@ -103,54 +103,4 @@ export function useStudentData(): StudentBundle {
  */
 export function useReviewLoader(): (attemptId: string) => ReviewEntry {
 	return useStudentDataValue().loadReview;
-}
-
-/**
- * Re-renders the student layout every {@link REFRESH_MS} while the student is
- * actually using the app, and as soon as they come back to the tab after being
- * away longer than that.
- *
- * Each refresh re-runs the layout's guard, so a session ended elsewhere (a
- * sign-in on another device, a revoked device) is noticed within a minute,
- * and what a teacher changed — a released result, a new test — appears.
- * An idle or hidden tab makes no requests — and the first touch after being
- * idle checks at once, so a device whose session ended while nobody was
- * using it signs out on that touch, not up to a minute later.
- */
-export function StudentAutoRefresh() {
-	const router = useRouter();
-
-	useEffect(() => {
-		let lastActivity = Date.now();
-		let lastRefresh = Date.now();
-
-		const refresh = () => {
-			lastRefresh = Date.now();
-			router.refresh();
-		};
-		const onActivity = () => {
-			const now = Date.now();
-			const refreshNow = shouldRefreshOnActivity(now, lastActivity, lastRefresh);
-			lastActivity = now;
-			if (refreshNow) refresh();
-		};
-		const onVisible = () => {
-			if (document.visibilityState === "visible" && Date.now() - lastRefresh > REFRESH_MS) refresh();
-		};
-
-		const timer = setInterval(() => {
-			if (shouldRefreshOnTick(Date.now(), lastActivity, document.visibilityState === "visible")) refresh();
-		}, REFRESH_MS);
-
-		const events = ["pointerdown", "keydown", "scroll", "touchstart"] as const;
-		for (const event of events) window.addEventListener(event, onActivity, { passive: true });
-		document.addEventListener("visibilitychange", onVisible);
-		return () => {
-			clearInterval(timer);
-			for (const event of events) window.removeEventListener(event, onActivity);
-			document.removeEventListener("visibilitychange", onVisible);
-		};
-	}, [router]);
-
-	return null;
 }

@@ -5,7 +5,8 @@ import { StudentBottomNav, StudentTopNav } from "@/components/student/student-na
 import { getOpenAttempts } from "@/lib/attempts/load";
 import { requireRole, signedInUserId } from "@/lib/auth/guard";
 import { getStudentBundle } from "@/lib/queries/student";
-import { StudentAutoRefresh, StudentDataProvider } from "@/components/student/student-data";
+import { AutoRefresh } from "@/components/auto-refresh";
+import { StudentDataProvider } from "@/components/student/student-data";
 import { BrandMark } from "@/components/brand/brand-mark";
 
 /**
@@ -32,7 +33,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
 	return (
 		<div className="flex min-h-screen flex-col bg-bg">
 			<AudioCacheGuard ownerId={actor.id} />
-			<StudentAutoRefresh />
+			<AutoRefresh />
 			<header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-6 border-b border-line bg-surface px-4 md:min-h-[72px] md:px-8">
 				<Link href="/home" className="flex items-center gap-3 text-ink no-underline hover:no-underline">
 					<BrandMark />

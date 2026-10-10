@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { timeTakenSeconds } from "@/lib/attempts/clock";
 import { overridableAnswers } from "@/lib/attempts/overrides";
 import { readAnswerKeyObject } from "@/lib/r2";
@@ -17,6 +19,7 @@ import type {
 	LiveSession,
 	LiveStudent,
 	OverridableAnswer,
+	ResultsIndexRow,
 	TeacherDashboard,
 } from "@/lib/view-models/teacher";
 import { selectAll } from "./shared";
@@ -25,39 +28,48 @@ import { daysUntil, displayPhone, formatDuration, formatShortDate, instituteToda
 type Tables = Database["public"]["Tables"];
 type Attempt = Tables["attempts"]["Row"];
 
-async function actorId(): Promise<{ supabase: Awaited<ReturnType<typeof createClient>>; id: string; name: string }> {
+/**
+ * The caller's RLS client and id. The id comes from the JWT, verified
+ * locally — no round trip, so nothing below waits on it.
+ */
+async function actorId(): Promise<{ supabase: Awaited<ReturnType<typeof createClient>>; id: string }> {
 	const supabase = await createClient();
 	const { data: auth } = await supabase.auth.getClaims();
 	const id = auth?.claims?.sub;
 	if (!id) throw new Error("A signed-in user is required.");
-	const { data: profile, error } = await supabase.from("users").select("name").eq("id", id).maybeSingle();
-	if (error) queryFailed("teacher profile", error);
-	return { supabase, id, name: profile?.name ?? "Teacher" };
+	return { supabase, id };
 }
 
-async function visibleBatchIds(supabase: Awaited<ReturnType<typeof createClient>>, teacherId: string): Promise<string[]> {
-	const { data, error } = await supabase.from("batch_teachers").select("batch_id").eq("teacher_id", teacherId);
-	if (error) queryFailed("teacher batches", error);
-	return (data ?? []).map((row) => row.batch_id);
-}
+/** The teacher's name for the dashboard greeting — read alongside the dashboard's data, not before it. */
+const teacherName = cache(async function teacherName(id: string): Promise<string> {
+	const supabase = await createClient();
+	const { data: profile, error } = await supabase.from("users").select("name").eq("id", id).maybeSingle();
+	if (error) queryFailed("teacher profile", error);
+	return profile?.name ?? "Teacher";
+});
 
 function released(resultsRelease: string, releasedAt: string | null): boolean {
 	return resultsRelease === "immediate" || (releasedAt !== null && new Date(releasedAt) <= new Date());
 }
 
-/** Screen 14 — dashboard assembled entirely from RLS-scoped Supabase rows. */
+/**
+ * Screen 14 — dashboard assembled entirely from RLS-scoped Supabase rows.
+ *
+ * One round trip (was three): the teacher's own batches come with their
+ * members embedded, matched on `batch_teachers` inside the same query rather
+ * than looked up first, and the greeting's name is read alongside.
+ */
 export async function getTeacherDashboard(): Promise<TeacherDashboard> {
-	const { supabase, id, name } = await actorId();
-	const batchIds = await visibleBatchIds(supabase, id);
+	const { supabase, id } = await actorId();
 
-	const [batchesResult, membershipsResult, assignmentsResult, targetsResult, attemptsResult, scoresResult, plansResult] =
+	const [name, batchesResult, assignmentsResult, targetsResult, attemptsResult, scoresResult, plansResult] =
 		await Promise.all([
-			batchIds.length
-				? supabase.from("batches").select("id, name").in("id", batchIds).order("name")
-				: Promise.resolve({ data: [], error: null }),
-			batchIds.length
-				? supabase.from("batch_students").select("batch_id, student_id, left_at").in("batch_id", batchIds)
-				: Promise.resolve({ data: [], error: null }),
+			teacherName(id),
+			supabase
+				.from("batches")
+				.select("id, name, batch_teachers!inner ( teacher_id ), batch_students ( batch_id, student_id, left_at )")
+				.eq("batch_teachers.teacher_id", id)
+				.order("name"),
 			// Test titles ride along with the assignments: one round trip, not a
 			// second query once the assignments are back.
 			supabase.from("assignments").select("*, tests(id, title, skill)"),
@@ -67,7 +79,6 @@ export async function getTeacherDashboard(): Promise<TeacherDashboard> {
 			supabase.from("student_plans").select("student_id, expires_on, status"),
 		]);
 	if (batchesResult.error) queryFailed("teacher dashboard batches", batchesResult.error);
-	if (membershipsResult.error) queryFailed("teacher dashboard students", membershipsResult.error);
 	if (assignmentsResult.error) queryFailed("teacher dashboard assignments", assignmentsResult.error);
 	if (targetsResult.error) queryFailed("teacher dashboard targets", targetsResult.error);
 	if (attemptsResult.error) queryFailed("teacher dashboard attempts", attemptsResult.error);
@@ -78,7 +89,7 @@ export async function getTeacherDashboard(): Promise<TeacherDashboard> {
 	const attempts = (attemptsResult.data ?? []) as Attempt[];
 	const tests = new Map(assignments.flatMap((row) => (row.tests ? [[row.tests.id, row.tests] as const] : [])));
 	const scores = new Map((scoresResult.data ?? []).map((score) => [score.attempt_id, score.band]));
-	const memberships = (membershipsResult.data ?? []).filter((row) => row.left_at === null);
+	const memberships = (batchesResult.data ?? []).flatMap((batch) => batch.batch_students).filter((row) => row.left_at === null);
 	const targets = targetsResult.data ?? [];
 	const batches = batchesResult.data ?? [];
 
@@ -498,19 +509,6 @@ export async function getLiveSession(sessionId: string): Promise<LiveSession | n
 	};
 }
 
-/** One assignment on the teacher's results list (M10-01). */
-export type ResultsIndexRow = {
-	assignmentId: string;
-	testTitle: string;
-	skill: string;
-	/** Who it went to: batch names, or "3 students". */
-	targetLabel: string;
-	/** When it was set, institute time. */
-	setLabel: string;
-	submitted: number;
-	working: number;
-	release: { mode: "immediate" | "scheduled" | "manual"; released: boolean; whenLabel: string | null };
-};
 
 /**
  * `/teacher/results` — every assignment this person can see, newest first,
@@ -520,36 +518,30 @@ export type ResultsIndexRow = {
  */
 export async function getResultsIndex(): Promise<ResultsIndexRow[]> {
 	const { supabase } = await actorId();
-	const { data: assignments, error } = await supabase
-		.from("assignments")
-		.select("id, test_id, created_at, results_release, results_released_at")
-		.order("created_at", { ascending: false });
-	if (error) queryFailed("results index assignments", error);
-	if (!assignments?.length) return [];
-	const ids = assignments.map((a) => a.id);
-	const testIds = [...new Set(assignments.map((a) => a.test_id))];
-	const [testsResult, targetsResult, attempts] = await Promise.all([
-		supabase.from("tests").select("id, title, skill").in("id", testIds),
-		supabase.from("assignment_targets").select("assignment_id, batch_id, student_id").in("assignment_id", ids),
+	// One round trip (was three): each assignment carries its test and its
+	// targets' batch names, and the attempts are read at the same time — all
+	// the RLS-visible ones on an assignment, rather than "these ids" after the
+	// assignments came back.
+	const [assignmentsResult, attempts] = await Promise.all([
+		supabase
+			.from("assignments")
+			.select(
+				"id, test_id, created_at, results_release, results_released_at, tests ( title, skill ), assignment_targets ( batch_id, student_id, batches ( name ) )",
+			)
+			.order("created_at", { ascending: false }),
 		selectAll("results index attempts", (from, to) =>
-			supabase.from("attempts").select("id, assignment_id, status").in("assignment_id", ids).order("id").range(from, to),
+			supabase.from("attempts").select("id, assignment_id, status").not("assignment_id", "is", null).order("id").range(from, to),
 		),
 	]);
-	if (testsResult.error) queryFailed("results index tests", testsResult.error);
-	if (targetsResult.error) queryFailed("results index targets", targetsResult.error);
-	const batchIds = [...new Set((targetsResult.data ?? []).flatMap((t) => (t.batch_id ? [t.batch_id] : [])))];
-	const batchesResult = batchIds.length
-		? await supabase.from("batches").select("id, name").in("id", batchIds)
-		: { data: [] as { id: string; name: string }[], error: null };
-	if (batchesResult.error) queryFailed("results index batches", batchesResult.error);
+	if (assignmentsResult.error) queryFailed("results index assignments", assignmentsResult.error);
+	const assignments = assignmentsResult.data ?? [];
+	if (!assignments.length) return [];
 
-	const tests = new Map((testsResult.data ?? []).map((t) => [t.id, t]));
-	const batchName = new Map((batchesResult.data ?? []).map((b) => [b.id, b.name]));
 	return assignments.flatMap((a) => {
-		const test = tests.get(a.test_id);
+		const test = a.tests;
 		if (!test) return [];
-		const targets = (targetsResult.data ?? []).filter((t) => t.assignment_id === a.id);
-		const batches = targets.flatMap((t) => (t.batch_id ? [batchName.get(t.batch_id) ?? "A batch"] : []));
+		const targets = a.assignment_targets;
+		const batches = targets.flatMap((t) => (t.batch_id ? [t.batches?.name ?? "A batch"] : []));
 		const students = targets.filter((t) => t.student_id).length;
 		const parts = [...batches, ...(students ? [`${students} ${students === 1 ? "student" : "students"}`] : [])];
 		const mine = attempts.filter((t) => t.assignment_id === a.id);

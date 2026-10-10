@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { TeacherNav, TeacherNavCompact } from "@/components/staff/teacher-nav";
 import { requireRole } from "@/lib/auth/guard";
+import { getTeacherBundle } from "@/lib/queries/staff-bundles";
+import { AutoRefresh } from "@/components/auto-refresh";
+import { TeacherDataProvider } from "@/components/staff/staff-data";
 import { BrandMark } from "@/components/brand/brand-mark";
 
 /**
@@ -14,9 +17,13 @@ import { BrandMark } from "@/components/brand/brand-mark";
  * and database RLS.
  */
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
-	await requireRole(["teacher", "invigilator"]);
+	// The guard and every sidebar page's data are read side by side — one round
+	// trip — and the pages then switch with none. Pages this person may not open
+	// are dropped on the server (lib/queries/staff-bundles.ts).
+	const { bundle } = await getTeacherBundle(requireRole(["teacher", "invigilator"]));
 	return (
 		<div className="flex min-h-screen flex-col bg-bg">
+			<AutoRefresh />
 			<header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-6 border-b border-line bg-surface px-4 md:px-8">
 				<Link href="/teacher/dashboard" className="flex items-center gap-3 text-ink no-underline hover:no-underline">
 					<BrandMark />
@@ -30,7 +37,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
 					<TeacherNav />
 					<TeacherNavCompact />
 				</div>
-				<main className="min-w-0 flex-1">{children}</main>
+				<main className="min-w-0 flex-1"><TeacherDataProvider bundle={bundle}>{children}</TeacherDataProvider></main>
 			</div>
 		</div>
 	);

@@ -177,3 +177,17 @@ export type LiveStudent = {
 	/** Anti-cheat signals so far. Flags, never blocks. */
 	flags: string[];
 };
+
+/** One assignment on the teacher's results list (M10-01). */
+export type ResultsIndexRow = {
+	assignmentId: string;
+	testTitle: string;
+	skill: string;
+	/** Who it went to: batch names, or "3 students". */
+	targetLabel: string;
+	/** When it was set, institute time. */
+	setLabel: string;
+	submitted: number;
+	working: number;
+	release: { mode: "immediate" | "scheduled" | "manual"; released: boolean; whenLabel: string | null };
+};

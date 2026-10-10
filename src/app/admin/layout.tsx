@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { AdminNav, AdminNavCompact } from "@/components/staff/staff-nav";
 import { requireRole } from "@/lib/auth/guard";
+import { getAdminBundle } from "@/lib/queries/staff-bundles";
+import { AutoRefresh } from "@/components/auto-refresh";
+import { AdminDataProvider } from "@/components/staff/staff-data";
 import { BrandMark } from "@/components/brand/brand-mark";
 
 /**
@@ -14,9 +17,13 @@ import { BrandMark } from "@/components/brand/brand-mark";
  * database RLS remain the finer-grained independent gates underneath it.
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-	await requireRole(["super_admin", "admin"]);
+	// The guard and every sidebar page's data are read side by side — one round
+	// trip — and the pages then switch with none. Pages this person may not open
+	// are dropped on the server (lib/queries/staff-bundles.ts).
+	const { bundle } = await getAdminBundle(requireRole(["super_admin", "admin"]));
 	return (
 		<div className="flex min-h-screen flex-col bg-bg">
+			<AutoRefresh />
 			<header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-6 border-b border-line bg-surface px-4 md:px-8">
 				<Link href="/admin/overview" className="flex items-center gap-3 text-ink no-underline hover:no-underline">
 					<BrandMark />
@@ -30,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 					<AdminNav />
 					<AdminNavCompact />
 				</div>
-				<main className="min-w-0 flex-1">{children}</main>
+				<main className="min-w-0 flex-1"><AdminDataProvider bundle={bundle}>{children}</AdminDataProvider></main>
 			</div>
 		</div>
 	);

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LiveMonitor } from "@/components/staff/live-monitor";
-import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getLiveSession } from "@/lib/queries/teacher";
 
 export const metadata: Metadata = { title: "Live session" };
@@ -16,8 +16,7 @@ export const metadata: Metadata = { title: "Live session" };
  */
 export default async function LivePage({ params }: { params: Promise<{ sessionId: string }> }) {
 	const { sessionId } = await params;
-	await requirePermissionOrRedirect("session:invigilate", `/teacher/live/${sessionId}`);
-	const session = await getLiveSession(sessionId);
+	const session = await withGuard(requirePermissionOrRedirect("session:invigilate", `/teacher/live/${sessionId}`), getLiveSession(sessionId));
 	if (!session) notFound();
 
 	return (

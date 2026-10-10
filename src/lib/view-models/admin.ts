@@ -23,6 +23,8 @@ export type StudentRow = {
 	email: string;
 	/** Display form, e.g. "+91 98765 43210". */
 	phone: string;
+	/** For the batch filter, which now runs in the browser. */
+	batchId: string | null;
 	batchName: string | null;
 	status: AccountStatus;
 	planState: PlanState;
@@ -78,6 +80,8 @@ export type StudentDetail = {
 
 /** Screen 24 — Plans & validity, the expiry workqueue. */
 export type PlansWorkqueue = {
+	/** The institute's date (`Asia/Kolkata`), from the server — never the browser's clock. */
+	today: string;
 	expired: StudentRow[];
 	expiringThisWeek: StudentRow[];
 	expiringThisMonth: StudentRow[];

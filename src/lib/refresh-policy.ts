@@ -1,8 +1,9 @@
 /**
- * When the student app re-reads its data and re-checks the session.
+ * When the app re-reads a layout's data and re-checks the session.
  *
- * Pure and import-free so it can be unit-tested; `StudentAutoRefresh` in
- * `components/student/student-data.tsx` applies it.
+ * Pure and import-free so it can be unit-tested; `AutoRefresh` in
+ * `components/auto-refresh.tsx` applies it, for the student, teacher and
+ * admin layouts alike.
  */
 
 /** How often an active student's data is re-read, and their session re-checked. */

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { PlayerShell } from "@/components/player/player-shell";
 import { Banner } from "@/components/ui/banner";
-import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getTestPreview } from "@/lib/queries/test-preview";
 
 export const metadata: Metadata = {
@@ -30,9 +30,8 @@ const PROBLEM_TEXT = {
  */
 export default async function PreviewTestPage({ params }: { params: Promise<{ testId: string }> }) {
 	const { testId } = await params;
-	await requirePermissionOrRedirect("test:author", `/admin/library/${testId}/preview`);
 	if (!UUID.test(testId)) notFound();
-	const preview = await getTestPreview(testId);
+	const preview = await withGuard(requirePermissionOrRedirect("test:author", `/admin/library/${testId}/preview`), getTestPreview(testId));
 	if (!preview) notFound();
 
 	if ("problem" in preview) {

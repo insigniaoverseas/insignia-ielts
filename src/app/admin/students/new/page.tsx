@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { InviteStudentForm } from "@/components/admin/invite-student-form";
-import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { listBatchOptions } from "@/lib/queries/batches";
 
 export const metadata: Metadata = { title: "Invite a student" };
@@ -20,8 +20,7 @@ export const metadata: Metadata = { title: "Invite a student" };
  * not stand between the browser and it.
  */
 export default async function NewStudentPage() {
-	await requirePermissionOrRedirect("student:manage", "/admin/students/new");
-	const batches = await listBatchOptions();
+	const batches = await withGuard(requirePermissionOrRedirect("student:manage", "/admin/students/new"), listBatchOptions());
 
 	return (
 		<div className="flex max-w-[640px] flex-col gap-6">

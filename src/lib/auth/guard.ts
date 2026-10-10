@@ -111,3 +111,22 @@ export async function isFirstRunPending(): Promise<boolean> {
 	const { data: pending } = await supabase.rpc("first_run_pending");
 	return pending === true;
 }
+
+/**
+ * Runs a page's guard and its data load at the same time instead of one
+ * after the other — one round trip instead of two.
+ *
+ * The guard's verdict always wins: if it redirects, that redirect is what
+ * happens, whatever the load did. The load reads through the caller's RLS
+ * client, so starting it early fetches nothing they could not see anyway, and
+ * nothing is rendered unless the guard passes.
+ *
+ * @example
+ * const data = await withGuard(requirePermissionOrRedirect("student:manage", path), getStudentDetail(id));
+ */
+export async function withGuard<T>(guard: Promise<unknown>, load: Promise<T>): Promise<T> {
+	const [verdict, loaded] = await Promise.allSettled([guard, load]);
+	if (verdict.status === "rejected") throw verdict.reason;
+	if (loaded.status === "rejected") throw loaded.reason;
+	return loaded.value;
+}

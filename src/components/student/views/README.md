@@ -8,7 +8,7 @@ round trip (`getStudentBundle` in `src/lib/queries/student.ts`) and hands it to
 
 Moving between tabs therefore never touches the database. The bundle is rebuilt
 when the layout renders again: after a save (`revalidatePath`), and every 60 s
-while the student is active (`StudentAutoRefresh`).
+while the student is active (`AutoRefresh`).
 
 `result-view.tsx` (screen 09) reads the same bundle, so opening a result is
 instant too. If an attempt's marking failed at submit it calls
