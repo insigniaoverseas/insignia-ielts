@@ -29,6 +29,18 @@ export type { KeyEdit } from "@/lib/key-edits";
 
 export type KeyEditOutcome = { ok: true; message: string } | { ok: false; message: string };
 
+/**
+ * Applies the editor's changes to a test's `key.json` in place, then re-marks
+ * every finished attempt on that content version (teacher-given marks kept).
+ *
+ * Assumes the caller already holds `test:author` (`scope` is that permission's
+ * scope); an `own`-scoped author may change only tests they created. Audited
+ * as `test.key_edit` with each change.
+ *
+ * @returns A sentence for the editor — what was saved and how many finished
+ *   tests were re-marked — or why nothing was saved. Throws only on an
+ *   unexpected database or storage error.
+ */
 export async function updateAnswerKey(
 	actor: Actor,
 	scope: Scope,

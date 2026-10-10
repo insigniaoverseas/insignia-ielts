@@ -46,6 +46,13 @@ function Prompt({ html }: { html: string }) {
 	return <span dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+/**
+ * One question group in the player: its instructions, then each question
+ * through the widget its type names (`lib/question-types.ts`).
+ *
+ * Holds no state — answers come in and changes go out through `onAnswer`, so
+ * the runner owns saving. The HTML it renders was sanitised on the server.
+ */
 export function QuestionGroupBlock({
 	group,
 	answers,

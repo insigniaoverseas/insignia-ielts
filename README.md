@@ -1,47 +1,32 @@
-# OpenNext Starter
+# Insignia IELTS
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+IELTS Listening and Reading practice tests for a coaching institute in India: students take timed mock, class and practice tests; teachers assign, monitor and release results; admins run students, plans, batches and the test library.
 
-## Getting Started
+**Next.js 16 on Cloudflare Workers (OpenNext) · Supabase Postgres (Mumbai) with Row-Level Security · Cloudflare R2 for content and audio.**
 
-Read the documentation at https://opennext.js.org/cloudflare.
+## Start here
 
-## Develop
+1. [`CLAUDE.md`](CLAUDE.md) — the entry point and the non-negotiables
+2. [`MVP-1.md`](MVP-1.md) — what to build and how it must behave
+3. [`PROJECT-MEMORY.md`](PROJECT-MEMORY.md) — where the project is
+4. [`docs/`](docs/README.md) — architecture, data model, security, question types, runbook, decision records
 
-Run the Next.js development server:
+## Run it
 
-```bash
-npm run dev
-# or similar package manager command
+```sh
+npm ci
+cp .dev.vars.example .dev.vars   # fill in the values
+npm run dev                      # Node, http://localhost:3000
+npm run preview                  # the real Cloudflare runtime, with R2
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Checks: `npm run typecheck`, `npm run lint`, `npm run test:unit`, `npm run test:db`, `npx next build && npm run check:bundle`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Deploying is merging to `main`** — Cloudflare Workers Builds builds every branch as a preview and `main` as the live site. Don't deploy from a laptop with `npm run deploy`. Details: [`docs/runbook.md`](docs/runbook.md).
 
-## Preview
+## The rules that matter most
 
-Preview the application locally on the Cloudflare runtime:
-
-```bash
-npm run preview
-# or similar package manager command
-```
-
-## Deploy
-
-Deploy the application to Cloudflare:
-
-```bash
-npm run deploy
-# or similar package manager command
-```
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- The server owns the timer; scoring never runs in the browser; the answer key never leaves the server.
+- A student can never read another student's data — Postgres RLS **and** `lib/rbac.ts`.
+- No public signup: every account starts as an invitation.
+- This repository is public: no secret values, no source papers, no answer keys.
