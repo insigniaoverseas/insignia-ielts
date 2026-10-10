@@ -54,7 +54,7 @@ export function landingPathFor(roleKey: string): string {
  * `x-forwarded-for` is a local-development fallback and is only ever trusted
  * for its first entry.
  */
-async function clientIp(): Promise<string | null> {
+export async function clientIp(): Promise<string | null> {
 	const h = await headers();
 	const cf = h.get("cf-connecting-ip");
 	if (cf) return cf;

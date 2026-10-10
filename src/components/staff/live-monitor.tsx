@@ -30,27 +30,21 @@ const STATE: Record<LiveStudent["state"], { label: string; pill: "not_started" |
  * decoration: an invigilator needs to know whether they are looking at the room
  * or at a frozen page, and a silently dead socket looks exactly like a calm room.
  *
- * Between polls the tiles tick their own countdowns so the numbers stay alive.
+ * The poll is `GET /teacher/live/[id]/state` (M7-01), which returns only the
+ * tiles. Between polls the tiles tick their own countdowns so the numbers stay alive.
  * That is cosmetic; every poll replaces them with the server's figures, which
  * are the only ones that decide anything.
  */
 export function LiveMonitor({ initial }: { initial: LiveSession }) {
 	const [session, setSession] = useState(initial);
 	const [secondsSincePoll, setSecondsSincePoll] = useState(0);
+	const [gone, setGone] = useState(false);
 	const [acting, setActing] = useState<{ student: LiveStudent; action: "extend" | "submit" } | null>(null);
 
+	// The one-second tick: the "updated" stamp and the cosmetic countdowns.
 	useEffect(() => {
 		const tick = setInterval(() => {
-			setSecondsSincePoll((s) => {
-				const next = s + 1;
-				// The real poll lands with M7-01; until then, keep the clocks honest
-				// by ticking them down locally and resetting the stamp.
-				if (next >= POLL_SECONDS) {
-					setSession((prev) => ({ ...prev, lastUpdatedLabel: "just now" }));
-					return 0;
-				}
-				return next;
-			});
+			setSecondsSincePoll((s) => s + 1);
 			setSession((prev) => ({
 				...prev,
 				students: prev.students.map((st) =>
@@ -62,6 +56,61 @@ export function LiveMonitor({ initial }: { initial: LiveSession }) {
 		}, 1000);
 		return () => clearInterval(tick);
 	}, []);
+
+	// The poll (M7-01). Skipped while the tab is hidden — nobody is watching, and
+	// on the Free plan every request counts — and run at once when it comes
+	// back, so a returning invigilator never reads a stale room.
+	useEffect(() => {
+		if (gone) return;
+		let inFlight = false;
+		let stopped = false;
+
+		async function poll() {
+			if (inFlight || stopped || document.hidden) return;
+			inFlight = true;
+			try {
+				const res = await fetch(`/teacher/live/${encodeURIComponent(initial.sessionId)}/state`, {
+					cache: "no-store",
+					headers: { Accept: "application/json" },
+				});
+				if (stopped) return;
+				// Signed out or revoked: the guard redirected to sign-in. Reload rather
+				// than follow it — the page's own guard then sends them to sign in
+				// with *this screen* as the way back, not the JSON endpoint.
+				if (res.redirected || !res.headers.get("content-type")?.includes("application/json")) {
+					stopped = true;
+					window.location.reload();
+					return;
+				}
+				if (res.status === 404) {
+					setGone(true);
+					return;
+				}
+				if (!res.ok) return; // Try again next round; the stamp keeps ageing.
+				const body = (await res.json()) as { students: LiveStudent[] };
+				setSession((prev) => ({ ...prev, students: body.students, lastUpdatedLabel: "just now" }));
+				setSecondsSincePoll(0);
+			} catch {
+				// Offline or a dropped request. Same as above: the stamp says so.
+			} finally {
+				inFlight = false;
+			}
+		}
+
+		const interval = setInterval(poll, POLL_SECONDS * 1000);
+		const onVisible = () => {
+			if (!document.hidden) void poll();
+		};
+		document.addEventListener("visibilitychange", onVisible);
+		return () => {
+			stopped = true;
+			clearInterval(interval);
+			document.removeEventListener("visibilitychange", onVisible);
+		};
+	}, [initial.sessionId, gone]);
+
+	// Three missed polls: say so in words, not just a bigger number.
+	const stale = secondsSincePoll >= POLL_SECONDS * 3;
 
 	const working = session.students.filter((s) => s.state === "in_progress").length;
 	const finished = session.students.filter((s) => s.state === "submitted").length;
@@ -85,10 +134,20 @@ export function LiveMonitor({ initial }: { initial: LiveSession }) {
 					</span>
 				</div>
 				{/* Says whether you're looking at the room or at a frozen page. */}
-				<span className="text-small text-ink-2" aria-live="polite">
-					Updated {secondsSincePoll === 0 ? "just now" : `${secondsSincePoll}s ago`} · refreshes every{" "}
-					{POLL_SECONDS}s
-				</span>
+				{gone ? (
+					<span className="text-small font-semibold text-danger" role="alert">
+						This test is no longer available to you. Go back to the dashboard.
+					</span>
+				) : stale ? (
+					<span className="text-small font-semibold text-warning" role="alert">
+						Can&rsquo;t reach the server — last updated {secondsSincePoll}s ago. Check the internet connection.
+					</span>
+				) : (
+					<span className="text-small text-ink-2">
+						Updated {secondsSincePoll < 2 ? "just now" : `${secondsSincePoll}s ago`} · refreshes every{" "}
+						{POLL_SECONDS}s
+					</span>
+				)}
 			</div>
 
 			<ul className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 xl:grid-cols-3">
