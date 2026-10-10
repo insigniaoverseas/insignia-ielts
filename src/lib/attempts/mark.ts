@@ -60,25 +60,13 @@ export async function ensureMarked(attemptId: string): Promise<"marked" | "alrea
 	const controls = key.sections.flatMap((section) => section.question_groups.flatMap((group) => group.questions));
 	const marked = markAttempt(key, givenAnswersFromRows(controls, answersResult.data ?? []));
 
-	// The assignment's chart, else the default for this skill and variant.
-	let scaleId = assignmentResult.data?.band_scale_id ?? null;
-	if (!scaleId) {
-		const { data: scale, error: scaleError } = await admin
-			.from("band_scales")
-			.select("id")
-			.eq("skill", testResult.data.skill)
-			.eq("variant", testResult.data.variant)
-			.eq("is_default", true)
-			.single();
-		if (scaleError) throw scaleError;
-		scaleId = scale.id;
-	}
-	const { data: bandRows, error: bandError } = await admin
-		.from("band_scale_rows")
-		.select("raw_min, raw_max, band")
-		.eq("scale_id", scaleId);
-	if (bandError) throw bandError;
-	const band = bandFor(bandLookupScore(marked.rawScore, marked.maxScore), bandRows ?? []);
+	const band = await bandForScore(
+		admin,
+		assignmentResult.data?.band_scale_id ?? null,
+		testResult.data,
+		marked.rawScore,
+		marked.maxScore,
+	);
 
 	const { error: marksError } = await admin.from("answer_marks").upsert(
 		marked.marks.map((mark) => ({
@@ -109,4 +97,36 @@ export async function ensureMarked(attemptId: string): Promise<"marked" | "alrea
 	);
 	if (scoreError) throw scoreError;
 	return "marked";
+}
+
+/**
+ * The band for a raw score: the assignment's chart if it has one, else the
+ * default chart for the test's skill and variant. Shared by first marking and
+ * re-scoring, so the two can never read different charts.
+ */
+export async function bandForScore(
+	admin: ReturnType<typeof createAdminClient>,
+	assignmentScaleId: string | null,
+	test: { skill: string; variant: string },
+	rawScore: number,
+	maxScore: number,
+) {
+	let scaleId = assignmentScaleId;
+	if (!scaleId) {
+		const { data: scale, error: scaleError } = await admin
+			.from("band_scales")
+			.select("id")
+			.eq("skill", test.skill)
+			.eq("variant", test.variant)
+			.eq("is_default", true)
+			.single();
+		if (scaleError) throw scaleError;
+		scaleId = scale.id;
+	}
+	const { data: bandRows, error: bandError } = await admin
+		.from("band_scale_rows")
+		.select("raw_min, raw_max, band")
+		.eq("scale_id", scaleId);
+	if (bandError) throw bandError;
+	return bandFor(bandLookupScore(rawScore, maxScore), bandRows ?? []);
 }

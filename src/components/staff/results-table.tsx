@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -14,6 +14,7 @@ import {
 	TableRow,
 	TableToolbar,
 } from "@/components/ui/table";
+import { giveMarkAction } from "@/lib/actions/marks";
 import type { AssignmentResults, OverridableAnswer } from "@/lib/view-models/teacher";
 
 /**
@@ -24,20 +25,45 @@ import type { AssignmentResults, OverridableAnswer } from "@/lib/view-models/tea
  * an admin auditing a band — needs to know *why* a mark was changed by hand,
  * and "I'll remember" is not true a month later.
  */
-function OverrideRows({ answers }: { answers: OverridableAnswer[] }) {
+function OverrideRows({
+	answers,
+	attemptId,
+	assignmentId,
+}: {
+	answers: OverridableAnswer[];
+	attemptId: string;
+	assignmentId: string;
+}) {
 	const [notes, setNotes] = useState<Record<number, string>>({});
+	const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+	const [busy, setBusy] = useState<number | null>(null);
+	const [, startTransition] = useTransition();
+
+	function give(questionNumber: number) {
+		setBusy(questionNumber);
+		startTransition(async () => {
+			const result = await giveMarkAction({ attemptId, assignmentId, qNumber: questionNumber, note: notes[questionNumber] ?? "" });
+			setBusy(null);
+			setMessage(result ? { ok: result.ok, text: result.message } : null);
+		});
+	}
 
 	return (
 		<div className="flex flex-col gap-3 border-l-2 border-brand bg-bg px-5 py-4">
 			<p className="m-0 text-small font-semibold">
 				Answers marked wrong. Give a mark back only if the student was right.
 			</p>
+			{message && (
+				<p className={`m-0 text-small font-semibold ${message.ok ? "text-success" : "text-danger"}`} role="status">
+					{message.text}
+				</p>
+			)}
 			{answers.map((a) => (
 				<div key={a.questionNumber} className="flex flex-wrap items-center gap-3">
 					<span className="w-8 flex-none font-mono text-ink-2">{a.questionNumber}</span>
 					<span className="flex min-w-[220px] flex-1 flex-wrap items-center gap-x-4 gap-y-1">
-						<span className="text-danger">
-							<span aria-hidden="true">✕</span> They wrote{" "}
+						<span className={a.overridden ? "text-success" : "text-danger"}>
+							<span aria-hidden="true">{a.overridden ? "✓" : "✕"}</span> They wrote{" "}
 							<strong className="font-semibold">{a.givenAnswer ?? "nothing"}</strong>
 						</span>
 						<span className="text-success">
@@ -45,17 +71,29 @@ function OverrideRows({ answers }: { answers: OverridableAnswer[] }) {
 							<strong className="font-semibold">{a.correctAnswer}</strong>
 						</span>
 					</span>
-					<Input
-						size="admin"
-						className="min-w-[200px] flex-1"
-						value={notes[a.questionNumber] ?? ""}
-						onChange={(e) => setNotes((n) => ({ ...n, [a.questionNumber]: e.target.value }))}
-						placeholder="Why you're changing this"
-						aria-label={`Why question ${a.questionNumber} is being re-marked`}
-					/>
-					<Button variant="secondary" disabled={!(notes[a.questionNumber] ?? "").trim()}>
-						Give the mark
-					</Button>
+					{a.overridden ? (
+						<span className="min-w-[200px] flex-1 text-small text-ink-2">
+							Mark given by hand — <em>{a.overrideNote}</em>
+						</span>
+					) : (
+						<>
+							<Input
+								size="admin"
+								className="min-w-[200px] flex-1"
+								value={notes[a.questionNumber] ?? ""}
+								onChange={(e) => setNotes((n) => ({ ...n, [a.questionNumber]: e.target.value }))}
+								placeholder="Why you're changing this"
+								aria-label={`Why question ${a.questionNumber} is being re-marked`}
+							/>
+							<Button
+								variant="secondary"
+								disabled={!(notes[a.questionNumber] ?? "").trim() || busy !== null}
+								onClick={() => give(a.questionNumber)}
+							>
+								{busy === a.questionNumber ? "Saving…" : "Give the mark"}
+							</Button>
+						</>
+					)}
 				</div>
 			))}
 		</div>
@@ -101,14 +139,16 @@ export function ResultsTable({ data }: { data: AssignmentResults }) {
 							<TableRow>
 								<TableCell>
 									<span className="font-semibold">{r.studentName}</span>
-									{r.answers && (
+									{r.answers && r.answers.length > 0 && (
 										<button
 											type="button"
 											onClick={() => setExpanded(expanded === r.attemptId ? null : r.attemptId)}
 											aria-expanded={expanded === r.attemptId}
 											className="block cursor-pointer text-small font-semibold text-brand"
 										>
-											{expanded === r.attemptId ? "Hide the answers" : `Re-mark ${r.answers.length} answers`}
+											{expanded === r.attemptId
+												? "Hide the answers"
+												: `Re-mark ${r.answers.filter((x) => !x.overridden).length} answers`}
 										</button>
 									)}
 								</TableCell>
@@ -138,10 +178,10 @@ export function ResultsTable({ data }: { data: AssignmentResults }) {
 									)}
 								</TableCell>
 							</TableRow>
-							{expanded === r.attemptId && r.answers && (
+							{expanded === r.attemptId && r.answers && r.answers.length > 0 && (
 								<TableRow>
 									<TableCell colSpan={6} className="p-0">
-										<OverrideRows answers={r.answers} />
+										<OverrideRows answers={r.answers} attemptId={r.attemptId} assignmentId={data.assignmentId} />
 									</TableCell>
 								</TableRow>
 							)}

@@ -22,6 +22,7 @@ only export async functions.
 | `batches.ts` | `createBatchAction`, `updateBatchAction` |
 | `invigilation.ts` | `extendAttemptAction`, `forceSubmitAttemptAction` — the live monitor's buttons; scope is the invigilator's own RLS read of the attempt |
 | `invitations.ts` | `inviteAction`, `bulkInviteAction`, `revokeInvitationAction`, `resendInvitationAction` |
+| `marks.ts` | `giveMarkAction` — screen 18's re-mark |
 | `plans.ts` | `extendPlansAction` — screen 24; scope is the admin's own RLS read of the plans |
 | `types.ts` | `FormState`, `LoginFormState`, `AcceptFormState` — no runtime exports. |
 

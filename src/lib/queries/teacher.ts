@@ -1,6 +1,10 @@
 import "server-only";
 
 import { timeTakenSeconds } from "@/lib/attempts/clock";
+import { overridableAnswers } from "@/lib/attempts/overrides";
+import { readAnswerKeyObject } from "@/lib/r2";
+import { answerKeyObjectKey } from "@/lib/r2-keys";
+import { answerKeySchema, type AnswerKey } from "@/lib/scoring";
 import { QUESTION_TYPES, isQuestionType } from "@/lib/question-types";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +16,7 @@ import type {
 	ClassAnalytics,
 	LiveSession,
 	LiveStudent,
+	OverridableAnswer,
 	TeacherDashboard,
 } from "@/lib/view-models/teacher";
 import { daysUntil, displayPhone, formatDuration, formatShortDate, instituteToday, queryFailed, relativeActivity, testSummary } from "./shared";
@@ -276,6 +281,11 @@ export async function getAssignmentResults(assignmentId: string): Promise<Assign
 	const users = new Map((usersResult.data ?? []).map((user) => [user.id, user.name]));
 	const scores = new Map((scoresResult.data ?? []).map((score) => [score.attempt_id, score]));
 	const isReleased = released(assignment.results_release, assignment.results_released_at);
+	const reMarkable = await overridableByAttempt(
+		supabase,
+		assignment.test_id,
+		attempts.filter((attempt) => attempt.status !== "in_progress" && scores.has(attempt.id)),
+	);
 	return {
 		assignmentId,
 		maxScore: testResult.data.total_questions,
@@ -301,11 +311,55 @@ export async function getAssignmentResults(assignmentId: string): Promise<Assign
 				timeTakenLabel: attempt.status === "expired" ? "Ran out of time" : formatDuration(elapsed),
 				stateLabel: attempt.status === "expired" ? "Expired" : "Submitted",
 				released: isReleased,
+				answers: reMarkable.get(attempt.id),
 				flags: attempt.tab_switches > 0 ? [`Left the tab ${attempt.tab_switches} ${attempt.tab_switches === 1 ? "time" : "times"}`] : [],
 			};
 		}),
 		notStarted: Math.max(0, targetStudents.size - new Set(attempts.map((attempt) => attempt.student_id)).size),
 	};
+}
+
+/**
+ * Each finished attempt's wrong (or already overridden) answers beside the
+ * key, for screen 18's re-mark rows (M6-05). Staff-only: the key is read
+ * through the R2 binding here, on the server, at each attempt's pinned
+ * version. A missing or unreadable key leaves that attempt without rows
+ * rather than failing the page.
+ */
+async function overridableByAttempt(
+	supabase: Awaited<ReturnType<typeof actorId>>["supabase"],
+	testId: string,
+	finished: readonly Pick<Attempt, "id" | "content_version">[],
+): Promise<Map<string, OverridableAnswer[]>> {
+	const result = new Map<string, OverridableAnswer[]>();
+	if (finished.length === 0) return result;
+	const ids = finished.map((attempt) => attempt.id);
+	const [answersResult, marksResult] = await Promise.all([
+		supabase.from("answers").select("attempt_id, q_number, given_answer").in("attempt_id", ids),
+		supabase.from("answer_marks").select("attempt_id, q_number, is_correct, marks_awarded, overridden_by, override_note").in("attempt_id", ids),
+	]);
+	if (answersResult.error) queryFailed("re-mark answers", answersResult.error);
+	if (marksResult.error) queryFailed("re-mark marks", marksResult.error);
+
+	const keys = new Map<number, AnswerKey | null>();
+	for (const version of new Set(finished.map((attempt) => attempt.content_version))) {
+		const object = await readAnswerKeyObject(answerKeyObjectKey(testId, version));
+		const parsed = object ? answerKeySchema.safeParse(await object.json()) : null;
+		keys.set(version, parsed?.success ? parsed.data : null);
+	}
+	for (const attempt of finished) {
+		const key = keys.get(attempt.content_version);
+		if (!key) continue;
+		result.set(
+			attempt.id,
+			overridableAnswers(
+				key,
+				(answersResult.data ?? []).filter((row) => row.attempt_id === attempt.id),
+				(marksResult.data ?? []).filter((row) => row.attempt_id === attempt.id),
+			),
+		);
+	}
+	return result;
 }
 
 /** Screen 19 — class aggregates from scores and answer marks. */

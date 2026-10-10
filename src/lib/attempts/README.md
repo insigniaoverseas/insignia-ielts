@@ -10,6 +10,9 @@
 | `finish.ts` | `server-only`. Closes an attempt as `submitted` or `expired` (secret-key client, after the caller proved ownership); a second close is a no-op. |
 | `mark.ts` | `server-only`. `ensureMarked`: the only place an attempt is *marked* against `key.json`. Marks, looks up the band, writes `answer_marks` then `attempt_scores`. Idempotent. |
 | `review.ts` | `server-only`, pure. Screen 10's rows: content + key + saved answers + the **stored** marks, joined per control. Called only after the release and `allow_review` gates. |
+| `rescore.ts` | `server-only`. `rescoreAttempt`: marks a finished attempt again (corrected key, or after an override) keeping every teacher override, then rewrites score + band. |
+| `overrides.ts` | Pure. Applies stored overrides to fresh marks and re-adds totals; builds screen 18's re-mark rows. |
+| `give-mark.ts` | `server-only`. A teacher's "Give the mark": scope via their RLS read, note required, then `rescoreAttempt`. |
 | `pause.ts` | `server-only`. `checkInPractice`: records a practice check-in and gives back time spent away. Mock/class untouched. Runs before every overdue check. |
 | `load.ts` | `server-only`. Reads the student's own attempt through their RLS client, its pinned `content.json` from R2, their saved answers, and signs five-minute audio/image URLs scoped to the attempt. |
 
