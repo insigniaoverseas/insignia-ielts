@@ -10,6 +10,7 @@ import type {
 	BatchView,
 	ClassAnalytics,
 	LiveSession,
+	LiveStudent,
 	TeacherDashboard,
 } from "@/lib/view-models/teacher";
 import { daysUntil, displayPhone, formatDuration, formatShortDate, instituteToday, queryFailed, relativeActivity, testSummary } from "./shared";
@@ -350,52 +351,80 @@ export async function getClassAnalytics(batchId: string): Promise<ClassAnalytics
 	};
 }
 
-/** Screen 17 — an assignment-backed live monitor. */
-export async function getLiveSession(sessionId: string): Promise<LiveSession | null> {
-	const results = await getAssignmentResults(sessionId);
-	if (!results) return null;
+/**
+ * The tiles of screen 17: one per attempt on the assignment, with the server's
+ * time remaining and how many questions have a saved answer.
+ *
+ * This is what the monitor polls every 10 seconds (M7-01), so it reads only
+ * what changes — attempts and answers — and leaves the title, batch and roster
+ * to {@link getLiveSession}'s first load. Runs under the invigilator's RLS:
+ * attempts outside the batches they teach are simply not returned.
+ *
+ * @returns `null` when the assignment is not visible to the caller.
+ */
+export async function getLiveStudents(sessionId: string): Promise<LiveStudent[] | null> {
 	const { supabase } = await actorId();
-	const { data: assignment, error: assignmentError } = await supabase
-		.from("assignments")
-		.select("test_id")
-		.eq("id", sessionId)
-		.maybeSingle();
-	if (assignmentError) queryFailed("live assignment", assignmentError);
-	if (!assignment) return null;
-	const attemptsResult = await supabase.from("attempts").select("*").eq("assignment_id", sessionId);
+	const [assignmentResult, attemptsResult] = await Promise.all([
+		supabase.from("assignments").select("test_id").eq("id", sessionId).maybeSingle(),
+		supabase
+			.from("attempts")
+			.select("id, student_id, status, expires_at, tab_switches")
+			.eq("assignment_id", sessionId),
+	]);
+	if (assignmentResult.error) queryFailed("live assignment", assignmentResult.error);
 	if (attemptsResult.error) queryFailed("live attempts", attemptsResult.error);
-	const attempts = (attemptsResult.data ?? []) as Attempt[];
+	const assignment = assignmentResult.data;
+	if (!assignment) return null;
+	const attempts = attemptsResult.data ?? [];
 	const attemptIds = attempts.map((attempt) => attempt.id);
 	const studentIds = [...new Set(attempts.map((attempt) => attempt.student_id))];
-	const [answersResult, studentsResult] = await Promise.all([
+	const [answersResult, studentsResult, testResult] = await Promise.all([
 		attemptIds.length
 			? supabase.from("answers").select("attempt_id, q_number").in("attempt_id", attemptIds)
 			: Promise.resolve({ data: [], error: null }),
 		studentIds.length
 			? supabase.from("users").select("id, name").in("id", studentIds)
 			: Promise.resolve({ data: [], error: null }),
+		supabase.from("tests").select("total_questions").eq("id", assignment.test_id).maybeSingle(),
 	]);
 	if (answersResult.error) queryFailed("live answers", answersResult.error);
 	if (studentsResult.error) queryFailed("live students", studentsResult.error);
-	const testResult = await supabase.from("tests").select("total_questions").eq("id", assignment.test_id).maybeSingle();
 	if (testResult.error) queryFailed("live test", testResult.error);
 	const studentNames = new Map((studentsResult.data ?? []).map((student) => [student.id, student.name]));
+	const answered = new Map<string, Set<number>>();
+	for (const answer of answersResult.data ?? []) {
+		const set = answered.get(answer.attempt_id) ?? new Set<number>();
+		set.add(answer.q_number);
+		answered.set(answer.attempt_id, set);
+	}
+	const now = Date.now();
+	return attempts.map((attempt) => ({
+		attemptId: attempt.id,
+		studentId: attempt.student_id,
+		name: studentNames.get(attempt.student_id) ?? "Student",
+		state: attempt.status === "submitted" || attempt.status === "expired" ? attempt.status : "in_progress",
+		secondsRemaining:
+			attempt.status === "in_progress"
+				? Math.max(0, Math.floor((new Date(attempt.expires_at).getTime() - now) / 1000))
+				: null,
+		answered: answered.get(attempt.id)?.size ?? 0,
+		total: testResult.data?.total_questions ?? 0,
+		flags:
+			attempt.tab_switches > 0
+				? [`Left the tab ${attempt.tab_switches} ${attempt.tab_switches === 1 ? "time" : "times"}`]
+				: [],
+	}));
+}
+
+/** Screen 17 — an assignment-backed live monitor: the header, then {@link getLiveStudents}. */
+export async function getLiveSession(sessionId: string): Promise<LiveSession | null> {
+	const [results, students] = await Promise.all([getAssignmentResults(sessionId), getLiveStudents(sessionId)]);
+	if (!results || !students) return null;
 	return {
 		sessionId,
 		testTitle: results.testTitle,
 		batchName: results.batchName,
 		lastUpdatedLabel: "just now",
-		students: attempts.map((attempt) => {
-			return {
-				attemptId: attempt.id,
-				studentId: attempt.student_id,
-				name: studentNames.get(attempt.student_id) ?? "Student",
-				state: attempt.status === "submitted" || attempt.status === "expired" ? attempt.status : "in_progress",
-				secondsRemaining: attempt.status === "in_progress" ? Math.max(0, Math.floor((new Date(attempt.expires_at).getTime() - Date.now()) / 1000)) : null,
-				answered: new Set((answersResult.data ?? []).filter((answer) => answer.attempt_id === attempt.id).map((answer) => answer.q_number)).size,
-				total: testResult.data?.total_questions ?? 0,
-				flags: attempt.tab_switches > 0 ? [`Left the tab ${attempt.tab_switches} ${attempt.tab_switches === 1 ? "time" : "times"}`] : [],
-			};
-		}),
+		students,
 	};
 }
