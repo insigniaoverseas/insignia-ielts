@@ -25,7 +25,8 @@
 | **Before beta (in order)** | 1. **M9-05 load test at 200** — needs the user's OK for a throwaway Supabase project; the one item that could force design changes. 2. **M9-06 nightly backup + restore drill** — the user is setting it up. 3. **Content** — enough papers with teacher-checked keys (M0-20); prove each Reading type on a real paper (V20). 4. The **`PRIVACY_CONTACT_EMAIL`** value (M9-08), and the band tables checked against a current Cambridge book. |
 | **After beta (agreed with the user)** | Transcript + "Play this part"/"Show why" (M4-02), practice instant feedback (M4-05), passage highlight + notes (M3-11), anti-cheat flags (M9-01), test-authoring MCP (M8), missing edge screens (M9-04), Durable Object limiter (M1-10), dead PIN columns (M1-14), DPDP deletion path (M9-08), docs/ADRs (M0-21, M9-09). |
 | **Test accounts** | Student A "Test 2", student B, a teacher, and the Owner admin — **credentials are never written down**; the user supplies them per run as env vars (`tests/e2e/README.md`). Test 2's assignment `73bdfce9…` has attempts left for full E2E runs. Leftover test data: Test 2's phone is a dummy (+91 90000 00001); two hand-given marks on one Test 2 attempt. |
-| **Open PRs** | None (#42 merged 2026-10-10). |
+| **Open PRs** | #43 (task board + the M10 plan). |
+| **In progress (M10)** | User feedback batch, §2 M10: build M10-01…03 now; **M10-04 is a plan only** until the user answers its questions. Resume from the first `todo` row there. |
 | **Working setup** | Branches in the worktree `~/dev/insignia-quick`; local dev runs with Turnstile's test keys (`.dev.vars.example`). The user prefers one combined PR per batch — merge, never rebase, when combining. |
 
 **History** (superseded rows, kept for context):
@@ -206,12 +207,46 @@
 
 ---
 
+### M10 — User feedback batch (2026-10-10)
+
+The user tried the app and asked for four things. **1–3 are being built; 4 is a plan only — do not implement it until the user approves the design below.** Each task is its own branch from `main` in the worktree `~/dev/insignia-quick`; the user prefers them combined into one PR at the end (merge, never rebase).
+
+| Task | Status | Owner | Updated | Notes |
+|---|---|---|---|---|
+| M10-01 Teacher "Results" link works | todo | Claude | 2026-10-10 | The teacher nav links `/teacher/results`, but only `/teacher/results/[assignmentId]` exists → 404. Build the index: the teacher's assignments with submitted/total, held/released, newest first, each linking to its screen 18. Admins reach it too if they hold `results:release`. **Done when** the nav link lands on a list and every row opens its results. |
+| M10-02 Test library filters | todo | Claude | 2026-10-10 | `/admin/library`: load every test **once**, filter in the browser — difficulty, skill, variant (Academic / General Training, even with no GT tests yet), pool (mock/class/practice), status, and a title search. Filter state in the URL so it survives reload and can be shared. **Done when** combining filters narrows the table with no request per change. |
+| M10-03 Assign several tests at once; form resets | todo | Claude | 2026-10-10 | Screen 16 picks **one** test and keeps everything filled in after "Assign". Allow ticking several tests → one assignment per test, same targets and rules, in one action (bulk, mind the 50-subrequest limit); after success clear the selections and say what was created. **Done when** 3 tests to one batch makes 3 assignments and the form is empty again. |
+| M10-04 Named plans with their own tests | **plan only — awaiting the user** | Claude | 2026-10-10 | See *M10-04 design* below. Needs: the user's answers to the open questions, then a migration (Supabase change → the user's explicit OK before applying). |
+
+#### M10-04 design (proposed, not built)
+
+**What the user wants.** Plans with names ("Basic batch plan", "3-month plan") that the institute can create, rename and archive. Each plan carries a set of tests — e.g. 15 fixed practice tests. Choosing a plan when inviting a student gives them those tests automatically; when they are also in a batch, plan tests and batch tests merge, and a test that arrives both ways shows **once**. Separately: choose from the test library which tests are practice tests.
+
+**Approach — a plan is a third kind of assignment target**, next to batch and student:
+
+1. **`plan_templates`** (new): `id, branch_id, name, months, test_quota?, archived_at, created_by, created_at`. Renaming changes `name`; archiving hides it from new invites but keeps existing students on it.
+2. **`student_plans.template_id`** (new, nullable): which template a student's plan came from. Invitations carry `plan_template_id` in `plan_template`; `accept_invitation` copies name/months from the template and sets `template_id`.
+3. **`assignment_targets.plan_template_id`** (new): the target is batch **XOR** student **XOR** plan. "Put a test in the Basic plan" = assign it to that plan, so due dates, attempt limits, result release, review and RLS all work unchanged; adding a test to a plan later reaches everyone on it. `private.assigned_to_me` gains one join (my active plan's template).
+4. **De-duplication** in the student's lists (`getMyTests`): group by `test_id`; when one test reaches a student by several assignments (plan + batch), show one card — the assignment with attempts left and the earliest due date wins; completed attempts count once.
+5. **Screens:** `/admin/plans` gains a *Plan templates* tab (create, rename, set months, archive, list/add/remove tests — adding a test here creates the plan-targeted assignment). Invite and CSV invite pick a template instead of only "months". Assign (screen 16) lists plans as targets beside batches and students. The student page shows where each test came from.
+6. **Tests/migration:** RLS policies ship in the same migration (non-negotiable 5); `tests/db` gains plan-target cases (a student on plan A never sees plan B's tests) and the policy sweep must stay complete; E2E: invite with a plan → the plan's tests appear once even when the batch has them too.
+
+**Open questions for the user** (answer before building):
+- **Q-P1 Rules for plan tests:** attempts, due date and result release — one default for the whole plan (e.g. unlimited attempts, results immediately), or set per test when adding it?
+- **Q-P2 "Which tests are practice tests":** today a practice test must drill **one question type** (Q10, enforced by the database). Should full-length tests be allowed in the practice pool (relaxing that rule), or does "practice tests in a plan" just mean the plan's tests are taken in practice mode (pausable clock, results at once)?
+- **Q-P3 Changing a student's plan** later (Basic → Advanced): do they lose the old plan's tests they haven't started, keep everything, or keep only what they've already attempted?
+- **Q-P4 Who manages plans:** admins at their centre, or the Owner only? Shared across centres?
+- **Q-P5** Apply the migration to the live Supabase project once reviewed (needs the user's explicit OK).
+
+**Rough size:** schema + RLS + db tests (1 day) · plan screen (1 day) · invite/assign/dedupe (1 day) · E2E + live check (½ day).
+
 ## 3. Changelog
 
 Newest first. `date · task · what changed · files · who`
 
 | Date | Task | What changed | Files | Who |
 |---|---|---|---|---|
+| 2026-10-10 | M10 | **Plan for the user's feedback batch.** Four requests recorded as M10-01…04 with "done when" lines so any session can resume: Results link 404, library filters (client-side), assign several tests + reset, and named plans with tests (**design only, awaiting the user's answers and migration OK**). | `PROJECT-MEMORY.md` | Claude |
 | 2026-10-10 | board | **Task board brought up to date.** 23 rows marked done that this session's PRs (#31, #35, #40, #42) finished and proved (mostly by the Playwright suite); every remaining open row is labelled **pre-beta** or **after beta**, as agreed with the user. §1 Current state rewritten: pre-beta order (load test → backup → content → privacy email + band tables), the after-beta list, test-account handling (never written down), working setup. Old §1 rows kept under "History". | `PROJECT-MEMORY.md` | Claude |
 | 2026-10-10 | M9-03 | **Staff can be managed.** Screen 28 gains Suspend/Reactivate per staff member, role change for the Owner, and a "Waiting to accept" list of pending staff invitations with Send again / Cancel. Every rule is checked against the target on the server; audited. Verified live. | `src/lib/staff.ts`, `src/lib/actions/staff.ts`, `src/components/admin/staff-controls.tsx`, `src/app/admin/users/page.tsx`, `src/lib/{queries,view-models}/admin.ts`, `PROJECT-MEMORY.md` | Claude |
 | 2026-10-10 | M5-05 | **Student detail buttons work.** "Send a password reset link" (was "Send a new invitation", which can't apply to an existing account) emails the same link `/forgot` sends; "Change phone number" validates and saves an Indian mobile. Scoped by the admin's RLS read, audited. Verified live as admin. | `src/lib/{student-account,phone}.ts`, `src/lib/actions/students.ts`, `src/components/admin/student-account-actions.tsx`, `src/app/admin/students/[id]/page.tsx`, `src/lib/{queries,view-models}/admin.ts`, `tests/unit/phone.test.mjs`, `PROJECT-MEMORY.md` | Claude |
