@@ -120,7 +120,9 @@ export default async function ReviewPage({
 					<p className="m-0 text-ink-2">
 						{all
 							? `All ${mistakes.summary.total} questions, in order. The ones you got right are marked too.`
-							: `${wrong.length === 1 ? "This is the question" : `These are the ${wrong.length} questions`} you got wrong. Read your answer, then the right one.`}
+							: // No count here: the header counts question numbers (as the result
+								// page does), while a card can cover two — "29–30" is one card.
+								"Here are the questions you got wrong. Read your answer, then the right one."}
 					</p>
 					<ol className="m-0 flex list-none flex-col gap-4 p-0">
 						{shown.map((q) => (

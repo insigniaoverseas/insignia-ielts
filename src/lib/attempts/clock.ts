@@ -17,6 +17,20 @@ export function isOverdue(attempt: { status: string; expires_at: string }, now =
 	return attempt.status === "in_progress" && new Date(attempt.expires_at).getTime() <= now;
 }
 
+/**
+ * How long a finished attempt took, in seconds — never more than the time it
+ * was allowed.
+ *
+ * Stops at `expires_at` (which already includes any extra time an invigilator
+ * gave): an attempt that ran out with the page closed is only marked
+ * `expired` on the next touch, so its `submitted_at` can be hours later. That
+ * gap is not time spent on the test.
+ */
+export function timeTakenSeconds(attempt: { started_at: string; submitted_at: string; expires_at: string }): number {
+	const end = Math.min(new Date(attempt.submitted_at).getTime(), new Date(attempt.expires_at).getTime());
+	return Math.max(0, Math.round((end - new Date(attempt.started_at).getTime()) / 1000));
+}
+
 /** How often an open, visible test checks in with the server. */
 export const HEARTBEAT_SECONDS = 30;
 /** A gap between check-ins longer than this means the student was away. */

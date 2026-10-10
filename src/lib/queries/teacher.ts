@@ -1,5 +1,6 @@
 import "server-only";
 
+import { timeTakenSeconds } from "@/lib/attempts/clock";
 import { QUESTION_TYPES, isQuestionType } from "@/lib/question-types";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
@@ -282,7 +283,7 @@ export async function getAssignmentResults(assignmentId: string): Promise<Assign
 		batchName: (batchesResult.data ?? []).map((batch) => batch.name).join(", ") || "Individual students",
 		rows: attempts.filter((attempt) => attempt.status !== "in_progress").map((attempt) => {
 			const score = scores.get(attempt.id);
-			const elapsed = attempt.submitted_at ? (new Date(attempt.submitted_at).getTime() - new Date(attempt.started_at).getTime()) / 1000 : 0;
+			const elapsed = attempt.submitted_at ? timeTakenSeconds({ ...attempt, submitted_at: attempt.submitted_at }) : 0;
 			return {
 				attemptId: attempt.id,
 				studentId: attempt.student_id,

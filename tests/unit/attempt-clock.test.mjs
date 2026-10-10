@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
-import { isOverdue, secondsLeft } from "../../src/lib/attempts/clock.ts";
+import { isOverdue, secondsLeft, timeTakenSeconds } from "../../src/lib/attempts/clock.ts";
 
 const now = Date.parse("2026-10-09T10:00:00Z");
 
@@ -69,4 +69,22 @@ describe("practice pause", () => {
 		);
 		assert.equal(result.expiresAt, null);
 	});
+});
+
+describe("time taken", () => {
+  const started_at = "2026-10-10T06:00:00.000Z";
+  const expires_at = "2026-10-10T06:40:00.000Z"; // 30 min + 10 min transfer
+
+  test("is the time between start and hand-in", () => {
+    assert.equal(timeTakenSeconds({ started_at, expires_at, submitted_at: "2026-10-10T06:25:30.000Z" }), 25 * 60 + 30);
+  });
+
+  test("stops at the deadline when the attempt was closed hours later", () => {
+    assert.equal(timeTakenSeconds({ started_at, expires_at, submitted_at: "2026-10-10T09:15:05.000Z" }), 40 * 60);
+  });
+
+  test("counts extra time an invigilator gave, because it moved the deadline", () => {
+    const extended = "2026-10-10T06:45:00.000Z";
+    assert.equal(timeTakenSeconds({ started_at, expires_at: extended, submitted_at: "2026-10-10T06:44:00.000Z" }), 44 * 60);
+  });
 });
