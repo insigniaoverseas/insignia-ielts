@@ -42,6 +42,9 @@ export type ResetRequestState = { message: string; sent: boolean } | null;
  */
 export type ChangePasswordState = { message: string; ok: boolean; field?: "current" | "password" } | null;
 
+/** What signing a device out from Profile returns. */
+export type SignOutDeviceResult = { ok: true } | { ok: false; message: string };
+
 /** The choose-a-new-password form's state. */
 export type ResetFormState = { message: string } | null;
 

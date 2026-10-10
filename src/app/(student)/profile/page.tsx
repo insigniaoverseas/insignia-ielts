@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { StatusPill } from "@/components/ui/status-pill";
 import { LogOutButton } from "@/components/auth/log-out-button";
+import { DeviceSignOutButton } from "@/components/student/device-sign-out-button";
 import { PlanBanner } from "@/components/student/plan-banner";
 import { getStudentProfile } from "@/lib/queries/student";
 
@@ -116,7 +117,7 @@ export default async function ProfilePage() {
 					<div className="flex flex-col gap-1">
 						<h2 className="m-0 text-h3">Where you&rsquo;re logged in</h2>
 						<p className="m-0 text-ink-2">
-							If you don&rsquo;t recognise one of these, change your password and tell your teacher.
+							If you don&rsquo;t recognise one of these, sign it out, change your password and tell your teacher.
 						</p>
 					</div>
 					<ul className="m-0 flex list-none flex-col gap-0 p-0">
@@ -129,7 +130,11 @@ export default async function ProfilePage() {
 									<span className="font-semibold">{d.label}</span>
 									<span className="text-small text-ink-2">Last used {d.lastUsedLabel}</span>
 								</span>
-								{d.current && <StatusPill status="active" size="sm" label="This device" />}
+								{d.current ? (
+									<StatusPill status="active" size="sm" label="This device" />
+								) : (
+									<DeviceSignOutButton sessionId={d.id} label={d.label} />
+								)}
 							</li>
 						))}
 					</ul>
