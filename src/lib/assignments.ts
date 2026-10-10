@@ -4,6 +4,7 @@ import { recordAudit } from "@/lib/audit";
 import { validateAssignment, type AssignField, type AssignInput } from "@/lib/assignment-input";
 import type { Actor, Scope } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Creating an assignment (M6-03, screen 16).
@@ -31,8 +32,8 @@ const TRY_AGAIN = "Something went wrong. Nothing was assigned. Try again.";
 /**
  * Validates and stores one assignment with its targets, then audits it.
  *
- * Results are released **immediately**: no release screen exists yet (M6-05),
- * and a `manual` assignment would hold every band with no way to let it go.
+ * Results reach students as the teacher chose: straight away, at a set time,
+ * or when they press Release on screen 18 (`releaseResults`).
  *
  * @param actor From `requirePermission("assignment:manage")`.
  * @param scope That permission's scope.
@@ -137,7 +138,8 @@ export async function createAssignment(actor: Actor, scope: Scope, input: Assign
 			due_by: checked.dueBy,
 			max_attempts: checked.maxAttempts,
 			allow_review: checked.allowReview,
-			results_release: "immediate",
+			results_release: checked.resultsRelease,
+			results_released_at: checked.resultsReleasedAt,
 			created_by: actor.id,
 		})
 		.select("id")
@@ -186,4 +188,60 @@ async function taughtBatchIds(db: ReturnType<typeof createAdminClient>, teacherI
 		return null;
 	}
 	return new Set((data ?? []).map((row) => row.batch_id));
+}
+
+export type ReleaseOutcome = { ok: true; message: string } | { ok: false; message: string };
+
+/**
+ * Releases an assignment's results to its students now (M6-05, screen 18).
+ *
+ * Release is **per assignment** — the database's release gate is
+ * `assignments.results_released_at`, read by the RLS on `attempt_scores` and
+ * `answer_marks` — so one press lets every student on it see their band.
+ *
+ * Scope: the assignment is read through the actor's **own RLS client** first.
+ * A teacher outside its batches gets no row, so cannot release it. The write
+ * then goes through the secret key (`assignments` is select-only to API
+ * roles) and is audited.
+ *
+ * A `scheduled` release can be brought forward; it is never pushed back.
+ *
+ * @param actor From `requirePermission("results:release")`.
+ */
+export async function releaseResults(actor: Actor, assignmentId: string): Promise<ReleaseOutcome> {
+	if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assignmentId)) {
+		return { ok: false, message: "That test couldn't be found." };
+	}
+	const { data: assignment, error } = await (await createClient())
+		.from("assignments")
+		.select("id, branch_id, results_release, results_released_at")
+		.eq("id", assignmentId)
+		.maybeSingle();
+	if (error) throw error;
+	if (!assignment) return { ok: false, message: "That test couldn't be found." };
+
+	const now = new Date();
+	const alreadyOut =
+		assignment.results_release === "immediate" ||
+		(assignment.results_released_at !== null && new Date(assignment.results_released_at) <= now);
+	if (alreadyOut) return { ok: false, message: "These results are already out." };
+
+	const { error: updateError } = await createAdminClient()
+		.from("assignments")
+		.update({ results_released_at: now.toISOString(), released_by: actor.id })
+		.eq("id", assignment.id);
+	if (updateError) {
+		console.error("release results failed:", updateError.message);
+		return { ok: false, message: "Something went wrong. Nothing was released. Try again." };
+	}
+
+	await recordAudit({
+		actorId: actor.id,
+		branchId: assignment.branch_id,
+		action: "results.release",
+		entity: "assignment",
+		entityId: assignment.id,
+		meta: { was: assignment.results_release, scheduled_for: assignment.results_released_at },
+	});
+	return { ok: true, message: "Results released. Students can see their band now." };
 }

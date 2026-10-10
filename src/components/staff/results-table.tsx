@@ -2,14 +2,11 @@
 
 import { Fragment, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ConfirmDialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { StatusPill } from "@/components/ui/status-pill";
 import {
 	Table,
 	TableBody,
-	TableBulkActions,
 	TableCard,
 	TableCell,
 	TableHead,
@@ -66,32 +63,23 @@ function OverrideRows({ answers }: { answers: OverridableAnswer[] }) {
 }
 
 /**
- * Screen 18 — Results & release (M6-04).
- *
- * Releasing is the moment a band becomes real to a student, so it is a
- * deliberate, multi-select, confirmed action rather than a per-row toggle that
- * can be hit by accident.
+ * Screen 18 — Results (M6-04). Releasing them is `ReleasePanel`, above this
+ * table: the database's release gate is per assignment, so it is one action
+ * for everyone rather than a per-row choice the gate could not honour.
  *
  * Flags are shown but never act on their own (`MVP-1.md` M9-01: flags, not
  * blocks). "Left the tab 11 times" might be cheating or might be a browser
  * notification — the teacher is the one who knows which.
  */
 export function ResultsTable({ data }: { data: AssignmentResults }) {
-	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [expanded, setExpanded] = useState<string | null>(null);
-	const [confirming, setConfirming] = useState(false);
-
-	const releasable = data.rows.filter((r) => !r.released);
-	const allOn = selected.size === releasable.length && releasable.length > 0;
-	const someOn = selected.size > 0 && !allOn;
 
 	return (
 		<TableCard>
 			<TableToolbar>
 				<div className="flex flex-col gap-1">
 					<span className="text-small text-ink-2">
-						{data.rows.length} submitted · {data.notStarted} never started ·{" "}
-						{data.rows.filter((r) => r.released).length} released
+						{data.rows.length} submitted · {data.notStarted} never started
 					</span>
 				</div>
 			</TableToolbar>
@@ -99,15 +87,6 @@ export function ResultsTable({ data }: { data: AssignmentResults }) {
 			<Table>
 				<TableHeader sticky>
 					<TableRow>
-						<TableHead className="w-12">
-							<Checkbox
-								checked={allOn ? true : someOn ? "indeterminate" : false}
-								onCheckedChange={() =>
-									setSelected(allOn ? new Set() : new Set(releasable.map((r) => r.attemptId)))
-								}
-								aria-label="Select every unreleased result"
-							/>
-						</TableHead>
 						<TableHead>Student</TableHead>
 						<TableHead className="text-right">Score</TableHead>
 						<TableHead className="text-right">Band</TableHead>
@@ -119,23 +98,7 @@ export function ResultsTable({ data }: { data: AssignmentResults }) {
 				<TableBody>
 					{data.rows.map((r) => (
 						<Fragment key={r.attemptId}>
-							<TableRow selected={selected.has(r.attemptId)}>
-								<TableCell>
-									{!r.released && (
-										<Checkbox
-											checked={selected.has(r.attemptId)}
-											onCheckedChange={() =>
-												setSelected((prev) => {
-													const next = new Set(prev);
-													if (next.has(r.attemptId)) next.delete(r.attemptId);
-													else next.add(r.attemptId);
-													return next;
-												})
-											}
-											aria-label={`Select ${r.studentName}'s result`}
-										/>
-									)}
-								</TableCell>
+							<TableRow>
 								<TableCell>
 									<span className="font-semibold">{r.studentName}</span>
 									{r.answers && (
@@ -150,7 +113,7 @@ export function ResultsTable({ data }: { data: AssignmentResults }) {
 									)}
 								</TableCell>
 								<TableCell className="text-right font-mono">
-									{r.rawScore === null ? <span className="text-ink-3">—</span> : `${r.rawScore} / 40`}
+									{r.rawScore === null ? <span className="text-ink-3">—</span> : `${r.rawScore} / ${data.maxScore}`}
 								</TableCell>
 								<TableCell className="text-right font-mono font-medium">{r.bandLabel}</TableCell>
 								<TableCell className="text-small text-ink-2">{r.timeTakenLabel}</TableCell>
@@ -167,10 +130,9 @@ export function ResultsTable({ data }: { data: AssignmentResults }) {
 									)}
 								</TableCell>
 								<TableCell>
+									{/* "Ran out of time" is already in the Time column. */}
 									{r.released ? (
 										<StatusPill status="submitted" size="sm" label="Released" />
-									) : r.stateLabel === "Expired" ? (
-										<StatusPill status="expired" size="sm" label="Ran out of time" />
 									) : (
 										<StatusPill status="not_started" size="sm" label="Held" />
 									)}
@@ -178,7 +140,7 @@ export function ResultsTable({ data }: { data: AssignmentResults }) {
 							</TableRow>
 							{expanded === r.attemptId && r.answers && (
 								<TableRow>
-									<TableCell colSpan={7} className="p-0">
+									<TableCell colSpan={6} className="p-0">
 										<OverrideRows answers={r.answers} />
 									</TableCell>
 								</TableRow>
@@ -187,27 +149,6 @@ export function ResultsTable({ data }: { data: AssignmentResults }) {
 					))}
 				</TableBody>
 			</Table>
-
-			{selected.size > 0 && (
-				<TableBulkActions>
-					<span className="font-semibold text-white">
-						{selected.size} {selected.size === 1 ? "result" : "results"} selected
-					</span>
-					<Button variant="inverse" onClick={() => setConfirming(true)}>
-						Release results
-					</Button>
-				</TableBulkActions>
-			)}
-
-			<ConfirmDialog
-				open={confirming}
-				onOpenChange={setConfirming}
-				title={`Release ${selected.size} ${selected.size === 1 ? "result" : "results"}?`}
-				description="Those students will see their band and their mistakes straight away. You can't un-release a result."
-				confirmLabel="Release them"
-				cancelLabel="Not yet"
-				onConfirm={() => setConfirming(false)}
-			/>
 		</TableCard>
 	);
 }

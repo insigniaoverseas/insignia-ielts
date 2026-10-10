@@ -278,6 +278,13 @@ export async function getAssignmentResults(assignmentId: string): Promise<Assign
 	const isReleased = released(assignment.results_release, assignment.results_released_at);
 	return {
 		assignmentId,
+		maxScore: testResult.data.total_questions,
+		release: {
+			mode: assignment.results_release as "immediate" | "scheduled" | "manual",
+			released: isReleased,
+			// Institute time, server-formatted (non-negotiable 9).
+			whenLabel: assignment.results_released_at ? formatDateTime(assignment.results_released_at) : null,
+		},
 		testTitle: testResult.data.title,
 		skill: testResult.data.skill,
 		batchName: (batchesResult.data ?? []).map((batch) => batch.name).join(", ") || "Individual students",

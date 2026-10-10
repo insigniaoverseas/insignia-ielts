@@ -18,10 +18,17 @@ export type AssignInput = {
 	dueBy: string;
 	attempts: string;
 	allowReview: boolean;
+	/** When students see their band: `immediate`, `scheduled` or `manual`. */
+	release: string;
+	/** `datetime-local`, read as `Asia/Kolkata`. Only for `scheduled`. */
+	releaseAt: string;
 };
 
+/** When results reach students (`assignments.results_release`, Q2 2026-09-15). */
+export type ReleaseMode = "immediate" | "scheduled" | "manual";
+
 /** A field the teacher has to fix, named so the form can point at it. */
-export type AssignField = "test" | "who" | "opensAt" | "dueBy" | "attempts";
+export type AssignField = "test" | "who" | "opensAt" | "dueBy" | "attempts" | "release";
 
 export type CheckedAssignment = {
 	ok: true;
@@ -34,6 +41,9 @@ export type CheckedAssignment = {
 	dueBy: string | null;
 	maxAttempts: number;
 	allowReview: boolean;
+	resultsRelease: ReleaseMode;
+	/** UTC ISO string for `scheduled`; `null` otherwise (the database requires both). */
+	resultsReleasedAt: string | null;
 };
 
 export type AssignRefusal = { ok: false; message: string; field: AssignField };
@@ -103,6 +113,20 @@ export function validateAssignment(input: AssignInput, now: Date): CheckedAssign
 		return { ok: false, message: `Attempts must be a whole number from 1 to ${MAX_ATTEMPTS}.`, field: "attempts" };
 	}
 
+	const release = input.release;
+	if (release !== "immediate" && release !== "scheduled" && release !== "manual") {
+		return { ok: false, message: "Choose when students see their results.", field: "release" };
+	}
+	let releaseAt: Date | null = null;
+	if (release === "scheduled") {
+		releaseAt = input.releaseAt.trim() ? kolkataLocalToUtc(input.releaseAt.trim()) : null;
+		if (!releaseAt) return { ok: false, message: "Pick the date and time results come out.", field: "release" };
+		if (releaseAt <= now) return { ok: false, message: "That release time has already passed.", field: "release" };
+		if (availableFrom && releaseAt <= availableFrom) {
+			return { ok: false, message: "Results can't come out before the test opens.", field: "release" };
+		}
+	}
+
 	return {
 		ok: true,
 		testId: input.testId,
@@ -112,5 +136,7 @@ export function validateAssignment(input: AssignInput, now: Date): CheckedAssign
 		dueBy: dueBy?.toISOString() ?? null,
 		maxAttempts: attempts,
 		allowReview: input.allowReview,
+		resultsRelease: release,
+		resultsReleasedAt: releaseAt?.toISOString() ?? null,
 	};
 }

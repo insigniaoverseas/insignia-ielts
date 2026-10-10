@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { createAssignment } from "@/lib/assignments";
+import { createAssignment, releaseResults } from "@/lib/assignments";
 import { ForbiddenError, requirePermission } from "@/lib/rbac";
 import type { FormState } from "@/lib/actions/types";
 
@@ -27,6 +27,8 @@ export async function assignTestAction(_previous: FormState, formData: FormData)
 			dueBy: String(formData.get("dueBy") ?? ""),
 			attempts: String(formData.get("attempts") ?? "1"),
 			allowReview: formData.get("allowReview") === "on",
+			release: String(formData.get("release") ?? ""),
+			releaseAt: String(formData.get("releaseAt") ?? ""),
 		});
 
 		if (!result.ok) return { ok: false, message: result.message, field: result.field };
@@ -39,6 +41,25 @@ export async function assignTestAction(_previous: FormState, formData: FormData)
 		if (error instanceof ForbiddenError) {
 			return { ok: false, message: "You don't have permission to assign tests." };
 		}
+		throw error;
+	}
+}
+
+/**
+ * "Release results to everyone" on screen 18 (M6-05). `results:release` again
+ * here; `releaseResults` confines it to assignments the actor can see.
+ */
+export async function releaseResultsAction(assignmentId: string): Promise<FormState> {
+	try {
+		const { actor } = await requirePermission("results:release");
+		const result = await releaseResults(actor, assignmentId);
+		if (result.ok) {
+			revalidatePath(`/teacher/results/${assignmentId}`);
+			revalidatePath("/teacher/dashboard");
+		}
+		return result;
+	} catch (error) {
+		if (error instanceof ForbiddenError) return { ok: false, message: "You don't have permission to release results." };
 		throw error;
 	}
 }
