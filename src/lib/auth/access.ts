@@ -43,6 +43,18 @@ export function signInPath(pathname?: string): string {
 }
 
 /**
+ * The sign-in page for a session that was ended — signed in on another device,
+ * or signed out from Profile or by an admin — keeping where they were, so a
+ * student pulled out of a test lands back in it after signing in again.
+ *
+ * @param pathname Where they were; dropped unless it is a path on this site.
+ */
+export function endedSignInPath(pathname?: string | null): string {
+	const next = pathname && pathname !== "/" && pathname !== "/login" ? safeRelativePath(pathname) : null;
+	return next ? `/login?ended=1&next=${encodeURIComponent(next)}` : "/login?ended=1";
+}
+
+/**
  * `path` if it is a path on **this** site, else `null` — the guard on every
  * "go back where you were" link, so the login form cannot be used as an open
  * redirect (`MVP-1.md` §8).
@@ -126,11 +138,14 @@ export function routeDecision({
 	userId,
 	role,
 	session,
+	next,
 }: {
 	pathname: string;
 	userId: string | null;
 	role: string | null;
 	session: SessionStanding;
+	/** On `/login`, its `next` parameter — kept when the session is ended there. */
+	next?: string | null;
 }): RouteDecision {
 	const area = routeArea(pathname);
 	const isEntry = pathname === "/";
@@ -139,7 +154,9 @@ export function routeDecision({
 
 	// A JWT without its revocable session is only half a login. Deleting the
 	// cookie must not become a way around device revocation.
-	if (userId && role && session === "ended") return { kind: "endSession", to: "/login?ended=1" };
+	if (userId && role && session === "ended") {
+		return { kind: "endSession", to: endedSignInPath(isLogin ? next : pathname) };
+	}
 
 	if (isEntry) return { kind: "redirect", to: role ? homeForRole(role) : "/login" };
 	if (isLogin) return role ? { kind: "redirect", to: homeForRole(role) } : { kind: "pass" };

@@ -10,6 +10,7 @@ import type { AnswerValue } from "@/components/player/question-group";
 import { heartbeatAction, saveAnswerAction, submitAttemptAction } from "@/lib/actions/attempts";
 import type { SaveAnswerInput } from "@/lib/actions/types";
 import { dropAudio } from "@/lib/audio-cache";
+import { endedSignInPath } from "@/lib/auth/access";
 import type { AttemptSession } from "@/lib/view-models/attempt";
 
 /** How long typing must pause before a text answer is sent. */
@@ -32,7 +33,9 @@ type SaveStatus = "saved" | "saving" | "offline";
  *   queue entry), so the database never sees a newer save before an older one
  *   from this tab. Across two tabs it keeps the newer and refuses the older.
  * - A failed save is kept and retried; the student is told "Offline — keep
- *   working", never asked to do anything.
+ *   working", never asked to do anything. While the connection is down a
+ *   banner says so (screen 30, M9-04), and the moment the browser is back
+ *   online everything waiting is sent rather than left for its retry timer.
  * - Submit first sends everything still pending.
  *
  * Nothing here decides the deadline (M2-08). The countdown is drawn by the
@@ -58,6 +61,8 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 	const [goingHome, startGoingHome] = useTransition();
 	/** Handing in: from the tap (or time-up) until the result page loads or it fails. */
 	const [submitting, setSubmitting] = useState(false);
+	/** The browser's own word that the network is gone, ahead of a failed save. */
+	const [browserOffline, setBrowserOffline] = useState(false);
 	const correct = useCallback((seconds: number) => setClock({ seconds, stamp: Date.now() }), []);
 	const router = useRouter();
 	/** The latest `send`, for retry timers set before it was recreated. */
@@ -113,7 +118,7 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 				if (result.ok) correct(result.secondsRemaining);
 				if (!result.ok) {
 					if (result.reason === "session_ended") {
-						router.replace("/login?ended=1");
+						router.replace(endedSignInPath(`/attempt/${session.attemptId}`));
 						return;
 					}
 					if (result.reason === "time_up" || result.reason === "closed") {
@@ -142,7 +147,7 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 			}
 			if (inFlight.current === 0 && pending.current.size === 0) setStatus("saved");
 		},
-		[correct, finish, router],
+		[correct, finish, router, session.attemptId],
 	);
 	useEffect(() => {
 		sendRef.current = send;
@@ -159,7 +164,7 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 				correct(result.secondsRemaining);
 				return result.secondsRemaining;
 			}
-			if (result.reason === "session_ended") router.replace("/login?ended=1");
+			if (result.reason === "session_ended") router.replace(endedSignInPath(`/attempt/${session.attemptId}`));
 			if (result.reason === "time_up" || result.reason === "closed") return null;
 		} catch {
 			// Offline: keep drawing the clock; the next check corrects it.
@@ -252,6 +257,32 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 		await finish();
 	}, [check, finish, send]);
 
+	// The network dropping and coming back. Offline shows the banner at once,
+	// before a save has had to fail; online sends whatever is waiting now and
+	// corrects the clock, instead of leaving it for the 5-second retry.
+	useEffect(() => {
+		function onOffline() {
+			setBrowserOffline(true);
+		}
+		function onOnline() {
+			setBrowserOffline(false);
+			for (const key of [...pending.current.keys()]) {
+				clearTimeout(timers.current.get(key));
+				void sendRef.current(key);
+			}
+			void check().then((left) => {
+				if (left === null) void finish();
+			});
+		}
+		if (!navigator.onLine) onOffline();
+		window.addEventListener("offline", onOffline);
+		window.addEventListener("online", onOnline);
+		return () => {
+			window.removeEventListener("offline", onOffline);
+			window.removeEventListener("online", onOnline);
+		};
+	}, [check, finish]);
+
 	// Back button: the clock doesn't stop, so leaving is never an accident. One
 	// extra history entry means Back lands here first and asks.
 	useEffect(() => {
@@ -281,6 +312,15 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 
 	return (
 		<>
+			{(status === "offline" || browserOffline) && (
+				// Reassure, don't alarm (BUILD-STEPS 98). Answers already sent are
+				// saved; anything typed now lives in this tab until the connection
+				// is back, so closing the page is the one thing to warn against.
+				<div role="status" className="border-b border-warning-line bg-warning-soft px-4 py-3 md:px-8">
+					<strong className="font-semibold">The internet has dropped. Reconnecting…</strong> Keep working, and
+					don&rsquo;t close this page — your answers will save by themselves when it&rsquo;s back.
+				</div>
+			)}
 			{submitError && (
 				<div role="alert" className="border-b border-danger-line bg-danger-soft px-4 py-3 md:px-8">
 					{submitError}

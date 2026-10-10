@@ -1092,7 +1092,7 @@ look came from: a rendered `.dc.html` where one exists, otherwise
 | 27 | Answer key editor | Admin | — | ✅ built | M5 |
 | 28 | Users & roles | Admin | — | ✅ built | M9 |
 | 29 | Audit log | Admin | — | ✅ built | M9 |
-| 30 | Error / edge screens | Shared | — | 🟡 partly — not-found and error done; connection-lost, test-not-available, session-expired, browser-unsupported still to do | M9 |
+| 30 | Error / edge screens | Shared | — | ✅ not-found, error, connection-lost, test-not-available, signed-out, browser-unsupported | M9 |
 
 **All 30 screens are built** as of 2026-09-16 (screen 02 dropped with the PIN).
 They render from `lib/view-models/*` — one type per screen — satisfied by

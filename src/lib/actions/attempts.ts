@@ -9,6 +9,7 @@ import { isOverdue, secondsLeft } from "@/lib/attempts/clock";
 import { getOwnedAttempt } from "@/lib/attempts/load";
 import { ensureMarked } from "@/lib/attempts/mark";
 import { checkInPractice } from "@/lib/attempts/pause";
+import { endedSignInPath } from "@/lib/auth/access";
 import { sessionState } from "@/lib/auth/sessions";
 import { getMyMistakes, getPreTestBriefing } from "@/lib/queries/student";
 import { ForbiddenError, requirePermission } from "@/lib/rbac";
@@ -99,7 +100,7 @@ export async function startAttemptAction(_previous: StartAttemptState, formData:
 			}
 		}
 	} catch (error) {
-		if (error instanceof SessionEndedError) redirect("/login?ended=1");
+		if (error instanceof SessionEndedError) redirect(endedSignInPath(`/tests/${encodeURIComponent(ref)}/start`));
 		if (error instanceof ForbiddenError) {
 			return { message: "You can't start tests from this account." };
 		}
@@ -281,7 +282,7 @@ export async function submitAttemptAction(attemptId: string): Promise<{ ok: fals
 		const attempt = await checkInPractice(owned);
 		await finishAttempt(attempt, isOverdue(attempt) ? "expired" : "submitted");
 	} catch (error) {
-		if (error instanceof SessionEndedError) redirect("/login?ended=1");
+		if (error instanceof SessionEndedError) redirect(endedSignInPath(`/attempt/${attemptId}`));
 		if (error instanceof ForbiddenError) {
 			return { ok: false, message: "You can't submit from this account." };
 		}

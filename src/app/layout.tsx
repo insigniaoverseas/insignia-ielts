@@ -52,6 +52,21 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 	return (
 		<html lang="en" className={`${inter.variable} ${plexMono.variable}`}>
 			<body>
+				{/* Screen 30 — browser unsupported (M9-04). Hidden unless the
+				    browser fails the CSS check in globals.css, which then hides
+				    everything else. Works with no JavaScript at all. */}
+				<div id="browser-unsupported" className="edge-notice" role="alert">
+					<h1>This browser is too old for Insignia IELTS</h1>
+					<p>Please open this page in an up-to-date Chrome, Edge, Safari or Firefox.</p>
+					<p>On a computer at the institute? Ask your teacher for help.</p>
+				</div>
+				<noscript>
+					<div className="edge-notice edge-notice--strip" role="alert">
+						<p>
+							<strong>Please turn on JavaScript in this browser.</strong> Tests can&rsquo;t run without it.
+						</p>
+					</div>
+				</noscript>
 				{children}
 				<Toaster />
 			</body>

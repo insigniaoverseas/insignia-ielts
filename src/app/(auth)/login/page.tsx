@@ -53,12 +53,17 @@ export default async function LoginPage({
 				</div>
 			</div>
 
-			{/* Reached by the guard when a session was revoked — most often a
-			    student who signed in on another machine. Said plainly, so it
-			    does not read as an error they caused. */}
+			{/* Screen 30 "signed out" (M9-04). Reached by the guard when a
+			    session was ended — most often a student who signed in on another
+			    machine, sometimes a device signed out from Profile or by an
+			    admin. Said plainly, so it does not read as an error they caused,
+			    and `next` takes them back to where they were — mid-test, into the
+			    test. Their answers were saved as they went. */}
 			{ended && (
 				<Banner tone="info">
-					You were signed out because this account was used on another device. Sign in again to carry on.
+					You&rsquo;ve been signed out, because this account was signed in on another device or signed out
+					from one. <strong className="font-semibold">Your answers are saved.</strong> Sign in again to carry
+					on where you left off.
 				</Banner>
 			)}
 

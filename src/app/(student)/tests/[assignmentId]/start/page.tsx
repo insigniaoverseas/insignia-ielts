@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { DifficultyBadge } from "@/components/ui/difficulty-badge";
 import { SoundCheck } from "@/components/student/sound-check";
 import { StartTestForm } from "@/components/student/start-test-form";
+import { TestNotAvailable } from "@/components/student/test-not-available";
 import { MODE_EXPLAINED, SKILL_LABEL } from "@/components/student/labels";
 import { getPreStartAudio, getPreTestBriefing } from "@/lib/queries/student";
 
@@ -31,6 +31,10 @@ function Fact({ value, caption }: { value: string; caption: string }) {
  * read, and Start waits for it (M2-06): the clock must never run while a lab
  * connection is still fetching the recording.
  *
+ * A test they can't start — not open yet, closed, no tries left, access
+ * ended, or not theirs — gets screen 30's "not available" instead, with the
+ * reason, rather than a Start button that refuses after it is pressed.
+ *
  * Two ways out, and the safe one is not hidden: "I'm ready — Start" is the
  * single primary action, and "Not now, go back" sits under it as plain text.
  */
@@ -41,7 +45,10 @@ export default async function PreTestPage({
 }) {
 	const { assignmentId } = await params;
 	const briefing = await getPreTestBriefing(assignmentId);
-	if (!briefing) notFound();
+	if (!briefing) return <TestNotAvailable reason={null} />;
+	if (briefing.assignment.locked && !briefing.assignment.resumeAttemptId) {
+		return <TestNotAvailable reason={briefing.assignment.locked} title={briefing.assignment.test.title} />;
+	}
 	const audio = await getPreStartAudio(briefing);
 
 	const { assignment, rules, soundCheckUrl } = briefing;
