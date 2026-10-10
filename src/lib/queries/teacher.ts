@@ -19,6 +19,7 @@ import type {
 	OverridableAnswer,
 	TeacherDashboard,
 } from "@/lib/view-models/teacher";
+import { selectAll } from "./shared";
 import { daysUntil, displayPhone, formatDuration, formatShortDate, instituteToday, queryFailed, relativeActivity, testSummary } from "./shared";
 
 type Tables = Database["public"]["Tables"];
@@ -334,12 +335,21 @@ async function overridableByAttempt(
 	const result = new Map<string, OverridableAnswer[]>();
 	if (finished.length === 0) return result;
 	const ids = finished.map((attempt) => attempt.id);
-	const [answersResult, marksResult] = await Promise.all([
-		supabase.from("answers").select("attempt_id, q_number, given_answer").in("attempt_id", ids),
-		supabase.from("answer_marks").select("attempt_id, q_number, is_correct, marks_awarded, overridden_by, override_note").in("attempt_id", ids),
+	// Paged: a class's answers pass the API's 1,000-row cap quickly.
+	const [answerRows, markRows] = await Promise.all([
+		selectAll("re-mark answers", (from, to) =>
+			supabase.from("answers").select("attempt_id, q_number, given_answer").in("attempt_id", ids).order("attempt_id").order("q_number").range(from, to),
+		),
+		selectAll("re-mark marks", (from, to) =>
+			supabase
+				.from("answer_marks")
+				.select("attempt_id, q_number, is_correct, marks_awarded, overridden_by, override_note")
+				.in("attempt_id", ids)
+				.order("attempt_id")
+				.order("q_number")
+				.range(from, to),
+		),
 	]);
-	if (answersResult.error) queryFailed("re-mark answers", answersResult.error);
-	if (marksResult.error) queryFailed("re-mark marks", marksResult.error);
 
 	const keys = new Map<number, AnswerKey | null>();
 	for (const version of new Set(finished.map((attempt) => attempt.content_version))) {
@@ -354,8 +364,8 @@ async function overridableByAttempt(
 			attempt.id,
 			overridableAnswers(
 				key,
-				(answersResult.data ?? []).filter((row) => row.attempt_id === attempt.id),
-				(marksResult.data ?? []).filter((row) => row.attempt_id === attempt.id),
+				answerRows.filter((row) => row.attempt_id === attempt.id),
+				markRows.filter((row) => row.attempt_id === attempt.id),
 			),
 		);
 	}

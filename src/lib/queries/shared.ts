@@ -103,3 +103,32 @@ export function queryFailed(context: string, error: { message: string } | null):
 	console.error(`${context}:`, error?.message ?? "no data returned");
 	throw new Error(`Could not load ${context}.`);
 }
+
+/** Supabase's API returns at most this many rows per request (`supabase/config.toml` `max_rows`). */
+export const API_MAX_ROWS = 1000;
+
+/**
+ * Every row of a query, fetched a page at a time.
+ *
+ * PostgREST **silently truncates** at `max_rows` — a class of 30 students has
+ * 1,230 answer rows on a 41-question paper, and a plain `.in(...)` returns the
+ * first 1,000 with no error. Use this wherever the row count grows with
+ * students × questions. Each page is one subrequest; Workers Free allows 50
+ * per request, so this suits thousands of rows, not hundreds of thousands.
+ *
+ * @param page Builds the query for one inclusive range, e.g.
+ *   `(from, to) => supabase.from("answers").select("…").in("attempt_id", ids).order("attempt_id").order("q_number").range(from, to)`.
+ *   It **must** have a stable `order`, or pages can overlap and skip rows.
+ */
+export async function selectAll<T>(
+	context: string,
+	page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+	const rows: T[] = [];
+	for (let from = 0; ; from += API_MAX_ROWS) {
+		const { data, error } = await page(from, from + API_MAX_ROWS - 1);
+		if (error) queryFailed(context, error);
+		rows.push(...(data ?? []));
+		if (!data || data.length < API_MAX_ROWS) return rows;
+	}
+}

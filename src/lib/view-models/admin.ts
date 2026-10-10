@@ -123,33 +123,6 @@ export type TestLibraryRow = {
 	updatedLabel: string;
 };
 
-/**
- * Screen 27 — Answer key editor.
- *
- * ⚠️ **The only screen in the product that carries correct answers to a
- * browser**, and only for a user holding `test:author` (`lib/rbac.ts`). It is
- * a staff screen behind two gates, never reachable from a student route, and
- * the rows below must never be reused by any student-facing view-model.
- */
-export type AnswerKeyEditor = {
-	testId: string;
-	testTitle: string;
-	skill: Skill;
-	rows: AnswerKeyRow[];
-};
-
-/** One question's key. */
-export type AnswerKeyRow = {
-	number: number;
-	questionType: string;
-	questionTypeLabel: string;
-	/** The canonical answer. Empty string means "not entered yet". */
-	answer: string;
-	/** Other spellings that also score — "20" and "twenty". */
-	acceptedVariants: string[];
-	marks: number;
-};
-
 /** Screen 28 — Users & roles (M9-03). */
 export type UsersAndRoles = {
 	users: StaffUserRow[];

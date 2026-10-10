@@ -9,6 +9,8 @@ import { getPreviewRow } from "./test-preview";
 
 /** One numbered control on screen 27: the question beside its key. */
 export type AnswerKeyRow = {
+	/** The control's first question number — what an edit names. */
+	n: number;
 	/** "7", or "11–13" for a control that answers several numbers. */
 	label: string;
 	section: number;
@@ -96,6 +98,7 @@ export async function getAnswerKeyView(testId: string): Promise<AnswerKeyView | 
 				if (question.answer.length > 0) entered += numbers.length;
 				const shown = prompts.get(question.n);
 				rows.push({
+					n: question.n,
 					label: numbers.length > 1 ? `${numbers[0]}–${numbers.at(-1)}` : String(question.n),
 					section: section.n,
 					typeName: QUESTION_TYPES[group.type].officialName,
