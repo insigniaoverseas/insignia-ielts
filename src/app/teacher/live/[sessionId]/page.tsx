@@ -10,9 +10,9 @@ export const metadata: Metadata = { title: "Live session" };
 /**
  * Screen 17 — Live session monitor (M7-02). The invigilator's screen.
  *
- * Its data arrives by polling, not a realtime channel — the polled endpoint is
- * M7-01 and the invigilator actions are M7-03. Until those land the tiles tick
- * their own clocks so the page behaves as it will in a lab.
+ * Its data arrives by polling, not a realtime channel: this page renders the
+ * first state, then the monitor polls `./state` (M7-01) every 10 seconds. The
+ * invigilator actions are M7-03 and are not wired yet.
  */
 export default async function LivePage({ params }: { params: Promise<{ sessionId: string }> }) {
 	const { sessionId } = await params;
