@@ -353,7 +353,7 @@ export async function getTestLibrary(): Promise<TestLibraryRow[]> {
 	const supabase = await createClient();
 	const { data, error } = await supabase
 		.from("tests")
-		.select("id, title, skill, variant, difficulty, total_questions, status, tags, updated_at")
+		.select("id, title, skill, variant, difficulty, kind, total_questions, status, tags, updated_at")
 		.in("skill", ["listening", "reading"])
 		.order("updated_at", { ascending: false });
 	if (error) queryFailed("test library", error);
@@ -368,9 +368,9 @@ export async function getTestLibrary(): Promise<TestLibraryRow[]> {
 			skill: test.skill as TestLibraryRow["skill"],
 			variant: test.variant as TestLibraryRow["variant"],
 			difficulty: test.difficulty as TestLibraryRow["difficulty"],
+			kind: (["mock", "class", "practice"].includes(test.kind) ? test.kind : "mock") as TestLibraryRow["kind"],
 			questionCount: test.total_questions,
 			status: test.status as TestLibraryRow["status"],
-			keysEntered: null,
 			tags: test.tags,
 			updatedLabel: formatShortDate(test.updated_at),
 		}];

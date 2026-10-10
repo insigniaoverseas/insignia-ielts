@@ -9,7 +9,8 @@
 
 /** What screen 16 posts, unvalidated. */
 export type AssignInput = {
-	testId: string;
+	/** One or more tests; each becomes its own assignment with the same targets and rules. */
+	testIds: string[];
 	batchIds: string[];
 	studentIds: string[];
 	/** `datetime-local` value, read as `Asia/Kolkata` wall-clock time. Empty = now. */
@@ -32,7 +33,7 @@ export type AssignField = "test" | "who" | "opensAt" | "dueBy" | "attempts" | "r
 
 export type CheckedAssignment = {
 	ok: true;
-	testId: string;
+	testIds: string[];
 	batchIds: string[];
 	studentIds: string[];
 	/** UTC ISO string, or `null` for "as soon as it is assigned". */
@@ -47,6 +48,12 @@ export type CheckedAssignment = {
 };
 
 export type AssignRefusal = { ok: false; message: string; field: AssignField };
+
+/**
+ * The most tests one Assign press may create. Each costs an audit write on
+ * top of the shared lookups, and Workers Free allows 50 subrequests per request.
+ */
+export const MAX_TESTS_PER_ASSIGN = 15;
 
 /** The most attempts the screen offers. The column allows more; nobody needs them. */
 export const MAX_ATTEMPTS = 9;
@@ -81,7 +88,12 @@ export function kolkataLocalToUtc(value: string): Date | null {
  * server action passes the server clock, never the browser's.
  */
 export function validateAssignment(input: AssignInput, now: Date): CheckedAssignment | AssignRefusal {
-	if (!UUID.test(input.testId)) return { ok: false, message: "Pick a test.", field: "test" };
+	const testIds = [...new Set(input.testIds.filter(Boolean))];
+	if (testIds.length === 0) return { ok: false, message: "Pick at least one test.", field: "test" };
+	if (testIds.length > MAX_TESTS_PER_ASSIGN) {
+		return { ok: false, message: `Pick at most ${MAX_TESTS_PER_ASSIGN} tests at a time.`, field: "test" };
+	}
+	if (!testIds.every((id) => UUID.test(id))) return { ok: false, message: "One of those tests couldn't be found. Reload the page.", field: "test" };
 
 	const batchIds = [...new Set(input.batchIds.filter(Boolean))];
 	const studentIds = [...new Set(input.studentIds.filter(Boolean))];
@@ -129,7 +141,7 @@ export function validateAssignment(input: AssignInput, now: Date): CheckedAssign
 
 	return {
 		ok: true,
-		testId: input.testId,
+		testIds,
 		batchIds,
 		studentIds,
 		availableFrom: availableFrom?.toISOString() ?? null,

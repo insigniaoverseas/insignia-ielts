@@ -117,10 +117,10 @@ export type TestLibraryRow = {
 	skill: Skill;
 	variant: Variant;
 	difficulty: Difficulty;
+	/** Which pool: full mock, class test, or a practice set. */
+	kind: "mock" | "class" | "practice";
 	questionCount: number;
 	status: "draft" | "published" | "archived";
-	/** `null` while private R2 key inspection is deliberately unavailable. */
-	keysEntered: number | null;
 	tags: string[];
 	updatedLabel: string;
 };

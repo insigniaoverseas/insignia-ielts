@@ -24,7 +24,7 @@ import { createClient } from "@/lib/supabase/server";
 export type { AssignInput } from "@/lib/assignment-input";
 
 export type AssignOutcome =
-	| { ok: true; id: string; message: string }
+	| { ok: true; ids: string[]; message: string }
 	| { ok: false; message: string; field?: AssignField };
 
 const TRY_AGAIN = "Something went wrong. Nothing was assigned. Try again.";
@@ -44,17 +44,19 @@ export async function createAssignment(actor: Actor, scope: Scope, input: Assign
 
 	const db = createAdminClient();
 
-	const { data: test, error: testError } = await db
+	const { data: found, error: testError } = await db
 		.from("tests")
 		.select("id, title, status, skill")
-		.eq("id", checked.testId)
-		.maybeSingle();
+		.in("id", checked.testIds);
 	if (testError) {
 		console.error("assign test lookup failed:", testError.message);
 		return { ok: false, message: TRY_AGAIN };
 	}
-	if (!test || test.status !== "published" || (test.skill !== "listening" && test.skill !== "reading")) {
-		return { ok: false, message: "That test isn't available to assign. Pick another.", field: "test" };
+	const tests = checked.testIds.map((id) => (found ?? []).find((t) => t.id === id));
+	const unavailable = tests.findIndex((t) => !t || t.status !== "published" || (t.skill !== "listening" && t.skill !== "reading"));
+	if (unavailable !== -1) {
+		const title = tests[unavailable]?.title;
+		return { ok: false, message: `${title ? `“${title}”` : "One of those tests"} isn't available to assign. Untick it.`, field: "test" };
 	}
 
 	const branches = new Set<string>();
@@ -129,55 +131,64 @@ export async function createAssignment(actor: Actor, scope: Scope, input: Assign
 	}
 	const [branchId] = branches;
 
+	// One insert for every test, one for every target — the same work whether
+	// it is one test or fifteen.
 	const { data: created, error: insertError } = await db
 		.from("assignments")
-		.insert({
-			test_id: test.id,
-			branch_id: branchId,
-			...(checked.availableFrom ? { available_from: checked.availableFrom } : {}),
-			due_by: checked.dueBy,
-			max_attempts: checked.maxAttempts,
-			allow_review: checked.allowReview,
-			results_release: checked.resultsRelease,
-			results_released_at: checked.resultsReleasedAt,
-			created_by: actor.id,
-		})
-		.select("id")
-		.single();
-	if (insertError || !created) {
+		.insert(
+			tests.map((test) => ({
+				test_id: test!.id,
+				branch_id: branchId,
+				...(checked.availableFrom ? { available_from: checked.availableFrom } : {}),
+				due_by: checked.dueBy,
+				max_attempts: checked.maxAttempts,
+				allow_review: checked.allowReview,
+				results_release: checked.resultsRelease,
+				results_released_at: checked.resultsReleasedAt,
+				created_by: actor.id,
+			})),
+		)
+		.select("id, test_id");
+	if (insertError || !created || created.length !== tests.length) {
 		console.error("assignment insert failed:", insertError?.message);
+		if (created?.length) await db.from("assignments").delete().in("id", created.map((c) => c.id));
 		return { ok: false, message: TRY_AGAIN };
 	}
 
-	const targets = [
-		...checked.batchIds.map((batchId) => ({ assignment_id: created.id, batch_id: batchId })),
-		...checked.studentIds.map((studentId) => ({ assignment_id: created.id, student_id: studentId })),
-	];
+	const targets = created.flatMap((assignment) => [
+		...checked.batchIds.map((batchId) => ({ assignment_id: assignment.id, batch_id: batchId })),
+		...checked.studentIds.map((studentId) => ({ assignment_id: assignment.id, student_id: studentId })),
+	]);
 	const { error: targetError } = await db.from("assignment_targets").insert(targets);
 	if (targetError) {
 		console.error("assignment targets insert failed:", targetError.message);
-		// An assignment with no targets reaches nobody but still shows to staff; take it back.
-		await db.from("assignments").delete().eq("id", created.id);
+		// Assignments with no targets reach nobody but still show to staff; take them back.
+		await db.from("assignments").delete().in("id", created.map((c) => c.id));
 		return { ok: false, message: TRY_AGAIN };
 	}
 
-	await recordAudit({
-		actorId: actor.id,
-		branchId,
-		action: "assignment.create",
-		entity: "assignment",
-		entityId: created.id,
-		meta: {
-			test_id: test.id,
-			title: test.title,
-			batches: checked.batchIds.length,
-			students: checked.studentIds.length,
-			due_by: checked.dueBy,
-			max_attempts: checked.maxAttempts,
-		},
-	});
+	for (const assignment of created) {
+		const test = tests.find((t) => t!.id === assignment.test_id)!;
+		await recordAudit({
+			actorId: actor.id,
+			branchId,
+			action: "assignment.create",
+			entity: "assignment",
+			entityId: assignment.id,
+			meta: {
+				test_id: test.id,
+				title: test.title,
+				batches: checked.batchIds.length,
+				students: checked.studentIds.length,
+				due_by: checked.dueBy,
+				max_attempts: checked.maxAttempts,
+			},
+		});
+	}
 
-	return { ok: true, id: created.id, message: `${test.title} was assigned.` };
+	const message =
+		tests.length === 1 ? `${tests[0]!.title} was assigned.` : `${tests.length} tests were assigned: ${tests.map((t) => t!.title).join(", ")}.`;
+	return { ok: true, ids: created.map((c) => c.id), message };
 }
 
 /** The batches a teacher teaches, or `null` when the lookup failed. */

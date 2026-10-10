@@ -5,7 +5,7 @@ import { kolkataLocalToUtc, validateAssignment } from "../../src/lib/assignment-
 
 const NOW = new Date("2026-10-10T06:30:00.000Z"); // 12:00 IST
 const base = {
-  testId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  testIds: ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"],
   batchIds: ["bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"],
   studentIds: [],
   opensAt: "",
@@ -54,7 +54,7 @@ describe("assigning a test — when results come out (M6-05)", () => {
 
 describe("assigning a test — the rest of the form", () => {
   test("needs a test and somebody to take it", () => {
-    assert.equal(validateAssignment({ ...base, testId: "" }, NOW).field, "test");
+    assert.equal(validateAssignment({ ...base, testIds: [] }, NOW).field, "test");
     assert.equal(validateAssignment({ ...base, batchIds: [] }, NOW).field, "who");
   });
 
@@ -65,5 +65,18 @@ describe("assigning a test — the rest of the form", () => {
   test("datetime-local is Asia/Kolkata, whatever the browser's zone", () => {
     assert.equal(kolkataLocalToUtc("2026-10-11T09:30")?.toISOString(), "2026-10-11T04:00:00.000Z");
     assert.equal(kolkataLocalToUtc("2026-02-30T10:00"), null);
+  });
+});
+
+describe("assigning several tests at once (M10-03)", () => {
+  const T = (n) => `aaaaaaaa-aaaa-4aaa-8aaa-${String(n).padStart(12, "0")}`;
+  test("several tests share one set of targets and rules; duplicates collapse", () => {
+    const r = validateAssignment({ ...base, testIds: [T(1), T(2), T(1)] }, NOW);
+    assert.equal(r.ok, true);
+    assert.deepEqual(r.testIds, [T(1), T(2)]);
+  });
+  test("caps a single press at 15 tests, and refuses a malformed id", () => {
+    assert.equal(validateAssignment({ ...base, testIds: Array.from({ length: 16 }, (_, i) => T(i + 1)) }, NOW).field, "test");
+    assert.equal(validateAssignment({ ...base, testIds: [T(1), "nope"] }, NOW).field, "test");
   });
 });

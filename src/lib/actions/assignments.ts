@@ -20,7 +20,7 @@ export async function assignTestAction(_previous: FormState, formData: FormData)
 		const { actor, scope } = await requirePermission("assignment:manage");
 
 		const result = await createAssignment(actor, scope, {
-			testId: String(formData.get("testId") ?? ""),
+			testIds: formData.getAll("tests").map(String),
 			batchIds: formData.getAll("batches").map(String),
 			studentIds: formData.getAll("students").map(String),
 			opensAt: String(formData.get("opensAt") ?? ""),

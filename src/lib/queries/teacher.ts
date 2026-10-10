@@ -500,3 +500,77 @@ export async function getLiveSession(sessionId: string): Promise<LiveSession | n
 		students,
 	};
 }
+
+/** One assignment on the teacher's results list (M10-01). */
+export type ResultsIndexRow = {
+	assignmentId: string;
+	testTitle: string;
+	skill: string;
+	/** Who it went to: batch names, or "3 students". */
+	targetLabel: string;
+	/** When it was set, institute time. */
+	setLabel: string;
+	submitted: number;
+	working: number;
+	release: { mode: "immediate" | "scheduled" | "manual"; released: boolean; whenLabel: string | null };
+};
+
+/**
+ * `/teacher/results` — every assignment this person can see, newest first,
+ * each linking to its results (screen 18). RLS decides "can see": a teacher's
+ * batches and students, an admin's centre. Attempts are read paged — they grow
+ * with students × assignments.
+ */
+export async function getResultsIndex(): Promise<ResultsIndexRow[]> {
+	const { supabase } = await actorId();
+	const { data: assignments, error } = await supabase
+		.from("assignments")
+		.select("id, test_id, created_at, results_release, results_released_at")
+		.order("created_at", { ascending: false });
+	if (error) queryFailed("results index assignments", error);
+	if (!assignments?.length) return [];
+	const ids = assignments.map((a) => a.id);
+	const testIds = [...new Set(assignments.map((a) => a.test_id))];
+	const [testsResult, targetsResult, attempts] = await Promise.all([
+		supabase.from("tests").select("id, title, skill").in("id", testIds),
+		supabase.from("assignment_targets").select("assignment_id, batch_id, student_id").in("assignment_id", ids),
+		selectAll("results index attempts", (from, to) =>
+			supabase.from("attempts").select("id, assignment_id, status").in("assignment_id", ids).order("id").range(from, to),
+		),
+	]);
+	if (testsResult.error) queryFailed("results index tests", testsResult.error);
+	if (targetsResult.error) queryFailed("results index targets", targetsResult.error);
+	const batchIds = [...new Set((targetsResult.data ?? []).flatMap((t) => (t.batch_id ? [t.batch_id] : [])))];
+	const batchesResult = batchIds.length
+		? await supabase.from("batches").select("id, name").in("id", batchIds)
+		: { data: [] as { id: string; name: string }[], error: null };
+	if (batchesResult.error) queryFailed("results index batches", batchesResult.error);
+
+	const tests = new Map((testsResult.data ?? []).map((t) => [t.id, t]));
+	const batchName = new Map((batchesResult.data ?? []).map((b) => [b.id, b.name]));
+	return assignments.flatMap((a) => {
+		const test = tests.get(a.test_id);
+		if (!test) return [];
+		const targets = (targetsResult.data ?? []).filter((t) => t.assignment_id === a.id);
+		const batches = targets.flatMap((t) => (t.batch_id ? [batchName.get(t.batch_id) ?? "A batch"] : []));
+		const students = targets.filter((t) => t.student_id).length;
+		const parts = [...batches, ...(students ? [`${students} ${students === 1 ? "student" : "students"}`] : [])];
+		const mine = attempts.filter((t) => t.assignment_id === a.id);
+		return [
+			{
+				assignmentId: a.id,
+				testTitle: test.title,
+				skill: test.skill,
+				targetLabel: parts.join(" · ") || "Nobody yet",
+				setLabel: formatDateTime(a.created_at),
+				submitted: mine.filter((t) => t.status === "submitted" || t.status === "expired").length,
+				working: mine.filter((t) => t.status === "in_progress").length,
+				release: {
+					mode: a.results_release as "immediate" | "scheduled" | "manual",
+					released: released(a.results_release, a.results_released_at),
+					whenLabel: a.results_released_at ? formatDateTime(a.results_released_at) : null,
+				},
+			},
+		];
+	});
+}
