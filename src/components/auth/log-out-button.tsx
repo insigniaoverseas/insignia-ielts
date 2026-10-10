@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { signOutAction } from "@/lib/actions/auth";
+import { purgeAllAudio } from "@/lib/audio-cache";
 
 /**
  * Log out, behind a confirm dialog (screen 13).
@@ -49,7 +50,13 @@ export function LogOutButton({
 				cancelLabel="Stay logged in"
 				// The dialog stays open, showing its spinner, until the redirect
 				// lands. Closing it first would flash the page they are leaving.
-				onConfirm={() => startTransition(async () => void (await signOutAction()))}
+				onConfirm={() =>
+					startTransition(async () => {
+						// Nothing of theirs stays on a shared machine (M2-06).
+						await purgeAllAudio();
+						await signOutAction();
+					})
+				}
 			/>
 		</>
 	);

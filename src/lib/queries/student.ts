@@ -5,6 +5,7 @@ import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
+import { audioCacheKey } from "@/lib/audio-cache-key";
 import { deviceLabel } from "@/lib/auth/device-label";
 import { QUESTION_TYPES, isQuestionType } from "@/lib/question-types";
 import type { Database, Json } from "@/lib/supabase/database.types";
@@ -408,6 +409,54 @@ export async function getPreTestBriefing(assignmentId: string): Promise<PreTestB
 		],
 		// Cloudflare/R2 audio delivery is intentionally deferred.
 		soundCheckUrl: null,
+	};
+}
+
+/** The audio a student may download on screen 05, before Start (M2-06). */
+export type PreStartAudio = {
+	/** The R2 object's identity. Never sent to the browser as a key. */
+	testId: string;
+	contentVersion: number;
+	/** Where the browser caches it — names the student, so it purges per owner. */
+	cacheKey: string;
+	ownerId: string;
+};
+
+/**
+ * Which audio file a student may download from the pre-test screen, or `null`.
+ *
+ * Only for a Listening test they may start now (or resume), so the download
+ * is gated exactly like Start is. The version is the one Start will pin: the
+ * test's current `content_version`, or the open attempt's when resuming.
+ *
+ * @param briefing The result of {@link getPreTestBriefing} for the same ref.
+ */
+export async function getPreStartAudio(briefing: PreTestBriefing): Promise<PreStartAudio | null> {
+	const { assignment } = briefing;
+	if (assignment.test.skill !== "listening") return null;
+	if (assignment.locked && !assignment.resumeAttemptId) return null;
+	const supabase = await createClient();
+	const ownerId = await signedInUserId(supabase);
+	const [testResult, attemptResult] = await Promise.all([
+		supabase.from("tests").select("content_version, audio_duration_seconds").eq("id", assignment.test.id).maybeSingle(),
+		assignment.resumeAttemptId
+			? supabase
+					.from("attempts")
+					.select("content_version")
+					.eq("id", assignment.resumeAttemptId)
+					.eq("student_id", ownerId)
+					.maybeSingle()
+			: Promise.resolve({ data: null, error: null }),
+	]);
+	if (testResult.error) queryFailed("pre-start audio test", testResult.error);
+	if (attemptResult.error) queryFailed("pre-start audio attempt", attemptResult.error);
+	if (!testResult.data?.audio_duration_seconds) return null;
+	const contentVersion = attemptResult.data?.content_version ?? testResult.data.content_version;
+	return {
+		testId: assignment.test.id,
+		contentVersion,
+		cacheKey: audioCacheKey(ownerId, assignment.test.id, contentVersion),
+		ownerId,
 	};
 }
 

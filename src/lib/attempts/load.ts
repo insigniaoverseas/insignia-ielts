@@ -2,6 +2,7 @@ import "server-only";
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
+import { audioCacheKey } from "@/lib/audio-cache-key";
 import { readContentObject, signUrl } from "@/lib/r2";
 import { audioObjectKey, contentObjectKey, parseR2ObjectKey } from "@/lib/r2-keys";
 import type { AttemptObjectAccess } from "@/lib/r2-keys";
@@ -138,7 +139,16 @@ export async function loadAttemptSession(
 		expiresAt: attempt.expires_at,
 		audio:
 			audioUrl && testResult.data.audio_duration_seconds
-				? { url: audioUrl, durationSeconds: testResult.data.audio_duration_seconds }
+				? {
+						url: audioUrl,
+						durationSeconds: testResult.data.audio_duration_seconds,
+						cache: {
+							key: audioCacheKey(attempt.student_id, attempt.test_id, attempt.content_version),
+							ownerId: attempt.student_id,
+							// Mock and class audio must not stay replayable after submit (§12).
+							dropAfterSubmit: content.kind !== "practice",
+						},
+					}
 				: null,
 		sections,
 		answers: state.answers,

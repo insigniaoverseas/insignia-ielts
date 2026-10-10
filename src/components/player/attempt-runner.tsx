@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import type { AnswerValue } from "@/components/player/question-group";
 import { heartbeatAction, saveAnswerAction, submitAttemptAction } from "@/lib/actions/attempts";
 import type { SaveAnswerInput } from "@/lib/actions/types";
+import { dropAudio } from "@/lib/audio-cache";
 import type { AttemptSession } from "@/lib/view-models/attempt";
 
 /** How long typing must pause before a text answer is sent. */
@@ -82,11 +83,14 @@ export function AttemptRunner({ session, firstRevision }: { session: AttemptSess
 	const finish = useCallback(async () => {
 		if (finishing.current) return;
 		finishing.current = true;
+		// A mock or class recording must not stay replayable once handed in (§12).
+		const cached = session.audio?.cache;
+		if (cached?.dropAfterSubmit) await dropAudio(cached.key);
 		const result = await submitAttemptAction(session.attemptId);
 		// On success the action redirects and this line is never reached.
 		finishing.current = false;
 		if (result && !result.ok) setSubmitError(result.message);
-	}, [session.attemptId]);
+	}, [session.attemptId, session.audio]);
 
 	/** Sends one queued save. Re-queues it on a network failure. */
 	const send = useCallback(

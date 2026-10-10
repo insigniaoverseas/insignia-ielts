@@ -2,7 +2,7 @@ import "server-only";
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-import { readContentObject } from "@/lib/r2";
+import { readContentObject, streamR2Object } from "@/lib/r2";
 import { audioObjectKey, contentObjectKey, parseR2ObjectKey } from "@/lib/r2-keys";
 import { sanitizeAttemptSession } from "@/lib/security/sanitize-attempt";
 import { createClient } from "@/lib/supabase/server";
@@ -135,24 +135,6 @@ export async function streamPreviewMedia(
 		bucket = env.CONTENT_BUCKET;
 	}
 
-	const object = await bucket.get(key, { range: request.headers });
-	if (!object) return new Response("Not found", { status: 404 });
-
-	const headers = new Headers();
-	object.writeHttpMetadata(headers);
-	headers.set("etag", object.httpEtag);
-	headers.set("accept-ranges", "bytes");
-	// Staff-only content: never let a shared cache keep it.
-	headers.set("cache-control", "private, no-store");
-
-	const range = object.range as { offset?: number; length?: number; suffix?: number } | undefined;
-	if (range && request.headers.has("range")) {
-		const offset = range.suffix !== undefined ? object.size - range.suffix : (range.offset ?? 0);
-		const length = range.suffix ?? range.length ?? object.size - offset;
-		headers.set("content-range", `bytes ${offset}-${offset + length - 1}/${object.size}`);
-		headers.set("content-length", String(length));
-		return new Response(object.body, { status: 206, headers });
-	}
-	headers.set("content-length", String(object.size));
-	return new Response(object.body, { status: 200, headers });
+	// Staff-only content: `streamR2Object` marks it private, no-store.
+	return streamR2Object(bucket, key, request);
 }
