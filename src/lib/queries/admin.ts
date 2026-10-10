@@ -28,6 +28,8 @@ type Attempt = Tables["attempts"]["Row"];
 const ACTION_LABEL: Record<string, string> = {
 	"auth.sign_in": "Signed in",
 	"auth.sign_out": "Signed out",
+	"auth.password_reset": "Password reset",
+	"auth.password_change": "Password changed",
 	"invitation.create": "Invitation sent",
 	"invitation.revoke": "Invitation revoked",
 	"invitation.resend": "Invitation resent",

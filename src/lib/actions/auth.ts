@@ -4,13 +4,22 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { acceptInvitation } from "@/lib/auth/acceptance";
+import { changePassword } from "@/lib/auth/change-password";
 import { completePasswordReset, requestPasswordReset, RESET_REQUESTED_MESSAGE } from "@/lib/auth/password-reset";
+import { requireUser } from "@/lib/auth/guard";
 import { signIn } from "@/lib/auth/sign-in";
 import { endSession, startSession } from "@/lib/auth/sessions";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
 import { verifyTurnstile } from "@/lib/turnstile";
-import type { AcceptFormState, FormState, LoginFormState, ResetFormState, ResetRequestState } from "@/lib/actions/types";
+import type {
+	AcceptFormState,
+	ChangePasswordState,
+	FormState,
+	LoginFormState,
+	ResetFormState,
+	ResetRequestState,
+} from "@/lib/actions/types";
 
 /**
  * Server Actions for signing in, signing out, accepting an invitation and the
@@ -174,4 +183,30 @@ export async function completePasswordResetAction(
 	// if this was an intruder being locked out, theirs. Handing back a fresh
 	// session here would undo that for whoever just used the link.
 	redirect("/login?reset=1");
+}
+
+/**
+ * Changes the signed-in user's password from Profile.
+ *
+ * Who they are comes from the verified JWT. The form supplies only the two
+ * passwords, so it cannot be pointed at somebody else's account.
+ */
+export async function changePasswordAction(
+	_previous: ChangePasswordState,
+	formData: FormData,
+): Promise<ChangePasswordState> {
+	// Also refuses a revoked session, which a still-valid JWT alone would not.
+	const actor = await requireUser("/profile/password");
+	const { data } = await (await createClient()).auth.getClaims();
+	const email = data?.claims?.email;
+	if (typeof email !== "string") redirect("/login?next=/profile/password");
+
+	const result = await changePassword(
+		actor.id,
+		email,
+		String(formData.get("current") ?? ""),
+		String(formData.get("password") ?? ""),
+	);
+	if (!result.ok) return { ok: false, message: result.message, field: result.field };
+	return { ok: true, message: "Your password is changed. Use the new one next time you sign in." };
 }

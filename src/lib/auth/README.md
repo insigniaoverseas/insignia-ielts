@@ -39,6 +39,7 @@ returning student
 | `invitations.ts` | Create, revoke, resend. Where "never grant above the inviter" lives. |
 | `acceptance.ts` | Token lookup and turning an invitation into an account. |
 | `sign-in.ts` | Verifying a password; one message for every failure. |
+| `change-password.ts` | Changing a password while signed in: re-checks the current one under the lockout, ends every other session. |
 | `sessions.ts` | `user_sessions` records, the session cookie, revocation. |
 | `lockout.ts` | Five wrong passwords → a fifteen-minute lock, by account **and** IP. |
 | `password-reset.ts` | `/forgot` and `/reset/[token]`. Same answer whether or not the account exists. |
