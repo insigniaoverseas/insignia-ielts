@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { InviteColleagueForm, type InvitableRole } from "@/components/admin/invite-colleague-form";
-import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { canInviteRole } from "@/lib/permissions";
 import { listBranchOptions } from "@/lib/queries/batches";
 
@@ -48,9 +48,10 @@ const STAFF_ROLES: InvitableRole[] = [
  * admin can still invite a teacher.
  */
 export default async function NewColleaguePage() {
-	const actor = await requirePermissionOrRedirect("staff:manage", "/admin/users/new");
+	const guard = requirePermissionOrRedirect("staff:manage", "/admin/users/new");
+	const branches = await withGuard(guard, listBranchOptions());
+	const actor = await guard;
 	const roles = STAFF_ROLES.filter((role) => canInviteRole(actor, role.key));
-	const branches = await listBranchOptions();
 
 	return (
 		<div className="flex max-w-[640px] flex-col gap-6">

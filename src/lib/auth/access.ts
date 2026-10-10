@@ -78,6 +78,19 @@ export function routeNeedsIdentity(pathname: string): boolean {
 }
 
 /**
+ * Whether Proxy must also look up the visitor's role and session row — a
+ * database round trip — rather than only verify the JWT locally.
+ *
+ * Only the two routes whose *answer* is the role: `/` picks a home, and
+ * `/login` bounces a live session to it (and clears the cookies of an ended
+ * one). Inside an app area the layout guard makes the same checks, so doing
+ * them here as well only added latency to every click.
+ */
+export function routeNeedsRole(pathname: string): boolean {
+	return pathname === "/" || pathname === "/login";
+}
+
+/**
  * What the request could establish about the browser's application session.
  *
  * `unverified` exists because a transient database error must not sign the

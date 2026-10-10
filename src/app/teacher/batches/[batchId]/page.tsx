@@ -14,7 +14,7 @@ import {
 	TableRow,
 	TableToolbar,
 } from "@/components/ui/table";
-import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getBatchView } from "@/lib/queries/teacher";
 
 export const metadata: Metadata = { title: "Batch" };
@@ -29,8 +29,7 @@ export const metadata: Metadata = { title: "Batch" };
  */
 export default async function BatchPage({ params }: { params: Promise<{ batchId: string }> }) {
 	const { batchId } = await params;
-	await requirePermissionOrRedirect("assignment:manage", `/teacher/batches/${batchId}`);
-	const data = await getBatchView(batchId);
+	const data = await withGuard(requirePermissionOrRedirect("assignment:manage", `/teacher/batches/${batchId}`), getBatchView(batchId));
 	if (!data) notFound();
 
 	const expiringSoon = data.roster.filter((r) => r.daysRemaining <= 7).length;

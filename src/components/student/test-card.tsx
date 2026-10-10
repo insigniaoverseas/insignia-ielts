@@ -131,6 +131,7 @@ export function CompletedAttemptCard({ item }: { item: CompletedAttempt }) {
 				{result ? (
 					<Link
 						href={`/results/${item.attemptId}`}
+						prefetch
 						className="flex h-primary items-center justify-center rounded-control border border-line bg-surface text-h3 font-semibold text-ink no-underline hover:border-ink-3 hover:no-underline"
 					>
 						See my result

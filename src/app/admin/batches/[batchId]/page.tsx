@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { BatchRoster } from "@/components/admin/batch-roster";
 import { EditBatchForm } from "@/components/admin/edit-batch-form";
-import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getBatchDetail } from "@/lib/queries/admin";
 import { listStudentOptions, listTeacherOptions } from "@/lib/queries/batches";
 
@@ -23,13 +23,10 @@ export const metadata: Metadata = { title: "Batch" };
  */
 export default async function BatchPage({ params }: { params: Promise<{ batchId: string }> }) {
 	const { batchId } = await params;
-	await requirePermissionOrRedirect("student:manage", `/admin/batches/${batchId}`);
-
-	const [batch, teachers, students] = await Promise.all([
-		getBatchDetail(batchId),
-		listTeacherOptions(),
-		listStudentOptions(),
-	]);
+	const [batch, teachers, students] = await withGuard(
+		requirePermissionOrRedirect("student:manage", `/admin/batches/${batchId}`),
+		Promise.all([getBatchDetail(batchId), listTeacherOptions(), listStudentOptions()]),
+	);
 	if (!batch) notFound();
 
 	return (

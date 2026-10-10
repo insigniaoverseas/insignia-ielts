@@ -278,3 +278,14 @@ export type ReviewQuestion = {
 	/** Listening only: offset into the one audio file, in seconds. */
 	audioOffsetSeconds: number | null;
 };
+
+/** Everything the four student tabs show, built from one round of reads. */
+export type StudentBundle = {
+	home: StudentHome;
+	tests: MyTests;
+	progress: MyProgress;
+	profile: StudentProfile;
+};
+
+/** Screen 10, or why it cannot be shown. */
+export type MistakesLoad = { mistakes: MyMistakes } | { problem: "content_missing"; attempt: CompletedAttempt };

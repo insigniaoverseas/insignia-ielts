@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { PERMISSIONS, parsePermissions } from "@/lib/permissions";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
@@ -18,7 +20,7 @@ import type {
 	TestLibraryRow,
 	UsersAndRoles,
 } from "@/lib/view-models/admin";
-import { daysUntil, displayPhone, formatShortDate, queryFailed, relativeActivity } from "./shared";
+import { daysUntil, displayPhone, formatShortDate, instituteToday, queryFailed, relativeActivity } from "./shared";
 
 type Tables = Database["public"]["Tables"];
 type User = Tables["users"]["Row"];
@@ -83,18 +85,22 @@ function planState(plan: Plan | null, user: User): { state: PlanState; days: num
 	};
 }
 
-async function allStudentRows(): Promise<{
+/**
+ * Every RLS-visible student with plan, batch, last band and activity.
+ *
+ * One round trip: the student role is matched inside the users query rather
+ * than looked up first. Memoised, because Overview, Students and Plans all
+ * read it and the admin layout builds them together.
+ */
+const allStudentRows = cache(async function allStudentRows(): Promise<{
 	rows: StudentRow[];
 	batchIdByStudent: Map<string, string>;
 }> {
 	const supabase = await createClient();
-	const { data: studentRole, error: roleError } = await supabase.from("roles").select("id").eq("key", "student").maybeSingle();
-	if (roleError) queryFailed("student role", roleError);
-	if (!studentRole) return { rows: [], batchIdByStudent: new Map() };
 
 	const [usersResult, plansResult, membershipsResult, batchesResult, attemptsResult, scoresResult, sessionsResult] =
 		await Promise.all([
-			supabase.from("users").select("*").eq("role_id", studentRole.id).order("name"),
+			supabase.from("users").select("*, roles!inner(key)").eq("roles.key", "student").order("name"),
 			supabase.from("student_plans").select("*").order("expires_on", { ascending: false }),
 			supabase.from("batch_students").select("batch_id, student_id, left_at"),
 			supabase.from("batches").select("id, name"),
@@ -139,6 +145,7 @@ async function allStudentRows(): Promise<{
 				name: user.name,
 				email: user.email,
 				phone: displayPhone(user.country_code, user.phone),
+				batchId: batchId ?? null,
 				batchName: batchId ? batchById.get(batchId) ?? null : null,
 				status: user.status === "inactive" || user.status === "suspended" ? user.status : "active",
 				planState: access.state,
@@ -150,7 +157,7 @@ async function allStudentRows(): Promise<{
 			};
 		}),
 	};
-}
+});
 
 function jsonDetail(meta: Json): string {
 	if (typeof meta !== "object" || meta === null || Array.isArray(meta)) return "";
@@ -159,22 +166,36 @@ function jsonDetail(meta: Json): string {
 		.join(" · ");
 }
 
-async function auditEntries(limit = 100): Promise<AuditEntry[]> {
+/**
+ * Every user this admin can see, with their role's name — the names behind
+ * audit rows and plan-history entries. Memoised: one read serves both.
+ */
+const visibleUsers = cache(async function visibleUsers() {
 	const supabase = await createClient();
-	const { data: logs, error } = await supabase.from("audit_log").select("*").order("at", { ascending: false }).limit(limit);
-	if (error) queryFailed("audit log", error);
-	const actorIds = [...new Set((logs ?? []).flatMap((log) => (log.actor_id ? [log.actor_id] : [])))];
-	const actorResult = actorIds.length
-		? await supabase.from("users").select("id, name, role_id").in("id", actorIds)
-		: { data: [], error: null };
-	if (actorResult.error) queryFailed("audit actors", actorResult.error);
-	const roleIds = [...new Set((actorResult.data ?? []).map((actor) => actor.role_id))];
-	const roleResult = roleIds.length
-		? await supabase.from("roles").select("id, name").in("id", roleIds)
-		: { data: [], error: null };
-	if (roleResult.error) queryFailed("audit actor roles", roleResult.error);
-	const roles = new Map((roleResult.data ?? []).map((role) => [role.id, role.name]));
-	const actors = new Map((actorResult.data ?? []).map((actor) => [actor.id, actor]));
+	const { data, error } = await supabase.from("users").select("id, name, roles ( name )");
+	if (error) queryFailed("audit actors", error);
+	return new Map((data ?? []).map((user) => [user.id, user]));
+});
+
+/** How many audit rows the log screen shows; Overview shows the newest few of the same read. */
+const AUDIT_LIMIT = 500;
+
+/**
+ * The newest audit rows with who did them.
+ *
+ * One round trip: `audit_log.actor_id` has no foreign key (staff can be
+ * erased, the trail cannot — M0-10), so names cannot be embedded; instead the
+ * visible users and their role names are read *alongside* the log rather than
+ * after it. Memoised for the request: Overview and the audit screen share it.
+ */
+const auditEntries = cache(async function auditEntries(): Promise<AuditEntry[]> {
+	const supabase = await createClient();
+	const [logsResult, actors] = await Promise.all([
+		supabase.from("audit_log").select("*").order("at", { ascending: false }).limit(AUDIT_LIMIT),
+		visibleUsers(),
+	]);
+	if (logsResult.error) queryFailed("audit log", logsResult.error);
+	const logs = logsResult.data;
 
 	return (logs ?? []).map((log) => {
 		const actor = log.actor_id ? actors.get(log.actor_id) : null;
@@ -182,14 +203,14 @@ async function auditEntries(limit = 100): Promise<AuditEntry[]> {
 			id: log.id,
 			whenLabel: formatDateTime(log.at),
 			actorName: actor?.name ?? null,
-			actorRole: actor ? roles.get(actor.role_id) ?? null : null,
+			actorRole: actor?.roles?.name ?? null,
 			action: log.action,
 			actionLabel: ACTION_LABEL[log.action] ?? log.action.replaceAll(".", " "),
 			target: `${log.entity}${log.entity_id ? ` · ${log.entity_id}` : ""}`,
 			detail: jsonDetail(log.meta),
 		};
 	});
-}
+});
 
 /** Screen 20 — live counts and recent audited activity. */
 export async function getAdminOverview(): Promise<AdminOverview> {
@@ -197,7 +218,7 @@ export async function getAdminOverview(): Promise<AdminOverview> {
 	const [{ rows }, attemptsResult, recentActivity] = await Promise.all([
 		allStudentRows(),
 		supabase.from("attempts").select("status, started_at, expires_at"),
-		auditEntries(5),
+		auditEntries().then((all) => all.slice(0, 5)),
 	]);
 	if (attemptsResult.error) queryFailed("overview attempts", attemptsResult.error);
 	const weekAgo = Date.now() - 7 * 86_400_000;
@@ -222,63 +243,50 @@ export async function getAdminOverview(): Promise<AdminOverview> {
 	};
 }
 
-/** Screen 21 — scoped student directory and real filters. */
-export async function getStudentsList(query?: { search?: string; batch?: string; status?: string }): Promise<StudentsList> {
+/**
+ * Screen 21 — every visible student, unfiltered. The search and filters run in
+ * the browser over this (`filterStudents` in `lib/staff-filters.ts`), so
+ * changing one needs no round trip.
+ */
+export async function getStudentsList(): Promise<StudentsList> {
 	const supabase = await createClient();
-	const [{ rows: allRows, batchIdByStudent }, batchesResult] = await Promise.all([
+	const [{ rows }, batchesResult] = await Promise.all([
 		allStudentRows(),
 		supabase.from("batches").select("id, name").order("name"),
 	]);
 	if (batchesResult.error) queryFailed("student filters", batchesResult.error);
-	let rows = allRows;
-	if (query?.search?.trim()) {
-		const needle = query.search.trim().toLowerCase();
-		rows = rows.filter((row) => row.name.toLowerCase().includes(needle) || row.phone.toLowerCase().includes(needle));
-	}
-	if (query?.batch && query.batch !== "all") rows = rows.filter((row) => batchIdByStudent.get(row.id) === query.batch);
-	if (query?.status && query.status !== "all") rows = rows.filter((row) => row.planState === query.status);
-	return { rows: rows.slice(0, 25), total: rows.length, batches: batchesResult.data ?? [] };
+	return { rows, total: rows.length, batches: batchesResult.data ?? [] };
 }
 
-/** Screen 23 — one RLS-visible student and their Supabase history. */
+/**
+ * Screen 23 — one RLS-visible student and their Supabase history.
+ *
+ * One round trip (was five, each waiting on ids from the last): plan history
+ * is reached through its plan, and each attempt's test and score ride along
+ * embedded.
+ */
 export async function getStudentDetail(id: string): Promise<StudentDetail | null> {
 	const supabase = await createClient();
-	const { rows } = await allStudentRows();
+	const [{ rows }, historyResult, attemptsResult, logs, users] = await Promise.all([
+		allStudentRows(),
+		supabase.from("plan_history").select("*, student_plans!inner(student_id)").eq("student_plans.student_id", id).order("at"),
+		supabase
+			.from("attempts")
+			.select("*, tests ( id, title, skill ), attempt_scores ( attempt_id, band, below_band )")
+			.eq("student_id", id)
+			.order("started_at", { ascending: false }),
+		auditEntries(),
+		visibleUsers(),
+	]);
 	const student = rows.find((row) => row.id === id);
 	if (!student) return null;
-	const [plansResult, attemptsResult, logs] = await Promise.all([
-		supabase.from("student_plans").select("id").eq("student_id", id),
-		supabase.from("attempts").select("*").eq("student_id", id).order("started_at", { ascending: false }),
-		auditEntries(200),
-	]);
-	if (plansResult.error) queryFailed("student plans", plansResult.error);
-	if (attemptsResult.error) queryFailed("student attempts", attemptsResult.error);
-	const planIds = (plansResult.data ?? []).map((plan) => plan.id);
-	const historyResult = planIds.length
-		? await supabase.from("plan_history").select("*").in("plan_id", planIds).order("at")
-		: { data: [], error: null };
 	if (historyResult.error) queryFailed("plan history", historyResult.error);
-	const actorIds = [...new Set((historyResult.data ?? []).flatMap((row) => (row.actor_id ? [row.actor_id] : [])))];
-	const actorsResult = actorIds.length
-		? await supabase.from("users").select("id, name").in("id", actorIds)
-		: { data: [], error: null };
-	if (actorsResult.error) queryFailed("plan history actors", actorsResult.error);
-	const actors = new Map((actorsResult.data ?? []).map((actor) => [actor.id, actor.name]));
-	const attempts = (attemptsResult.data ?? []) as Attempt[];
-	const testIds = [...new Set(attempts.map((attempt) => attempt.test_id))];
-	const attemptIds = attempts.map((attempt) => attempt.id);
-	const [testsResult, scoresResult] = await Promise.all([
-		testIds.length
-			? supabase.from("tests").select("id, title, skill").in("id", testIds)
-			: Promise.resolve({ data: [], error: null }),
-		attemptIds.length
-			? supabase.from("attempt_scores").select("attempt_id, band, below_band").in("attempt_id", attemptIds)
-			: Promise.resolve({ data: [], error: null }),
-	]);
-	if (testsResult.error) queryFailed("student attempt tests", testsResult.error);
-	if (scoresResult.error) queryFailed("student attempt scores", scoresResult.error);
-	const tests = new Map((testsResult.data ?? []).map((test) => [test.id, test]));
-	const scores = new Map((scoresResult.data ?? []).map((score) => [score.attempt_id, score]));
+	if (attemptsResult.error) queryFailed("student attempts", attemptsResult.error);
+	const actors = new Map([...users].map(([userId, user]) => [userId, user.name]));
+	const attemptRows = attemptsResult.data ?? [];
+	const attempts: Attempt[] = attemptRows;
+	const tests = new Map(attemptRows.flatMap((row) => (row.tests ? [[row.tests.id, row.tests] as const] : [])));
+	const scores = new Map(attemptRows.flatMap((row) => (row.attempt_scores ? [[row.id, row.attempt_scores] as const] : [])));
 
 	return {
 		student,
@@ -313,6 +321,7 @@ export async function getStudentDetail(id: string): Promise<StudentDetail | null
 export async function getPlansWorkqueue(): Promise<PlansWorkqueue> {
 	const { rows } = await allStudentRows();
 	return {
+		today: instituteToday(),
 		expired: rows.filter((row) => row.planState === "expired"),
 		expiringThisWeek: rows.filter((row) => row.daysRemaining >= 0 && row.daysRemaining <= 7),
 		expiringThisMonth: rows.filter((row) => row.daysRemaining > 7 && row.daysRemaining <= 31),
@@ -440,14 +449,13 @@ export async function getUsersAndRoles(): Promise<UsersAndRoles> {
 	};
 }
 
-/** Screen 29 — RLS-scoped audit records. */
-export async function getAuditLog(query?: { action?: string }): Promise<AuditLog> {
-	const all = await auditEntries(500);
-	const entries = query?.action && query.action !== "all" ? all.filter((entry) => entry.action === query.action) : all;
+/** Screen 29 — the newest RLS-scoped audit rows, unfiltered; the action filter runs in the browser. */
+export async function getAuditLog(): Promise<AuditLog> {
+	const all = await auditEntries();
 	const actions = [...new Set(all.map((entry) => entry.action))]
 		.sort()
 		.map((action) => ({ value: action, label: ACTION_LABEL[action] ?? action.replaceAll(".", " ") }));
-	return { entries, total: entries.length, actions };
+	return { entries: all, total: all.length, actions };
 }
 
 /**

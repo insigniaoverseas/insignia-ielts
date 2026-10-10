@@ -22,7 +22,7 @@ import type {
 	AssignedTest,
 	AttemptResult,
 	CompletedAttempt,
-	MyMistakes,
+	MistakesLoad,
 	LockedReason,
 	Mode,
 	MyProgress,
@@ -31,6 +31,7 @@ import type {
 	PracticeLibrary,
 	PreTestBriefing,
 	SectionScore,
+	StudentBundle,
 	StudentHome,
 	StudentIdentity,
 	StudentProfile,
@@ -299,32 +300,71 @@ function completedAttempt(attempt: Attempt, test: TestRow, score: Score | null):
 	};
 }
 
-/** Screen 04 — assignments, practice catalogue and completed attempts from Supabase. */
-export async function getMyTests(): Promise<MyTests> {
+/**
+ * Everything the four student tabs read — Home, My Tests, Progress, Profile —
+ * in **one** round trip: seven queries sent at the same time, each scoped by
+ * the student's own RLS. Memoised for the request, so the layout building the
+ * whole bundle ({@link getStudentBundle}) and any loader below share it.
+ *
+ * Scores ride embedded in the attempts query; answer marks and sessions are
+ * filtered to this student explicitly as well as by RLS.
+ */
+const loadStudentReads = cache(async function loadStudentReads() {
 	const supabase = await createClient();
 	const userId = await signedInUserId(supabase);
-	const context = await loadStudentContext(userId);
-	const [assignmentResult, testsResult, attemptsResult, unlocksResult] = await Promise.all([
-		supabase.from("assignments").select("*").order("available_from"),
-		supabase.from("tests").select(TEST_FIELDS).in("skill", ["listening", "reading"]).order("updated_at", { ascending: false }),
-		supabase.from("attempts").select("*").eq("student_id", userId).order("started_at", { ascending: false }),
-		supabase.from("assignment_unlocks").select("assignment_id, extra_attempts, until").eq("student_id", userId),
-	]);
+	const [context, assignmentResult, testsResult, attemptsResult, unlocksResult, marksResult, sessionsResult] =
+		await Promise.all([
+			loadStudentContext(userId),
+			supabase.from("assignments").select("*").order("available_from"),
+			supabase.from("tests").select(TEST_FIELDS).in("skill", ["listening", "reading"]).order("updated_at", { ascending: false }),
+			// RLS applies to the embedded scores too: an unreleased score comes back null.
+			supabase.from("attempts").select("*, attempt_scores(*)").eq("student_id", userId).order("started_at", { ascending: false }),
+			supabase.from("assignment_unlocks").select("assignment_id, extra_attempts, until").eq("student_id", userId),
+			supabase
+				.from("answer_marks")
+				.select("attempt_id, question_type, is_correct, attempts!inner(student_id)")
+				.eq("attempts.student_id", userId),
+			supabase
+				.from("user_sessions")
+				.select("id, user_agent, last_seen_at, revoked_at")
+				.eq("user_id", userId)
+				.is("revoked_at", null)
+				.order("last_seen_at", { ascending: false }),
+		]);
 	if (assignmentResult.error) queryFailed("student assignments", assignmentResult.error);
 	if (testsResult.error) queryFailed("student tests", testsResult.error);
 	if (attemptsResult.error) queryFailed("student attempts", attemptsResult.error);
 	if (unlocksResult.error) queryFailed("student assignment unlocks", unlocksResult.error);
+	if (marksResult.error) queryFailed("student answer accuracy", marksResult.error);
+	if (sessionsResult.error) queryFailed("student sessions", sessionsResult.error);
 
-	const tests = (testsResult.data ?? []) as TestRow[];
-	const attempts = (attemptsResult.data ?? []) as Attempt[];
+	return {
+		context,
+		assignments: assignmentResult.data ?? [],
+		tests: (testsResult.data ?? []) as TestRow[],
+		attempts: attemptsResult.data ?? [],
+		unlocks: unlocksResult.data ?? [],
+		marks: marksResult.data ?? [],
+		sessions: sessionsResult.data ?? [],
+	};
+});
+
+/** Screen 04 — assignments, practice catalogue and completed attempts. No queries of its own. */
+export const getMyTests = cache(async function getMyTests(): Promise<MyTests> {
+	const { context, assignments, tests, attempts: attemptRows, unlocks } = await loadStudentReads();
+
+	const attempts: Attempt[] = attemptRows;
+	const scores = new Map<string, Score>(
+		attemptRows.flatMap((row) => (row.attempt_scores ? [[row.id, row.attempt_scores] as const] : [])),
+	);
 	const testsById = new Map(tests.map((test) => [test.id, test]));
 	const now = new Date();
 	const extras = new Map<string, number>();
-	for (const unlock of unlocksResult.data ?? []) {
+	for (const unlock of unlocks) {
 		if (new Date(unlock.until) > now) extras.set(unlock.assignment_id, (extras.get(unlock.assignment_id) ?? 0) + unlock.extra_attempts);
 	}
 
-	const toDo = (assignmentResult.data ?? []).flatMap((assignment) => {
+	const toDo = assignments.flatMap((assignment) => {
 		const test = testsById.get(assignment.test_id);
 		if (!test) return [];
 		const item = assignedTest(assignment, test, attempts, extras.get(assignment.id) ?? 0, context.plan, now);
@@ -339,11 +379,6 @@ export async function getMyTests(): Promise<MyTests> {
 		});
 
 	const finished = attempts.filter((attempt) => attempt.status !== "in_progress" && attempt.submitted_at);
-	const scoreResult = finished.length
-		? await supabase.from("attempt_scores").select("*").in("attempt_id", finished.map((attempt) => attempt.id))
-		: { data: [] as Score[], error: null };
-	if (scoreResult.error) queryFailed("student scores", scoreResult.error);
-	const scores = new Map((scoreResult.data ?? []).map((score) => [score.attempt_id, score]));
 	const done = finished.flatMap((attempt) => {
 		const test = testsById.get(attempt.test_id);
 		if (!test) return [];
@@ -352,14 +387,11 @@ export async function getMyTests(): Promise<MyTests> {
 	});
 
 	return { toDo, practice, done };
-}
+});
 
 /** Screen 03 — the student's real next action and result counts. */
 export async function getStudentHome(): Promise<StudentHome> {
-	const supabase = await createClient();
-	const userId = await signedInUserId(supabase);
-	const context = await loadStudentContext(userId);
-	const tests = await getMyTests();
+	const [{ context }, tests] = await Promise.all([loadStudentReads(), getMyTests()]);
 	const released = tests.done.filter((attempt) => attempt.result !== null);
 	const last = released[0] ?? null;
 	const previous = released[1] ?? null;
@@ -486,8 +518,7 @@ export async function getAttemptResult(attemptId: string): Promise<CompletedAtte
 
 /** Screen 11 — released scores and question-type accuracy from Supabase. */
 export async function getMyProgress(): Promise<MyProgress> {
-	const supabase = await createClient();
-	const tests = await getMyTests();
+	const [{ marks }, tests] = await Promise.all([loadStudentReads(), getMyTests()]);
 	const released = tests.done.filter((attempt): attempt is CompletedAttempt & { result: AttemptResult } => attempt.result !== null).reverse();
 	const dates = released.map((attempt) => attempt.submittedAtLabel);
 	const trendSkills = (["listening", "reading"] as const).map((skill) => ({
@@ -495,13 +526,10 @@ export async function getMyProgress(): Promise<MyProgress> {
 		bands: released.map((attempt) => (attempt.test.skill === skill ? attempt.result.band : null)),
 	}));
 
-	const ids = released.map((attempt) => attempt.attemptId);
-	const markResult = ids.length
-		? await supabase.from("answer_marks").select("attempt_id, question_type, is_correct").in("attempt_id", ids)
-		: { data: [], error: null };
-	if (markResult.error) queryFailed("student answer accuracy", markResult.error);
+	// Only released results count, as before the marks joined the shared read.
+	const ids = new Set(released.map((attempt) => attempt.attemptId));
 	const accuracy = new Map<string, { correct: number; total: number }>();
-	for (const mark of markResult.data ?? []) {
+	for (const mark of marks.filter((row) => ids.has(row.attempt_id))) {
 		const current = accuracy.get(mark.question_type) ?? { correct: 0, total: 0 };
 		current.total += 1;
 		if (mark.is_correct) current.correct += 1;
@@ -538,20 +566,11 @@ export async function getPracticeLibrary(): Promise<PracticeLibrary> {
 
 /** Screen 13 — identity, plan and live application sessions. */
 export async function getStudentProfile(): Promise<StudentProfile> {
-	const supabase = await createClient();
-	const userId = await signedInUserId(supabase);
-	const context = await loadStudentContext(userId);
-	const { data: sessions, error } = await supabase
-		.from("user_sessions")
-		.select("id, user_agent, last_seen_at, revoked_at")
-		.eq("user_id", userId)
-		.is("revoked_at", null)
-		.order("last_seen_at", { ascending: false });
-	if (error) queryFailed("student sessions", error);
+	const { context, sessions } = await loadStudentReads();
 	const currentId = (await cookies()).get(SESSION_COOKIE)?.value;
 	return {
 		...context,
-		devices: (sessions ?? []).map((session) => ({
+		devices: sessions.map((session) => ({
 			id: session.id,
 			label: deviceLabel(session.user_agent),
 			lastUsedLabel: relativeActivity(session.last_seen_at),
@@ -560,8 +579,24 @@ export async function getStudentProfile(): Promise<StudentProfile> {
 	};
 }
 
-/** Screen 10, or why it cannot be shown. */
-export type MistakesLoad = { mistakes: MyMistakes } | { problem: "content_missing"; attempt: CompletedAttempt };
+/**
+ * The data for all four student tabs at once (Home, My Tests, Progress,
+ * Profile), for the student layout to hand to the browser.
+ *
+ * One round trip to the database ({@link loadStudentReads}); the four view
+ * models are then built from those rows with no further queries. Only view
+ * models leave the server, never raw rows.
+ */
+export const getStudentBundle = cache(async function getStudentBundle(): Promise<StudentBundle> {
+	const [home, tests, progress, profile] = await Promise.all([
+		getStudentHome(),
+		getMyTests(),
+		getMyProgress(),
+		getStudentProfile(),
+	]);
+	return { home, tests, progress, profile };
+});
+
 
 /**
  * Screen 10 — Review my mistakes (M4-01).

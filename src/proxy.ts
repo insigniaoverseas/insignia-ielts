@@ -1,11 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { routeDecision, routeNeedsIdentity, type SessionStanding } from "@/lib/auth/access";
+import { routeDecision, routeNeedsIdentity, routeNeedsRole, type RouteDecision, type SessionStanding } from "@/lib/auth/access";
 import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
 import { generateNonce, securityHeaders } from "@/lib/security/headers";
 import type { Database } from "@/lib/supabase/database.types";
 import { supabasePublishableKey, supabaseUrl } from "@/lib/supabase/env";
+import { timedFetch } from "@/lib/supabase/timing";
 
 /**
  * Runs before every page and API route (Next 16 "proxy", formerly middleware).
@@ -36,6 +37,7 @@ export async function proxy(request: NextRequest) {
 	const pathname = request.nextUrl.pathname;
 	if (routeNeedsIdentity(pathname)) {
 		const supabase = createServerClient<Database>(supabaseUrl(), supabasePublishableKey(), {
+			global: { fetch: timedFetch() },
 			cookies: {
 				getAll: () => request.cookies.getAll(),
 				setAll(cookiesToSet) {
@@ -51,7 +53,14 @@ export async function proxy(request: NextRequest) {
 		let role: string | null = null;
 		let session: SessionStanding = "unverified";
 
-		if (userId) {
+		// Inside the app areas this is skipped: every protected layout, page and
+		// Server Action runs `lib/auth/guard.ts` / `lib/rbac.ts`, which read the
+		// role and the session themselves. Repeating it here cost a ~230 ms round
+		// trip on every click. Proxy now only turns away visitors with no JWT
+		// (a local check, no network). `/` and `/login` still need the lookup:
+		// they choose a home by role, and `/login?ended=1` is where the guard
+		// sends a revoked session so that this code can clear its cookies.
+		if (userId && routeNeedsRole(pathname)) {
 			const sessionId = request.cookies.get(SESSION_COOKIE)?.value;
 
 			// One round trip for both facts. Every one of these costs ~230 ms to
@@ -76,7 +85,9 @@ export async function proxy(request: NextRequest) {
 			session = sessionStandingOf(sessionId, profile?.user_sessions ?? [], error);
 		}
 
-		const decision = routeDecision({ pathname, userId, role, session });
+		// A signed-in visitor inside an app area passes; their layout decides.
+		const decision: RouteDecision =
+			userId && !routeNeedsRole(pathname) ? { kind: "pass" } : routeDecision({ pathname, userId, role, session });
 
 		if (decision.kind === "endSession") {
 			await supabase.auth.signOut();

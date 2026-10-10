@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import type { Database } from "./database.types";
 import { supabaseSecretKey, supabaseUrl } from "./env";
+import { timedFetch } from "./timing";
 
 /**
  * Supabase client with the **secret key — it bypasses RLS entirely**.
@@ -22,5 +23,6 @@ import { supabaseSecretKey, supabaseUrl } from "./env";
 export function createAdminClient() {
 	return createClient<Database>(supabaseUrl(), supabaseSecretKey(), {
 		auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+		global: { fetch: timedFetch() },
 	});
 }

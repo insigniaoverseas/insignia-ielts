@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { StaffSidebar, type SidebarGroup } from "@/components/ui/staff-sidebar";
 
@@ -53,7 +54,9 @@ export function AdminNavCompact() {
 			{items.map((item) => {
 				const on = pathname === item.href || pathname.startsWith(`${item.href}/`);
 				return (
-					<a
+					// A Link, not <a>: a plain anchor reloaded the whole app on every tap.
+					<Link
+						prefetch
 						key={item.href}
 						href={item.href}
 						aria-current={on ? "page" : undefined}
@@ -62,7 +65,7 @@ export function AdminNavCompact() {
 						}`}
 					>
 						{item.label}
-					</a>
+					</Link>
 				);
 			})}
 		</nav>

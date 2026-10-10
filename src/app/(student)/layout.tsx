@@ -3,7 +3,10 @@ import { AudioCacheGuard } from "@/components/student/audio-cache-guard";
 import { RunningTestBanner } from "@/components/student/running-test-banner";
 import { StudentBottomNav, StudentTopNav } from "@/components/student/student-nav";
 import { getOpenAttempts } from "@/lib/attempts/load";
-import { requireRole } from "@/lib/auth/guard";
+import { requireRole, signedInUserId } from "@/lib/auth/guard";
+import { getStudentBundle } from "@/lib/queries/student";
+import { AutoRefresh } from "@/components/auto-refresh";
+import { StudentDataProvider } from "@/components/student/student-data";
 import { BrandMark } from "@/components/brand/brand-mark";
 
 /**
@@ -17,11 +20,20 @@ import { BrandMark } from "@/components/brand/brand-mark";
  * during a test there is no navigation to anywhere, only the test.
  */
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
-	const actor = await requireRole(["student"]);
-	const openAttempts = await getOpenAttempts(actor.id);
+	// Everything is read side by side — the guard, the running-test banner and
+	// all four tabs' data — so a first load is one round trip to the database,
+	// and moving between tabs after it is none. The reads are RLS-scoped to the
+	// JWT's user; the guard still decides whether anything renders.
+	const userId = await signedInUserId();
+	const [actor, openAttempts, bundle] = await Promise.all([
+		requireRole(["student"]),
+		userId ? getOpenAttempts(userId) : Promise.resolve([]),
+		getStudentBundle(),
+	]);
 	return (
 		<div className="flex min-h-screen flex-col bg-bg">
 			<AudioCacheGuard ownerId={actor.id} />
+			<AutoRefresh />
 			<header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-6 border-b border-line bg-surface px-4 md:min-h-[72px] md:px-8">
 				<Link href="/home" className="flex items-center gap-3 text-ink no-underline hover:no-underline">
 					<BrandMark />
@@ -32,7 +44,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
 
 			<main className="mx-auto w-full max-w-[1120px] flex-1 px-4 pt-6 pb-8 md:px-8 md:pt-12 md:pb-16">
 				<RunningTestBanner attempts={openAttempts} />
-				{children}
+				<StudentDataProvider bundle={bundle}>{children}</StudentDataProvider>
 			</main>
 
 			<StudentBottomNav />

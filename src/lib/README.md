@@ -44,3 +44,17 @@ The scorer returns domain data only. M2-17 will persist its per-question marks,
 section totals and attempt total together with submission in one database RPC.
 Never import this module into a Client Component; `server-only` blocks it and
 the production bundle guard also searches for its exported function names.
+
+## Student auto-refresh
+
+| File | Purpose |
+| --- | --- |
+| `refresh-policy.ts` | Pure rules for when the student, teacher and admin apps re-read their data and re-check the session: every 60 s while someone is using a visible tab, and at once on the first touch after being idle. Applied by `AutoRefresh` (`components/auto-refresh.tsx`); unit-tested. |
+
+## Staff layout bundles
+
+| File | Purpose |
+| --- | --- |
+| `bundle-slots.ts` | Pure rule: a sidebar page's data goes to the browser only if the person holds that page's permission; otherwise the slot is `forbidden` and carries nothing. Unit-tested. |
+| `staff-filters.ts` | Pure Students search/batch/status and Audit action filters, run in the browser over the admin bundle. Unit-tested. |
+| `queries/staff-bundles.ts` | `server-only`. Starts every sidebar loader alongside the layout's guard (one round trip), then applies `bundle-slots.ts`. |

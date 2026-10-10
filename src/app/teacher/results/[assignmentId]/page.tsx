@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ReleasePanel } from "@/components/staff/release-panel";
 import { ResultsTable } from "@/components/staff/results-table";
 import { SKILL_LABEL } from "@/components/student/labels";
-import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getAssignmentResults } from "@/lib/queries/teacher";
 
 export const metadata: Metadata = {
@@ -21,8 +21,7 @@ export const metadata: Metadata = {
  */
 export default async function ResultsPage({ params }: { params: Promise<{ assignmentId: string }> }) {
 	const { assignmentId } = await params;
-	await requirePermissionOrRedirect("results:release", `/teacher/results/${assignmentId}`);
-	const data = await getAssignmentResults(assignmentId);
+	const data = await withGuard(requirePermissionOrRedirect("results:release", `/teacher/results/${assignmentId}`), getAssignmentResults(assignmentId));
 	if (!data) notFound();
 
 	return (

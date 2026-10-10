@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CreateBatchForm } from "@/components/admin/create-batch-form";
-import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { listBranchOptions, listTeacherOptions } from "@/lib/queries/batches";
 import { instituteToday } from "@/lib/queries/shared";
 
@@ -19,8 +19,10 @@ export const metadata: Metadata = { title: "Create a batch" };
  * which admins hold in `branch` scope and the Owner in `all`.
  */
 export default async function NewBatchPage() {
-	await requirePermissionOrRedirect("student:manage", "/admin/batches/new");
-	const [branches, teachers] = await Promise.all([listBranchOptions(), listTeacherOptions()]);
+	const [branches, teachers] = await withGuard(
+		requirePermissionOrRedirect("student:manage", "/admin/batches/new"),
+		Promise.all([listBranchOptions(), listTeacherOptions()]),
+	);
 
 	return (
 		<div className="flex max-w-[640px] flex-col gap-6">

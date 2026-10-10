@@ -37,6 +37,9 @@ export function StudentTabBar({
 						<li key={item.href} className="flex-1">
 							<Link
 								href={item.href}
+								// Full prefetch: the tab's data is loaded in the background, so a
+								// tap shows it at once (next.config.ts `staleTimes`).
+								prefetch
 								aria-current={active ? "page" : undefined}
 								className={cn(
 									"flex min-h-16 flex-col items-center justify-center gap-1 no-underline hover:no-underline",

@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { SKILL_LABEL } from "@/components/student/labels";
-import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getStudentDetail } from "@/lib/queries/admin";
 
 export const metadata: Metadata = { title: "Student" };
@@ -56,8 +56,7 @@ function Timeline({
  */
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
-	await requirePermissionOrRedirect("student:manage", `/admin/students/${id}`);
-	const data = await getStudentDetail(id);
+	const data = await withGuard(requirePermissionOrRedirect("student:manage", `/admin/students/${id}`), getStudentDetail(id));
 	if (!data) notFound();
 
 	const { student: s } = data;
