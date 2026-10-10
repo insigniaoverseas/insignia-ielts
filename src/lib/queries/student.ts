@@ -211,7 +211,7 @@ function assignedTest(
 			kind: "no_attempts_left",
 			used: ownAttempts.length,
 			allowed,
-			message: `You've used all ${allowed} ${allowed === 1 ? "attempt" : "attempts"} on this test.`,
+			message: allowed === 1 ? "You've used your 1 attempt on this test." : `You've used all ${allowed} attempts on this test.`,
 		};
 	}
 
