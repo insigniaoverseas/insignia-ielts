@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
+import { assignTestAction } from "@/lib/actions/assignments";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DifficultyBadge } from "@/components/ui/difficulty-badge";
@@ -53,11 +54,11 @@ function Step({
  * separate fields are not.
  */
 export function AssignFlow({ options, initialBatch }: { options: AssignOptions; initialBatch?: string }) {
+	const [state, formAction, pending] = useActionState(assignTestAction, null);
 	const [testId, setTestId] = useState<string | null>(null);
 	const [search, setSearch] = useState("");
 	const [batchIds, setBatchIds] = useState<Set<string>>(new Set(initialBatch ? [initialBatch] : []));
 	const [studentIds, setStudentIds] = useState<Set<string>>(new Set());
-	const [mode, setMode] = useState<"mock" | "practice">("mock");
 	const [opensAt, setOpensAt] = useState("");
 	const [dueBy, setDueBy] = useState("");
 	const [attempts, setAttempts] = useState(1);
@@ -80,7 +81,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 			.filter((b) => batchIds.has(b.id))
 			.reduce((n, b) => n + b.studentCount, 0);
 		const extra = options.students.filter(
-			(s) => studentIds.has(s.id) && !options.batches.some((b) => batchIds.has(b.id) && b.name === s.batchName),
+			(s) => studentIds.has(s.id) && !options.batches.some((b) => batchIds.has(b.id) && b.id === s.batchId),
 		).length;
 		return fromBatches + extra;
 	}, [options, batchIds, studentIds]);
@@ -96,16 +97,17 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 
 	const summary = !ready
 		? null
-		: `${reached} ${reached === 1 ? "student" : "students"} will take ${test.title} as a ${
-				mode === "mock" ? "mock test that counts towards their band" : "practice test that does not count"
-			}, ${opensAt ? `from ${opensAt}` : "starting as soon as you assign it"}${
+		: `${reached} ${reached === 1 ? "student" : "students"} will take ${test.title}, ${opensAt ? `from ${opensAt}` : "starting as soon as you assign it"}${
 				dueBy ? ` until ${dueBy}` : ", with no closing date"
 			}. They get ${attempts === 1 ? "one attempt" : `${attempts} attempts`}, and ${
 				allowReview ? "can review their mistakes afterwards" : "cannot review their answers afterwards"
 			}.`;
 
 	return (
-		<div className="flex flex-col gap-6">
+		<form action={formAction} className="flex flex-col gap-6">
+			<input type="hidden" name="testId" value={testId ?? ""} />
+			{[...batchIds].map((id) => <input key={id} type="hidden" name="batches" value={id} />)}
+			{[...studentIds].map((id) => <input key={id} type="hidden" name="students" value={id} />)}
 			<Step n={1} title="Pick a test" hint="Search by name.">
 				<Input
 					size="admin"
@@ -184,30 +186,14 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 				</p>
 			</Step>
 
-			<Step n={3} title="Set the rules">
-				<div className="flex flex-wrap gap-2">
-					{(["mock", "practice"] as const).map((m) => (
-						<button
-							key={m}
-							type="button"
-							onClick={() => setMode(m)}
-							aria-pressed={mode === m}
-							className={`flex min-h-10 cursor-pointer items-center rounded-full border px-4 font-semibold ${
-								mode === m
-									? "border-brand bg-brand-soft text-brand"
-									: "border-line bg-surface text-ink-2 hover:text-ink"
-							}`}
-						>
-							{m === "mock" ? "Mock — counts towards their band" : "Practice — does not count"}
-						</button>
-					))}
-				</div>
+			<Step n={3} title="Set the rules" hint="The test type is set when the paper is created.">
 
 				<div className="flex flex-wrap gap-4">
 					<div className="flex min-w-[180px] flex-1 flex-col gap-1.5">
 						<Label htmlFor="opensAt">Available from</Label>
 						<Input
 							id="opensAt"
+							name="opensAt"
 							type="datetime-local"
 							size="admin"
 							value={opensAt}
@@ -218,6 +204,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 						<Label htmlFor="dueBy">Due by</Label>
 						<Input
 							id="dueBy"
+							name="dueBy"
 							type="datetime-local"
 							size="admin"
 							value={dueBy}
@@ -228,6 +215,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 						<Label htmlFor="attempts">Attempts</Label>
 						<Input
 							id="attempts"
+							name="attempts"
 							type="number"
 							min={1}
 							max={9}
@@ -240,6 +228,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 
 				<label className="flex min-h-touch cursor-pointer items-center gap-3">
 					<Checkbox checked={allowReview} onCheckedChange={(v) => setAllowReview(v === true)} />
+					<input type="hidden" name="allowReview" value={allowReview ? "on" : ""} />
 					<span>Let them see their mistakes after the result is released</span>
 				</label>
 			</Step>
@@ -251,9 +240,10 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 					{summary ?? "Pick a test and at least one student, and this will say exactly what happens."}
 				</p>
 				<div>
-					<Button disabled={!ready}>Assign</Button>
+					<Button type="submit" disabled={!ready || pending}>{pending ? "Assigning…" : "Assign"}</Button>
 				</div>
+				{state && <p className={state.ok ? "m-0 text-small text-success" : "m-0 text-small text-danger"} role="status">{state.message}</p>}
 			</section>
-		</div>
+		</form>
 	);
 }

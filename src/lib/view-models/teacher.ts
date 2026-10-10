@@ -81,7 +81,7 @@ export type AssignableTest = {
 export type AssignOptions = {
 	tests: AssignableTest[];
 	batches: { id: string; name: string; studentCount: number }[];
-	students: { id: string; name: string; batchName: string | null }[];
+	students: { id: string; name: string; batchId: string | null; batchName: string | null }[];
 };
 
 /** One attempt in the results table (screen 18). */
