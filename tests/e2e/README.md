@@ -15,7 +15,8 @@ E2E_BASE_URL=https://… npm run test:e2e  # against a preview instead of localh
 | File | Needs | Writes anything? |
 |---|---|---|
 | `public.spec.ts` | nothing (`SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY` for one check) | **No** — safe against production |
-| `student-loop.spec.ts` | `E2E_STUDENT_A_EMAIL/PASSWORD`, `E2E_STUDENT_B_EMAIL/PASSWORD`, `E2E_LISTENING_REF` | **Yes** — signs two students in (ending their other sessions), starts and submits one real attempt. **Test accounts only.** Skipped when unset. |
+| `student-loop.spec.ts` — *finished attempt* block | `E2E_STUDENT_A_*`, `E2E_STUDENT_B_*`, `E2E_A_FINISHED_ATTEMPT` (A's submitted, released attempt) | Sign-ins only. |
+| `student-loop.spec.ts` — *student loop* block | `E2E_STUDENT_A_*`, `E2E_STUDENT_B_*`, `E2E_LISTENING_REF`; optional `E2E_TEACHER_EMAIL/PASSWORD` for +5 minutes | **Yes** — signs students in (ending their other sessions), starts and submits **one real attempt**, adds 5 minutes to it. Uses one attempt per run. **Test accounts only.** Skipped when unset. |
 
 `E2E_LISTENING_REF` is an assignment id (or `practice:{testId}`) for a published Listening **mock** that student A may start now, with attempts to spare. Student B must be a different student who cannot see A's attempt.
 
@@ -32,7 +33,7 @@ E2E_BASE_URL=https://… npm run test:e2e  # against a preview instead of localh
 | V7 | No scoring/key paths in the client bundle | `npm run check:bundle` (CI) |
 | V8 | `key.json` never signable | `tests/unit/r2.test.mjs` |
 | V9 | Transcript refused before release | `tests/unit/r2.test.mjs` (no transcript route exists yet) |
-| V10 | Student B → A's attempt/result/review: 404 at the route | `student-loop.spec.ts` |
+| V10 | Student B → A's attempt/result/review: 404 at the route | `student-loop.spec.ts` (both blocks) |
 | V11 | Same with the route bypassed: empty at RLS | `tests/db` + `test:db:sweep` |
 | V12 | No matching policy → nothing | `tests/db` |
 | V13 | Section navigation never re-requests audio | `student-loop.spec.ts` |
@@ -45,3 +46,7 @@ E2E_BASE_URL=https://… npm run test:e2e  # against a preview instead of localh
 | V20 | Every canonical type renders/scores | ⬜ needs authored content per type |
 | V21–V22 | MCP refusals, publish completeness | ⬜ MCP not built (M8); publish CHECK is in the schema |
 | V23 | `<script>` stripped on write and render | `tests/unit/sanitize.test.mjs`, `tests/unit/review.test.mjs` |
+
+Also proven in `student-loop.spec.ts`: Review my mistakes renders for the owner with no key markers in any data response (M4-01); the teacher's **+5 minutes** reaches the student's clock (M7-03); a submitted mock's recording is dropped from the cache.
+
+**Last full run:** 2026-10-10, localhost against production Supabase with the institute's test accounts — public 29/29, signed-in 10/10.

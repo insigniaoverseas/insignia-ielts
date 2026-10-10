@@ -28,7 +28,7 @@ async function signIn(page: Page, email: string, password: string) {
 	await page.getByLabel("Email").fill(email);
 	await page.getByLabel("Password").fill(password);
 	// Turnstile fills a hidden input once it has a token (test keys: at once).
-	await expect(page.locator('input[name="cf-turnstile-response"]')).not.toHaveValue("", { timeout: 20_000 });
+	await expect(page.locator('input[name="cf-turnstile-response"]:not([id])')).not.toHaveValue("", { timeout: 20_000 });
 	await page.getByRole("button", { name: "Sign in" }).click();
 	await expect(page).not.toHaveURL(/\/login/, { timeout: 30_000 });
 }
@@ -56,6 +56,37 @@ async function clockSeconds(page: Page): Promise<number> {
 	if (!m) throw new Error(`No clock in "${text}"`);
 	return Number(m[1]) * 60 + Number(m[2]);
 }
+
+/**
+ * Read-only: needs student A's **finished, released** attempt
+ * (`E2E_A_FINISHED_ATTEMPT`) and both logins. Writes nothing beyond sign-ins.
+ */
+test.describe.serial("Finished attempt, signed in (read-only)", () => {
+	const finished = process.env.E2E_A_FINISHED_ATTEMPT;
+	test.skip(!finished || !env.aEmail || !env.bEmail, "Set E2E_A_FINISHED_ATTEMPT and both student logins");
+
+	test("M4-01 — A reviews their own released attempt, rendered without any client-side key", async ({ page }) => {
+		const flight: string[] = [];
+		page.on("response", async (res) => {
+			if (/x-component|json/.test(res.headers()["content-type"] ?? "")) flight.push(await res.text().catch(() => ""));
+		});
+		await signIn(page, env.aEmail!, env.aPassword!);
+		await page.goto(`/review/${finished}`);
+		await expect(page.getByRole("heading", { name: "See my mistakes" })).toBeVisible();
+		await expect(page.getByText("Correct answer").first()).toBeVisible();
+		for (const body of flight) for (const marker of KEY_MARKERS) expect(body.includes(marker), marker).toBe(false);
+	});
+
+	test("V10 — student B cannot open A's attempt, result or review", async ({ page }) => {
+		await signIn(page, env.bEmail!, env.bPassword!);
+		for (const path of [`/attempt/${finished}`, `/results/${finished}`, `/review/${finished}`]) {
+			await page.goto(path);
+			await expect(page.getByRole("heading", { name: "We couldn’t find that page" }), path).toBeVisible();
+			await expect(page.getByText("Correct answer"), path).toHaveCount(0);
+			await expect(page.getByText("Your band score"), path).toHaveCount(0);
+		}
+	});
+});
 
 test.describe.serial("Student loop, signed in", () => {
 	test.skip(!configured, "Set E2E_STUDENT_A_*, E2E_STUDENT_B_* and E2E_LISTENING_REF to run (see tests/e2e/README.md)");
@@ -162,6 +193,39 @@ test.describe.serial("Student loop, signed in", () => {
 		const seen = await clockSeconds(skewed);
 		expect(Math.abs(seen - honest)).toBeLessThan(30);
 		await skewed.close();
+	});
+
+	test("M7-03 — the teacher's +5 minutes reaches the student's clock", async ({ browser }) => {
+		const teacherEmail = process.env.E2E_TEACHER_EMAIL;
+		const teacherPassword = process.env.E2E_TEACHER_PASSWORD;
+		test.skip(!teacherEmail || !teacherPassword || env.ref!.startsWith("practice:"), "Needs E2E_TEACHER_* and an assignment ref");
+		const before = await clockSeconds(page);
+
+		const staff = await browser.newContext();
+		const t = await staff.newPage();
+		await signIn(t, teacherEmail!, teacherPassword!);
+		await t.goto(`/teacher/live/${env.ref}`);
+		const tile = t.locator("li", { has: t.getByRole("button", { name: "+5 minutes" }) }).first();
+		const tileSeconds = async () => {
+			const m = /(\d+):(\d{2})/.exec((await tile.innerText()) ?? "");
+			return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
+		};
+		const tileBefore = await tileSeconds();
+		await tile.getByRole("button", { name: "+5 minutes" }).click();
+		await t.getByRole("button", { name: "Give 5 minutes" }).click();
+		// Wait for the server's answer — closing first would cancel the action.
+		await expect(t.getByRole("dialog")).toHaveCount(0, { timeout: 30_000 });
+		await expect.poll(tileSeconds, { timeout: 15_000 }).toBeGreaterThan(tileBefore + 240);
+		// Next's route announcer is an empty role=alert on every page; only text counts.
+		await expect(t.getByRole("alert").filter({ hasText: /\S/ })).toHaveCount(0);
+		await staff.close();
+
+		// The student's page learns the new deadline from the server, not the click.
+		await page.reload();
+		await expect(page.getByRole("timer")).toBeVisible();
+		const after = await clockSeconds(page);
+		expect(after - before).toBeGreaterThan(240);
+		expect(after - before).toBeLessThanOrEqual(300);
 	});
 
 	test("V10 — student B cannot open student A's attempt, result or review", async ({ browser }) => {
