@@ -27,6 +27,8 @@ export function StudentTopNav() {
 					<Link
 						key={tab.href}
 						href={tab.href}
+						// Full prefetch — see student-tab-bar.tsx.
+						prefetch
 						aria-current={on ? "page" : undefined}
 						className={cn(
 							"flex min-h-touch items-center rounded-control px-4 font-semibold no-underline hover:no-underline",

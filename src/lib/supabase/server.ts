@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 
 import type { Database } from "./database.types";
 import { supabasePublishableKey, supabaseUrl } from "./env";
+import { timedFetch } from "./timing";
 
 /**
  * Supabase client acting **as the signed-in user**, for Server Components,
@@ -26,6 +27,7 @@ export async function createClient() {
 	const cookieStore = await cookies();
 
 	return createServerClient<Database>(supabaseUrl(), supabasePublishableKey(), {
+		global: { fetch: timedFetch() },
 		cookies: {
 			getAll() {
 				return cookieStore.getAll();

@@ -1,17 +1,20 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { rowsForValue } from "@/lib/attempts/answers";
 import { finishAttempt } from "@/lib/attempts/finish";
 import { isOverdue, secondsLeft } from "@/lib/attempts/clock";
 import { getOwnedAttempt } from "@/lib/attempts/load";
+import { ensureMarked } from "@/lib/attempts/mark";
 import { checkInPractice } from "@/lib/attempts/pause";
 import { sessionState } from "@/lib/auth/sessions";
-import { getPreTestBriefing } from "@/lib/queries/student";
+import { getMyMistakes, getPreTestBriefing } from "@/lib/queries/student";
 import { ForbiddenError, requirePermission } from "@/lib/rbac";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import type { MistakesLoad } from "@/lib/view-models/student";
 import type { AttemptSaveResult, SaveAnswerInput, StartAttemptState } from "./types";
 
 /**
@@ -207,6 +210,54 @@ export async function heartbeatAction(attemptId: string): Promise<AttemptSaveRes
 		console.error("heartbeat failed:", error);
 		return { ok: false, reason: "error" };
 	}
+}
+
+/**
+ * Marks one of the caller's finished attempts if its marking failed at submit.
+ *
+ * The result screen reads from the student layout's bundle and has no server
+ * work of its own, so this is how it repairs an unmarked attempt — what the
+ * server page used to do inline. A held result stays held: `ensureMarked`
+ * scores, it never releases. On success the layout is revalidated, so the
+ * bundle comes back with the result in it.
+ */
+export async function markMyResultAction(attemptId: string): Promise<"marked" | "already" | "not_finished" | "invalid"> {
+	try {
+		const actor = await liveActor();
+		const owned = await getOwnedAttempt(attemptId, actor.id);
+		if (!owned) return "invalid";
+		const outcome = await ensureMarked(owned.id);
+		if (outcome === "marked") revalidatePath("/", "layout");
+		return outcome;
+	} catch (error) {
+		if (error instanceof SessionEndedError || error instanceof ForbiddenError) return "invalid";
+		console.error("marking on the result page failed:", error);
+		return "not_finished";
+	}
+}
+
+/**
+ * Screen 10's data, for the result screen to load in the background so that
+ * "See my mistakes" opens instantly.
+ *
+ * The gate is unchanged — `getMyMistakes` allows only the caller's own
+ * attempt, released, with review allowed — and a live session is required as
+ * for every other attempt action. What comes back is exactly what the review
+ * screen shows that student; the answer key itself never leaves the server.
+ *
+ * @returns `null` when the student may not review this attempt, and
+ *   `"session_ended"` when they were signed in elsewhere or the device was
+ *   revoked — so the screen can send them to sign in rather than say "not found".
+ */
+export async function getMyReviewAction(attemptId: string): Promise<MistakesLoad | null | "session_ended"> {
+	try {
+		await liveActor();
+	} catch (error) {
+		if (error instanceof SessionEndedError) return "session_ended";
+		if (error instanceof ForbiddenError) return null;
+		throw error;
+	}
+	return getMyMistakes(attemptId);
 }
 
 /** Maps a database refusal to what the player should do about it. */

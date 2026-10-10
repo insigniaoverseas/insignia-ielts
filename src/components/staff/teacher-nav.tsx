@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { StaffSidebar, type SidebarGroup } from "@/components/ui/staff-sidebar";
 
@@ -37,7 +38,9 @@ export function TeacherNavCompact() {
 			{TEACHER_GROUPS.flatMap((g) => g.items).map((item) => {
 				const on = item.href === active;
 				return (
-					<a
+					// A Link, not <a>: a plain anchor reloaded the whole app on every tap.
+					<Link
+						prefetch
 						key={item.href}
 						href={item.href}
 						aria-current={on ? "page" : undefined}
@@ -46,7 +49,7 @@ export function TeacherNavCompact() {
 						}`}
 					>
 						{item.label}
-					</a>
+					</Link>
 				);
 			})}
 		</nav>

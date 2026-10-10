@@ -58,7 +58,9 @@ export async function getTeacherDashboard(): Promise<TeacherDashboard> {
 			batchIds.length
 				? supabase.from("batch_students").select("batch_id, student_id, left_at").in("batch_id", batchIds)
 				: Promise.resolve({ data: [], error: null }),
-			supabase.from("assignments").select("*"),
+			// Test titles ride along with the assignments: one round trip, not a
+			// second query once the assignments are back.
+			supabase.from("assignments").select("*, tests(id, title, skill)"),
 			supabase.from("assignment_targets").select("assignment_id, batch_id, student_id"),
 			supabase.from("attempts").select("*"),
 			supabase.from("attempt_scores").select("attempt_id, band"),
@@ -74,12 +76,7 @@ export async function getTeacherDashboard(): Promise<TeacherDashboard> {
 
 	const assignments = assignmentsResult.data ?? [];
 	const attempts = (attemptsResult.data ?? []) as Attempt[];
-	const testIds = [...new Set(assignments.map((assignment) => assignment.test_id))];
-	const testsResult = testIds.length
-		? await supabase.from("tests").select("id, title, skill").in("id", testIds)
-		: { data: [], error: null };
-	if (testsResult.error) queryFailed("teacher dashboard tests", testsResult.error);
-	const tests = new Map((testsResult.data ?? []).map((test) => [test.id, test]));
+	const tests = new Map(assignments.flatMap((row) => (row.tests ? [[row.tests.id, row.tests] as const] : [])));
 	const scores = new Map((scoresResult.data ?? []).map((score) => [score.attempt_id, score.band]));
 	const memberships = (membershipsResult.data ?? []).filter((row) => row.left_at === null);
 	const targets = targetsResult.data ?? [];

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { getActor } from "@/lib/rbac";
 import { can, type Actor, type Permission } from "@/lib/permissions";
@@ -21,6 +22,19 @@ import { homeForRole, signInPath } from "@/lib/auth/access";
  */
 
 /**
+ * The JWT subject, or `null` when signed out. Verified locally — the project
+ * signs ES256, so this is no round trip — and memoised for the request.
+ *
+ * Identity only, not authorisation: use it to start a user's RLS-scoped reads
+ * *alongside* `requireUser` instead of after it. The guard still decides
+ * whether the page renders.
+ */
+export const signedInUserId = cache(async function signedInUserId(): Promise<string | null> {
+	const { data } = await (await createClient()).auth.getClaims();
+	return data?.claims?.sub ?? null;
+});
+
+/**
  * The signed-in, active user, or a redirect to sign in.
  *
  * Also enforces revocation: a student who signed in elsewhere, or a device an
@@ -36,8 +50,7 @@ export async function requireUser(currentPath?: string): Promise<Actor> {
 	// verifying it is local work, not a round trip. Having it up front lets the
 	// profile read and the session check run at the same time instead of one
 	// after the other; each is ~230 ms to ap-south-1, in front of the first byte.
-	const { data: claims } = await (await createClient()).auth.getClaims();
-	const userId = claims?.claims?.sub;
+	const userId = await signedInUserId();
 
 	const [actor, state] = await Promise.all([
 		getActor(),

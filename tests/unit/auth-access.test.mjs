@@ -7,6 +7,7 @@ import {
   routeArea,
   routeDecision,
   routeNeedsIdentity,
+  routeNeedsRole,
   safeRelativePath,
   signInPath,
 } from "../../src/lib/auth/access.ts";
@@ -56,6 +57,17 @@ describe("entry and login routing", () => {
     assert.equal(routeNeedsIdentity("/forgot"), false);
     assert.equal(routeNeedsIdentity("/invite/abc"), false);
     assert.equal(routeNeedsIdentity("/setup"), false);
+  });
+
+  test("looks up role and session only where Proxy routes by role", () => {
+    // Inside an app area the layout guard reads them; Proxy repeating the
+    // query cost a round trip on every click.
+    assert.equal(routeNeedsRole("/"), true);
+    assert.equal(routeNeedsRole("/login"), true);
+    assert.equal(routeNeedsRole("/home"), false);
+    assert.equal(routeNeedsRole("/admin/students"), false);
+    assert.equal(routeNeedsRole("/teacher/dashboard"), false);
+    assert.equal(routeNeedsRole("/attempt/123"), false);
   });
 
   test("the bare URL always enters through the auth flow", () => {

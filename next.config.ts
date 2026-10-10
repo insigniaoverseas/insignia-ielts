@@ -3,6 +3,25 @@ import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 
 const nextConfig: NextConfig = {
 	experimental: {
+		/*
+		 * How long the browser keeps a page it has already loaded.
+		 *
+		 * `static` covers pages loaded by a full prefetch — the nav tabs, which
+		 * pass `prefetch` on their Links. They are fetched in the background and
+		 * reused for a minute, so switching tabs needs no server round trip.
+		 * The Server Actions behind those pages call `revalidatePath`, which
+		 * clears this cache, so nobody sees their own change missing.
+		 * What another person changes (a teacher releasing results) shows within
+		 * a minute.
+		 *
+		 * `dynamic` stays at its default of 0 on purpose: it would also cache
+		 * the test player, whose payload carries the saved answers and the
+		 * seconds left at render time. A player reopened from cache could show
+		 * answers from before the student left it.
+		 */
+		staleTimes: {
+			static: 60,
+		},
 		serverActions: {
 			/*
 			 * A Listening test's MP3 is the whole recording — the supplied paper's

@@ -51,6 +51,8 @@ export function StaffSidebar({
 								<li key={item.href}>
 									<Link
 										href={item.href}
+										// Full prefetch — see student-tab-bar.tsx.
+										prefetch
 										aria-current={active ? "page" : undefined}
 										className={cn(
 											"flex min-h-10 items-center gap-3 rounded-control px-3 no-underline hover:no-underline",

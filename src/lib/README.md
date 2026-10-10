@@ -44,3 +44,9 @@ The scorer returns domain data only. M2-17 will persist its per-question marks,
 section totals and attempt total together with submission in one database RPC.
 Never import this module into a Client Component; `server-only` blocks it and
 the production bundle guard also searches for its exported function names.
+
+## Student auto-refresh
+
+| File | Purpose |
+| --- | --- |
+| `refresh-policy.ts` | Pure rules for when the student app re-reads its data and re-checks the session: every 60 s while someone is using a visible tab, and at once on the first touch after being idle. Applied by `StudentAutoRefresh`; unit-tested. |
