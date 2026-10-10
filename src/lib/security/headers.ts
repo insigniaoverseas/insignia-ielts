@@ -45,6 +45,7 @@ export function contentSecurityPolicy(
 		"object-src 'none'",
 		"base-uri 'self'",
 		"form-action 'self'",
+		"frame-src 'self' https://challenges.cloudflare.com",
 		"frame-ancestors 'none'",
 		...(isDev ? [] : ["upgrade-insecure-requests"]),
 	];

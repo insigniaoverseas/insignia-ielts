@@ -9,6 +9,7 @@ import { signIn } from "@/lib/auth/sign-in";
 import { endSession, startSession } from "@/lib/auth/sessions";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
+import { verifyTurnstile } from "@/lib/turnstile";
 import type { AcceptFormState, FormState, LoginFormState, ResetFormState, ResetRequestState } from "@/lib/actions/types";
 
 /**
@@ -28,6 +29,11 @@ export async function signInAction(_previous: LoginFormState, formData: FormData
 
 	if (!email || !password) {
 		return { message: "Please fill in both boxes.", triesLeft: null, lockedUntil: null };
+	}
+	const requestHeaders = await headers();
+	const remoteIp = requestHeaders.get("cf-connecting-ip") ?? requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+	if (!(await verifyTurnstile(String(formData.get("cf-turnstile-response") ?? ""), "login", remoteIp))) {
+		return { message: "We couldn't verify that check. Please try again.", triesLeft: null, lockedUntil: null };
 	}
 
 	const result = await signIn(email, password, next ? String(next) : null);
@@ -68,6 +74,11 @@ export async function signOutAction(): Promise<void> {
 export async function acceptInvitationAction(_previous: AcceptFormState, formData: FormData): Promise<AcceptFormState> {
 	const token = String(formData.get("token") ?? "");
 	const password = String(formData.get("password") ?? "");
+	const requestHeaders = await headers();
+	const remoteIp = requestHeaders.get("cf-connecting-ip") ?? requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+	if (!(await verifyTurnstile(String(formData.get("cf-turnstile-response") ?? ""), "accept-invitation", remoteIp))) {
+		return { message: "We couldn't verify that check. Please try again." };
+	}
 
 	const result = await acceptInvitation(token, password);
 	if (!result.ok) return { message: result.message, dead: result.dead };

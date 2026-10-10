@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Turnstile } from "@/components/auth/turnstile";
 import { acceptInvitationAction } from "@/lib/actions/auth";
 import { PASSWORD_RULES } from "@/lib/auth/password";
 import type { AcceptFormState } from "@/lib/actions/types";
@@ -27,7 +28,7 @@ import type { AcceptFormState } from "@/lib/actions/types";
  * The server also checks against known-breached passwords, which is the check
  * that catches `password1` (Supabase leaked-password protection, M1-01).
  */
-export function SetPasswordForm({ token, email }: { token: string; email: string }) {
+export function SetPasswordForm({ token, email, turnstileSiteKey }: { token: string; email: string; turnstileSiteKey: string }) {
 	const [state, formAction] = useActionState<AcceptFormState, FormData>(acceptInvitationAction, null);
 	const [password, setPassword] = useState("");
 	const [show, setShow] = useState(false);
@@ -81,6 +82,7 @@ export function SetPasswordForm({ token, email }: { token: string; email: string
 					<span>{state.message}</span>
 				</p>
 			)}
+			<Turnstile siteKey={turnstileSiteKey} action="accept-invitation" resetKey={state?.message} />
 
 			<SubmitButton ready={ready} />
 
