@@ -8,6 +8,7 @@ import { homeForRole } from "@/lib/auth/access";
 import { isFirstRunPending } from "@/lib/auth/guard";
 import { sessionState } from "@/lib/auth/sessions";
 import { getActor } from "@/lib/rbac";
+import { turnstileSiteKey } from "@/lib/turnstile";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -82,7 +83,7 @@ export default async function LoginPage({
 				<Banner tone="success">Your account is ready. Sign in with the password you just created.</Banner>
 			)}
 
-			<LoginForm next={next} />
+			<LoginForm next={next} turnstileSiteKey={turnstileSiteKey()} />
 
 			{/* No signup link — accounts are created by invitation only. The
 			    reset link is new (M1-15): §9 originally sent everyone to their

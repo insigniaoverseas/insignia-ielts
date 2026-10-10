@@ -7,6 +7,7 @@ import { Banner } from "@/components/ui/banner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Turnstile } from "@/components/auth/turnstile";
 import { signInAction } from "@/lib/actions/auth";
 import { formatTime } from "@/lib/time";
 import type { LoginFormState } from "@/lib/actions/types";
@@ -21,7 +22,7 @@ import type { LoginFormState } from "@/lib/actions/types";
  * The three deliberate absences — no signup link, no per-field error, no
  * self-serve reset — are documented on the page that renders this.
  */
-export function LoginForm({ next }: { next?: string }) {
+export function LoginForm({ next, turnstileSiteKey }: { next?: string; turnstileSiteKey: string }) {
 	const [state, formAction] = useActionState<LoginFormState, FormData>(signInAction, null);
 	const locked = Boolean(state?.lockedUntil);
 
@@ -79,6 +80,7 @@ export function LoginForm({ next }: { next?: string }) {
 						</span>
 					</p>
 				)}
+				<Turnstile siteKey={turnstileSiteKey} action="login" resetKey={state?.message} />
 
 				<SubmitButton locked={locked} />
 			</form>

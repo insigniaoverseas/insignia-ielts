@@ -33,6 +33,7 @@ describe("production CSP", () => {
     assert.equal(directive(csp, "frame-ancestors"), "frame-ancestors 'none'");
     assert.equal(directive(csp, "base-uri"), "base-uri 'self'");
     assert.equal(directive(csp, "form-action"), "form-action 'self'");
+    assert.equal(directive(csp, "frame-src"), "frame-src 'self' https://challenges.cloudflare.com");
   });
   test("the browser talks only to our own origin", () => {
     assert.equal(directive(csp, "connect-src"), "connect-src 'self'");
