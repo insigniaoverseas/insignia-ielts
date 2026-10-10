@@ -123,7 +123,7 @@ export function InviteStudentForm({ batches }: { batches: BatchOption[] }) {
 function SubmitButton() {
 	const { pending } = useFormStatus();
 	return (
-		<Button type="submit" disabled={pending}>
+		<Button type="submit" loading={pending}>
 			{pending ? "Sending…" : "Send the invitation"}
 		</Button>
 	);

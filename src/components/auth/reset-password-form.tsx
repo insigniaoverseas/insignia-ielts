@@ -89,7 +89,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 function SubmitButton({ ready }: { ready: boolean }) {
 	const { pending } = useFormStatus();
 	return (
-		<Button type="submit" size="student" disabled={!ready || pending}>
+		<Button type="submit" size="student" disabled={!ready} loading={pending}>
 			{pending ? "Saving…" : "Save my new password"}
 		</Button>
 	);

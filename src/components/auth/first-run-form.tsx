@@ -76,7 +76,7 @@ export function FirstRunForm({ email }: { email: string }) {
 function SubmitButton() {
 	const { pending } = useFormStatus();
 	return (
-		<Button type="submit" size="admin" disabled={pending}>
+		<Button type="submit" size="admin" loading={pending}>
 			{pending ? "Setting up…" : "Finish setting up"}
 		</Button>
 	);

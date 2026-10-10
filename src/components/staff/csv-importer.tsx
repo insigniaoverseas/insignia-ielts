@@ -252,7 +252,7 @@ export function CsvImporter() {
 						>
 							Choose a different file
 						</Button>
-						<Button disabled={pending.length === 0 || progress !== null} onClick={() => setConfirming(true)}>
+						<Button disabled={pending.length === 0} loading={progress !== null} onClick={() => setConfirming(true)}>
 							{progress
 								? `Inviting… ${progress.done} of ${progress.total}`
 								: outcome.size > 0 && pending.length > 0

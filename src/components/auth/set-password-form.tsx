@@ -134,7 +134,7 @@ export function SetPasswordForm({
 function SubmitButton({ ready }: { ready: boolean }) {
 	const { pending } = useFormStatus();
 	return (
-		<Button type="submit" size="student" disabled={!ready || pending}>
+		<Button type="submit" size="student" disabled={!ready} loading={pending}>
 			{pending ? "Setting up…" : "Save my password and start"}
 		</Button>
 	);

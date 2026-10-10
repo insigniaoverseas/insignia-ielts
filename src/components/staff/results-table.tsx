@@ -87,7 +87,8 @@ function OverrideRows({
 							/>
 							<Button
 								variant="secondary"
-								disabled={!(notes[a.questionNumber] ?? "").trim() || busy !== null}
+								disabled={!(notes[a.questionNumber] ?? "").trim() || (busy !== null && busy !== a.questionNumber)}
+								loading={busy === a.questionNumber}
 								onClick={() => give(a.questionNumber)}
 							>
 								{busy === a.questionNumber ? "Saving…" : "Give the mark"}

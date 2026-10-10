@@ -37,6 +37,7 @@ export function PlayerShell({
 	onSubmit,
 	status,
 	clock,
+	submitting = false,
 }: {
 	session: AttemptSession;
 	/** Autosave. Fired per change, debounced by the caller. */
@@ -53,6 +54,12 @@ export function PlayerShell({
 	clock?: { seconds: number; stamp: number };
 	/** Hand over to the submit Server Action. */
 	onSubmit?: (reason: "student" | "time") => void;
+	/**
+	 * The test is being handed in. The Finish button spins and the dialog
+	 * can't be closed; when time ran out (no dialog open) a small one says so,
+	 * because handing in can take a few seconds on a lab connection.
+	 */
+	submitting?: boolean;
 }) {
 	const [answers, setAnswers] = useState<Record<string, AnswerValue>>(session.answers);
 	const [flagged, setFlagged] = useState<Set<number>>(new Set(session.flagged));
@@ -356,7 +363,7 @@ export function PlayerShell({
 			</footer>
 
 			{/* Screen 08 — never let a student submit blind. */}
-			<Dialog open={confirming} onOpenChange={setConfirming}>
+			<Dialog open={confirming} onOpenChange={(open) => !submitting && setConfirming(open)}>
 				<DialogContent showCloseButton={false}>
 					<DialogHeader>
 						<DialogTitle>
@@ -390,20 +397,31 @@ export function PlayerShell({
 					)}
 
 					<DialogFooter>
-						<Button size="modal" onClick={() => setConfirming(false)}>
+						<Button size="modal" onClick={() => setConfirming(false)} disabled={submitting}>
 							Go back
 						</Button>
 						<Button
 							size="modal"
 							variant="secondary"
+							loading={submitting}
 							onClick={() => {
 								submitted.current = true;
 								onSubmit?.("student");
 							}}
 						>
-							{unanswered.length === 0 ? "Finish" : "Submit anyway"}
+							{submitting ? "Handing in…" : unanswered.length === 0 ? "Finish" : "Submit anyway"}
 						</Button>
 					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* Time ran out: nothing was tapped, so say what is happening. */}
+			<Dialog open={submitting && !confirming}>
+				<DialogContent showCloseButton={false}>
+					<DialogHeader>
+						<DialogTitle>Time&rsquo;s up</DialogTitle>
+						<DialogDescription>Handing in your answers… This only takes a moment.</DialogDescription>
+					</DialogHeader>
 				</DialogContent>
 			</Dialog>
 		</div>

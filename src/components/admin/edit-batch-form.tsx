@@ -145,7 +145,7 @@ export function EditBatchForm({ batch, teachers }: { batch: BatchDetail; teacher
 function SubmitButton() {
 	const { pending } = useFormStatus();
 	return (
-		<Button type="submit" disabled={pending}>
+		<Button type="submit" loading={pending}>
 			{pending ? "Saving…" : "Save changes"}
 		</Button>
 	);

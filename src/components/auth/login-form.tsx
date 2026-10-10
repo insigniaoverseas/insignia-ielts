@@ -92,7 +92,7 @@ export function LoginForm({ next, turnstileSiteKey }: { next?: string; turnstile
 function SubmitButton({ locked }: { locked: boolean }) {
 	const { pending } = useFormStatus();
 	return (
-		<Button type="submit" size="student" disabled={locked || pending}>
+		<Button type="submit" size="student" disabled={locked} loading={pending}>
 			{pending ? "Signing in…" : "Sign in"}
 		</Button>
 	);

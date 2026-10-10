@@ -327,7 +327,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 					{summary ?? "Pick a test and at least one student, and this will say exactly what happens."}
 				</p>
 				<div>
-					<Button type="submit" disabled={!ready || pending}>{pending ? "Assigning…" : "Assign"}</Button>
+					<Button type="submit" disabled={!ready} loading={pending}>{pending ? "Assigning…" : "Assign"}</Button>
 				</div>
 				{state && <p className={state.ok ? "m-0 text-small text-success" : "m-0 text-small text-danger"} role="status">{state.message}</p>}
 			</section>
