@@ -3,10 +3,12 @@
 import { revalidatePath } from "next/cache";
 
 import { createInvitation, resendInvitation, revokeInvitation } from "@/lib/auth/invitations";
+import { CSV_INVITE_CHUNK } from "@/lib/csv-invite";
 import { ForbiddenError, requirePermission } from "@/lib/rbac";
+import { createClient } from "@/lib/supabase/server";
 import type { Permission } from "@/lib/permissions";
 import type { Json } from "@/lib/supabase/database.types";
-import type { FormState } from "@/lib/actions/types";
+import type { CsvInviteResult, CsvInviteRow, FormState } from "@/lib/actions/types";
 
 /**
  * Server Actions behind the invite screens (M5-04, screen 22).
@@ -190,6 +192,66 @@ export async function resendInvitationAction(_previous: FormState, formData: For
 		};
 	} catch (error) {
 		if (error instanceof ForbiddenError) return { ok: false, message: "You don't have permission to do that." };
+		throw error;
+	}
+}
+
+/**
+ * Invites one chunk of students from screen 22's CSV import.
+ *
+ * The screen sends the file a few rows at a time and shows progress, because
+ * one request cannot invite a whole batch: every invitation sends an email and
+ * writes several rows, and Workers Free allows 50 subrequests per request.
+ * Rows are checked again here — the browser's preview is a convenience, not a
+ * gate — and each row is reported by its line in the file.
+ *
+ * Batches are named in the CSV; each name must match a batch this admin can
+ * see (case does not matter), or that row is refused with the name quoted.
+ */
+export async function inviteCsvChunkAction(rows: CsvInviteRow[]): Promise<CsvInviteResult> {
+	const list = Array.isArray(rows) ? rows.slice(0, CSV_INVITE_CHUNK) : [];
+	try {
+		const { actor, scope } = await requirePermission("student:manage");
+		const { data: batches, error } = await (await createClient()).from("batches").select("id, name");
+		if (error) throw error;
+		const batchByName = new Map<string, string>((batches ?? []).map((b) => [b.name.trim().toLowerCase(), b.id]));
+
+		const results: CsvInviteResult = [];
+		for (const row of list) {
+			const line = Number(row?.line) || 0;
+			const batchName = String(row?.batch ?? "").trim();
+			const batchId = batchName ? batchByName.get(batchName.toLowerCase()) : null;
+			if (batchName && !batchId) {
+				results.push({ line, ok: false, message: `No batch called “${batchName}”.` });
+				continue;
+			}
+			const months = Number(String(row?.planMonths ?? "").trim() || 0);
+			if (!Number.isInteger(months) || months < 0 || months > 36) {
+				results.push({ line, ok: false, message: "Plan length must be a whole number of months." });
+				continue;
+			}
+			const phone = String(row?.phone ?? "").replace(/\D/g, "").replace(/^91(?=\d{10}$)/, "");
+			const result = await createInvitation(actor, scope, {
+				email: String(row?.email ?? ""),
+				name: String(row?.name ?? ""),
+				roleKey: "student",
+				batchId: batchId ?? null,
+				phone: phone || null,
+				countryCode: phone ? "+91" : null,
+				planTemplate: months > 0 ? { months, plan_name: `${months}-month plan` } : null,
+			});
+			results.push(
+				result.ok
+					? { line, ok: true, message: result.delivered ? `Sent to ${result.email}` : "Created — the email didn't send; use Resend" }
+					: { line, ok: false, message: result.message },
+			);
+		}
+		revalidatePath("/admin/students");
+		return results;
+	} catch (error) {
+		if (error instanceof ForbiddenError) {
+			return list.map((row) => ({ line: Number(row?.line) || 0, ok: false, message: "You don't have permission to invite students." }));
+		}
 		throw error;
 	}
 }
