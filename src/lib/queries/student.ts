@@ -5,6 +5,7 @@ import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
+import { timeTakenSeconds } from "@/lib/attempts/clock";
 import { buildReview } from "@/lib/attempts/review";
 import { audioCacheKey } from "@/lib/audio-cache-key";
 import { deviceLabel } from "@/lib/auth/device-label";
@@ -282,8 +283,8 @@ function completedAttempt(attempt: Attempt, test: TestRow, score: Score | null):
 				maxScore: summary.questionCount,
 				correctCount: Math.round(Number(score.raw_score)),
 				wrongCount: Math.max(0, summary.questionCount - Math.round(Number(score.raw_score))),
-				timeTakenSeconds: Math.max(0, Math.round((new Date(attempt.submitted_at).getTime() - new Date(attempt.started_at).getTime()) / 1000)),
-				timeTakenLabel: formatDuration((new Date(attempt.submitted_at).getTime() - new Date(attempt.started_at).getTime()) / 1000),
+				timeTakenSeconds: timeTakenSeconds({ ...attempt, submitted_at: attempt.submitted_at }),
+				timeTakenLabel: formatDuration(timeTakenSeconds({ ...attempt, submitted_at: attempt.submitted_at })),
 				sections: sectionScores(score.section_scores, summary),
 			}
 		: null;

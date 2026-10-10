@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
+import { sessionState } from "@/lib/auth/sessions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { type Actor, type Permission, type Scope, parsePermissions, scopeOf } from "@/lib/permissions";
@@ -68,6 +69,12 @@ export const getActor = cache(async function getActor(): Promise<Actor | null> {
 export async function requirePermission(permission: Permission): Promise<{ actor: Actor; scope: Scope }> {
 	const actor = await getActor();
 	if (!actor) throw new ForbiddenError("signed_out");
+	// A revoked device still holds a valid JWT until it expires. Proxy turns it
+	// away on every guarded route — but lets a request through if it cannot
+	// *read* the session, trusting the page to check again. Server Actions are
+	// endpoints with no page around them, so they check here. Memoised per
+	// request: a page that already ran `requireUser` pays nothing.
+	if ((await sessionState(actor.id)) !== "live") throw new ForbiddenError("signed_out");
 	const scope = scopeOf(actor, permission);
 	if (!scope) throw new ForbiddenError("missing_permission", permission);
 	return { actor, scope };

@@ -28,13 +28,25 @@ import type { AcceptFormState } from "@/lib/actions/types";
  * The server also checks against known-breached passwords, which is the check
  * that catches `password1` (Supabase leaked-password protection, M1-01).
  */
-export function SetPasswordForm({ token, email, turnstileSiteKey }: { token: string; email: string; turnstileSiteKey: string }) {
+export function SetPasswordForm({
+	token,
+	email,
+	turnstileSiteKey,
+	privacy,
+}: {
+	token: string;
+	email: string;
+	turnstileSiteKey: string;
+	/** The notice summary and its version, from `lib/privacy.ts` via the page. */
+	privacy: { summary: string[]; version: string };
+}) {
 	const [state, formAction] = useActionState<AcceptFormState, FormData>(acceptInvitationAction, null);
 	const [password, setPassword] = useState("");
 	const [show, setShow] = useState(false);
 
 	const checks = PASSWORD_RULES.map((rule) => ({ label: rule.label, ok: rule.test(password) }));
-	const ready = checks.every((c) => c.ok);
+	const [agreed, setAgreed] = useState(false);
+	const ready = checks.every((c) => c.ok) && agreed;
 
 	return (
 		<form action={formAction} className="flex flex-col gap-5 rounded-card border border-line bg-surface p-6">
@@ -75,6 +87,31 @@ export function SetPasswordForm({ token, email, turnstileSiteKey }: { token: str
 					</li>
 				))}
 			</ul>
+
+			{/* DPDP Act 2023: the notice comes before the agreement, and agreeing
+			    is something they do — never a box ticked for them. */}
+			<section className="flex flex-col gap-3 rounded-control border border-line bg-bg p-4">
+				<h2 className="m-0 text-h3">Your information</h2>
+				<ul className="m-0 flex flex-col gap-1.5 pl-5">
+					{privacy.summary.map((line) => (
+						<li key={line}>{line}</li>
+					))}
+				</ul>
+				<a href="/privacy" target="_blank" rel="noopener" className="font-semibold">
+					Read the full privacy notice
+				</a>
+				<label className="flex min-h-touch cursor-pointer items-start gap-3">
+					<input
+						type="checkbox"
+						name="privacyAccepted"
+						value={privacy.version}
+						checked={agreed}
+						onChange={(e) => setAgreed(e.target.checked)}
+						className="mt-1 size-5 flex-none cursor-pointer accent-brand"
+					/>
+					<span className="font-semibold">I have read this and I agree</span>
+				</label>
+			</section>
 
 			{state?.message && (
 				<p className="m-0 flex items-start gap-2 font-semibold text-danger" role="alert">

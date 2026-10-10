@@ -90,3 +90,8 @@ SENTRY_DSN=
 
 # M8 · secret · Scoped credential for the test-authoring MCP server.
 MCP_SERVICE_CREDENTIAL=
+
+# DPDP · privacy notice (/privacy and the accept-invitation screen).
+# The address students write to about their data. Not secret — a Wrangler
+# `vars` entry in production. Unset: the notice names the front desk instead.
+PRIVACY_CONTACT_EMAIL=

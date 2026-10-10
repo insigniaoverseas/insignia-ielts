@@ -33,6 +33,7 @@ const ACTION_LABEL: Record<string, string> = {
 	"invitation.create": "Invitation sent",
 	"invitation.revoke": "Invitation revoked",
 	"invitation.resend": "Invitation resent",
+	"privacy.accept": "Agreed to the privacy notice",
 	"plan.extend": "Plan extended",
 	"results.release": "Results released",
 	"mark.override": "Mark changed",
