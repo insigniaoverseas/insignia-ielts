@@ -63,6 +63,9 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 	const [dueBy, setDueBy] = useState("");
 	const [attempts, setAttempts] = useState(1);
 	const [allowReview, setAllowReview] = useState(true);
+	// Held by default (Q2, 2026-09-15): a band is the teacher's to hand out.
+	const [release, setRelease] = useState<"manual" | "immediate" | "scheduled">("manual");
+	const [releaseAt, setReleaseAt] = useState("");
 
 	const test = options.tests.find((t) => t.id === testId) ?? null;
 
@@ -93,7 +96,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 		apply(next);
 	}
 
-	const ready = test !== null && reached > 0;
+	const ready = test !== null && reached > 0 && (release !== "scheduled" || releaseAt !== "");
 
 	const summary = !ready
 		? null
@@ -101,7 +104,13 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 				dueBy ? ` until ${dueBy}` : ", with no closing date"
 			}. They get ${attempts === 1 ? "one attempt" : `${attempts} attempts`}, and ${
 				allowReview ? "can review their mistakes afterwards" : "cannot review their answers afterwards"
-			}.`;
+			}. ${
+				release === "immediate"
+					? "They see their band as soon as they finish."
+					: release === "scheduled"
+						? `They see their band from ${releaseAt.replace("T", " at ")}.`
+						: "They see their band when you release the results."
+			}`;
 
 	return (
 		<form action={formAction} className="flex flex-col gap-6">
@@ -226,6 +235,45 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 					</div>
 				</div>
 
+				<fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
+					<legend className="mb-1 font-semibold">When do students see their band?</legend>
+					<input type="hidden" name="release" value={release} />
+					{(
+						[
+							["manual", "When I release them", "You press Release on the results page."],
+							["immediate", "As soon as they finish", "Good for practice-style class tests."],
+							["scheduled", "On a date I choose", "Everyone's results come out together."],
+						] as const
+					).map(([value, label, hint]) => (
+						<label key={value} className="flex min-h-touch cursor-pointer items-start gap-3">
+							<input
+								type="radio"
+								name="releaseChoice"
+								value={value}
+								checked={release === value}
+								onChange={() => setRelease(value)}
+								className="mt-1 size-5 flex-none cursor-pointer accent-brand"
+							/>
+							<span className="flex flex-col">
+								<span className="font-semibold">{label}</span>
+								<span className="text-small text-ink-2">{hint}</span>
+							</span>
+						</label>
+					))}
+					{release === "scheduled" && (
+						<div className="flex max-w-[260px] flex-col gap-1.5 pl-8">
+							<Label htmlFor="releaseAt">Results come out at</Label>
+							<Input
+								id="releaseAt"
+								name="releaseAt"
+								type="datetime-local"
+								size="admin"
+								value={releaseAt}
+								onChange={(e) => setReleaseAt(e.target.value)}
+							/>
+						</div>
+					)}
+				</fieldset>
 				<label className="flex min-h-touch cursor-pointer items-center gap-3">
 					<Checkbox checked={allowReview} onCheckedChange={(v) => setAllowReview(v === true)} />
 					<input type="hidden" name="allowReview" value={allowReview ? "on" : ""} />

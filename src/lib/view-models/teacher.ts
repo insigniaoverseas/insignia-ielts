@@ -125,6 +125,14 @@ export type OverridableAnswer = {
 /** Screen 18 — Results & release, for one assignment. */
 export type AssignmentResults = {
 	assignmentId: string;
+	/**
+	 * The assignment's release gate (M6-05). One gate for everyone on it:
+	 * `released` is whether students can see their bands right now, and
+	 * `whenLabel` is when it opened or will open, in institute time.
+	 */
+	release: { mode: "immediate" | "scheduled" | "manual"; released: boolean; whenLabel: string | null };
+	/** The paper's question count — what a raw score is out of (not always 40). */
+	maxScore: number;
 	testTitle: string;
 	skill: Skill;
 	batchName: string;

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Banner } from "@/components/ui/banner";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/dialog";
 import { StatusPill } from "@/components/ui/status-pill";
 import {
 	Table,
@@ -13,6 +15,9 @@ import {
 	TableRow,
 	TableToolbar,
 } from "@/components/ui/table";
+import { inviteCsvChunkAction } from "@/lib/actions/invitations";
+import type { CsvInviteRow } from "@/lib/actions/types";
+import { CSV_INVITE_CHUNK } from "@/lib/csv-invite";
 
 /** The fields an invitation needs. `required` drives the per-row checks. */
 const FIELDS = [
@@ -39,6 +44,11 @@ export function CsvImporter() {
 	const [rows, setRows] = useState<ParsedRow[]>([]);
 	const [mapping, setMapping] = useState<Record<string, number>>({});
 	const [fileName, setFileName] = useState("");
+	const [confirming, setConfirming] = useState(false);
+	/** Rows sent so far, while inviting; `null` when idle. */
+	const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+	/** What the server said about each row, by its line in the file. */
+	const [outcome, setOutcome] = useState<Map<number, { ok: boolean; message: string }>>(new Map());
 
 	/** Split one CSV line, honouring quoted fields containing commas. */
 	function splitLine(line: string): string[] {
@@ -104,6 +114,45 @@ export function CsvImporter() {
 	const checked = rows.map((r) => ({ ...r, problems: problemsFor(r) }));
 	const good = checked.filter((r) => r.problems.length === 0);
 	const bad = checked.filter((r) => r.problems.length > 0);
+	const value = (row: ParsedRow, field: (typeof FIELDS)[number]["key"]) =>
+		mapping[field] === undefined ? "" : (row.cells[mapping[field]] ?? "").trim();
+	const pending = good.filter((r) => !outcome.get(r.line)?.ok);
+	const sent = [...outcome.values()].filter((o) => o.ok).length;
+	const failed = [...outcome.values()].filter((o) => !o.ok).length;
+
+	/**
+	 * Sends the good rows a chunk at a time (`CSV_INVITE_CHUNK`), in order,
+	 * updating the count as each chunk comes back. Rows already sent are never
+	 * sent again, so pressing the button after a partial failure retries only the rest.
+	 */
+	async function invite() {
+		setConfirming(false);
+		const todo: CsvInviteRow[] = pending.map((r) => ({
+			line: r.line,
+			name: value(r, "name"),
+			email: value(r, "email"),
+			phone: value(r, "phone"),
+			batch: value(r, "batch"),
+			planMonths: value(r, "planMonths"),
+		}));
+		setProgress({ done: 0, total: todo.length });
+		for (let i = 0; i < todo.length; i += CSV_INVITE_CHUNK) {
+			const chunk = todo.slice(i, i + CSV_INVITE_CHUNK);
+			let results: { line: number; ok: boolean; message: string }[];
+			try {
+				results = await inviteCsvChunkAction(chunk);
+			} catch {
+				results = chunk.map((r) => ({ line: r.line, ok: false, message: "Couldn't reach the server — press the button again to retry." }));
+			}
+			setOutcome((prev) => {
+				const next = new Map(prev);
+				for (const r of results) next.set(r.line, { ok: r.ok, message: r.message });
+				return next;
+			});
+			setProgress({ done: Math.min(i + chunk.length, todo.length), total: todo.length });
+		}
+		setProgress(null);
+	}
 
 	if (rows.length === 0) {
 		return (
@@ -173,6 +222,13 @@ export function CsvImporter() {
 				</div>
 			</section>
 
+			{outcome.size > 0 && progress === null && (
+				<Banner tone={failed === 0 ? "info" : "warning"}>
+					{sent} {sent === 1 ? "invitation" : "invitations"} sent
+					{failed > 0 ? ` · ${failed} ${failed === 1 ? "row" : "rows"} didn't go — see the reason beside each one.` : "."}
+				</Banner>
+			)}
+
 			<TableCard>
 				<TableToolbar>
 					<div className="flex flex-col gap-1">
@@ -196,7 +252,13 @@ export function CsvImporter() {
 						>
 							Choose a different file
 						</Button>
-						<Button disabled={good.length === 0}>Invite {good.length}</Button>
+						<Button disabled={pending.length === 0 || progress !== null} onClick={() => setConfirming(true)}>
+							{progress
+								? `Inviting… ${progress.done} of ${progress.total}`
+								: outcome.size > 0 && pending.length > 0
+									? `Try the ${pending.length} again`
+									: `Invite ${pending.length}`}
+						</Button>
 					</div>
 				</TableToolbar>
 
@@ -225,7 +287,12 @@ export function CsvImporter() {
 									);
 								})}
 								<TableCell>
-									{r.problems.length === 0 ? (
+									{outcome.has(r.line) ? (
+										<span className={`text-small font-semibold ${outcome.get(r.line)!.ok ? "text-success" : "text-danger"}`}>
+											{outcome.get(r.line)!.ok ? "✓ " : "✕ "}
+											{outcome.get(r.line)!.message}
+										</span>
+									) : r.problems.length === 0 ? (
 										<StatusPill status="submitted" size="sm" label="Ready" />
 									) : (
 										// The reason, in the row, not in a summary at the top.
@@ -241,6 +308,16 @@ export function CsvImporter() {
 					</TableBody>
 				</Table>
 			</TableCard>
+
+			<ConfirmDialog
+				open={confirming}
+				onOpenChange={setConfirming}
+				title={`Send ${pending.length} ${pending.length === 1 ? "invitation" : "invitations"}?`}
+				description="Each student gets an email with a link to set their password. Rows with problems are skipped."
+				confirmLabel="Send them"
+				cancelLabel="Not yet"
+				onConfirm={() => void invite()}
+			/>
 		</div>
 	);
 }

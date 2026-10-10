@@ -4,18 +4,9 @@ import { notFound } from "next/navigation";
 
 import { TestStatusControl } from "@/components/admin/test-status-control";
 import { SKILL_LABEL } from "@/components/student/labels";
+import { AnswerKeyEditor } from "@/components/staff/answer-key-editor";
 import { Banner } from "@/components/ui/banner";
 import { Button } from "@/components/ui/button";
-import {
-	Table,
-	TableBody,
-	TableCard,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-	TableToolbar,
-} from "@/components/ui/table";
 import { requirePermissionOrRedirect } from "@/lib/auth/guard";
 import { can } from "@/lib/rbac";
 import { getAnswerKeyView } from "@/lib/queries/answer-key";
@@ -40,8 +31,9 @@ const PROBLEM_TEXT = {
  * here as HTML and never handed to a client component — the one client piece,
  * the publish control, receives only the test id and status. Students are
  * stopped at the proxy, the admin layout, this permission check and RLS.
- * Editing is the other half of M5-09: it must write a new content version,
- * never overwrite `key.json` under an attempt in progress.
+ * Answers and accepted spellings are edited in `AnswerKeyEditor`; saving
+ * re-marks finished attempts (`lib/answer-key-edit.ts`). Questions, marks and
+ * audio change only by re-import, which makes a new content version.
  */
 export default async function AnswerKeyPage({ params }: { params: Promise<{ testId: string }> }) {
 	const { testId } = await params;
@@ -96,46 +88,14 @@ export default async function AnswerKeyPage({ params }: { params: Promise<{ test
 				)}
 			</div>
 			<Banner tone={complete ? "info" : "warning"}>
-				{view.entered} of {view.total} answers entered. Read-only for now — to change an answer, fix the test file and
-				import it again.
+				{view.entered} of {view.total} answers entered. Version {view.test.contentVersion}. To change questions, marks or audio, import the test again.
 			</Banner>
 
-			<TableCard>
-				<TableToolbar>
-					<span className="text-small text-ink-2">Version {view.test.contentVersion}</span>
-				</TableToolbar>
-				<Table>
-					<TableHeader sticky>
-						<TableRow>
-							<TableHead className="w-16">Q</TableHead>
-							<TableHead>Question</TableHead>
-							<TableHead>Answer</TableHead>
-							<TableHead>Also accepted</TableHead>
-							<TableHead className="text-right">Marks</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{view.rows.map((row) => (
-							<TableRow key={row.label}>
-								<TableCell className="font-mono font-semibold">{row.label}</TableCell>
-								<TableCell>
-									<div>{row.prompt}</div>
-									<div className="text-small text-ink-2">
-										{view.test.skill === "listening" ? "Section" : "Passage"} {row.section} · {row.typeName}
-										{row.wordLimit !== null &&
-											` · max ${row.wordLimit} ${row.wordLimit === 1 ? "word" : "words"}`}
-									</div>
-								</TableCell>
-								<TableCell className="font-semibold">{row.answer.join(" · ")}</TableCell>
-								<TableCell className="text-small text-ink-2">
-									{row.acceptedVariants.length > 0 ? row.acceptedVariants.join(" · ") : "—"}
-								</TableCell>
-								<TableCell className="text-right font-mono">{row.marks}</TableCell>
-							</TableRow>
-						))}
-					</TableBody>
-				</Table>
-			</TableCard>
+			<AnswerKeyEditor
+				testId={view.test.id}
+				rows={view.rows}
+				part={view.test.skill === "listening" ? "Section" : "Passage"}
+			/>
 		</div>
 	);
 }

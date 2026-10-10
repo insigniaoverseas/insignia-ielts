@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ReleasePanel } from "@/components/staff/release-panel";
 import { ResultsTable } from "@/components/staff/results-table";
 import { SKILL_LABEL } from "@/components/student/labels";
 import { requirePermissionOrRedirect } from "@/lib/auth/guard";
@@ -15,8 +16,8 @@ export const metadata: Metadata = {
 /**
  * Screen 18 — Results & release (M6-04, M6-05).
  *
- * Staff-only, gated by a database permission and RLS. Correct-answer override
- * rows remain absent until the private R2 key reader is connected.
+ * Staff-only, gated by a database permission and RLS. The release control
+ * sits above the table; correct-answer override rows are not wired yet.
  */
 export default async function ResultsPage({ params }: { params: Promise<{ assignmentId: string }> }) {
 	const { assignmentId } = await params;
@@ -36,6 +37,8 @@ export default async function ResultsPage({ params }: { params: Promise<{ assign
 					{SKILL_LABEL[data.skill]} · {data.batchName}
 				</p>
 			</div>
+
+			<ReleasePanel assignmentId={data.assignmentId} release={data.release} submitted={data.rows.length} />
 
 			<ResultsTable data={data} />
 		</div>

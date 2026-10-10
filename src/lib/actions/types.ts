@@ -51,6 +51,12 @@ export type SignOutDeviceResult = { ok: true } | { ok: false; message: string };
  */
 export type InvigilatorActionResult = { ok: true; secondsRemaining: number | null } | { ok: false; message: string };
 
+/** One CSV row as screen 22 sends it, already mapped to fields. `line` is its row in the file. */
+export type CsvInviteRow = { line: number; name: string; email: string; phone: string; batch: string; planMonths: string };
+
+/** What happened to each row of one chunk, by its line in the file. */
+export type CsvInviteResult = { line: number; ok: boolean; message: string }[];
+
 /** The choose-a-new-password form's state. */
 export type ResetFormState = { message: string } | null;
 

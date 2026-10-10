@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/ui/dialog";
@@ -17,6 +17,8 @@ import {
 	TableRow,
 	TableToolbar,
 } from "@/components/ui/table";
+import { extendPlansAction } from "@/lib/actions/plans";
+import { extendedExpiry } from "@/lib/plan-extension";
 import type { StudentRow } from "@/lib/view-models/admin";
 
 /** The extension lengths staff actually use, plus a custom date. */
@@ -40,16 +42,21 @@ export function ExtendPlansPanel({
 	note,
 	tone,
 	rows,
+	today,
 }: {
 	title: string;
 	note: string;
 	tone: "danger" | "warning" | "neutral";
 	rows: StudentRow[];
+	/** Institute date (`YYYY-MM-DD`) from the server — never the browser's clock. */
+	today: string;
 }) {
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [months, setMonths] = useState(3);
 	const [reason, setReason] = useState("");
 	const [confirming, setConfirming] = useState(false);
+	const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+	const [pending, startTransition] = useTransition();
 
 	if (rows.length === 0) return null;
 
@@ -70,14 +77,24 @@ export function ExtendPlansPanel({
 	 * consequence; the server recomputes it from each plan's own end date when
 	 * the action runs, so a stale tab cannot write a wrong date.
 	 */
-	const newExpiry = new Date();
-	newExpiry.setMonth(newExpiry.getMonth() + months);
-	const newExpiryLabel = newExpiry.toLocaleDateString("en-IN", {
+	const newExpiryLabel = new Date(`${extendedExpiry(today, today, months)}T00:00:00Z`).toLocaleDateString("en-IN", {
 		day: "numeric",
 		month: "short",
 		year: "numeric",
-		timeZone: "Asia/Kolkata",
+		timeZone: "UTC",
 	});
+
+	function extend() {
+		startTransition(async () => {
+			const result = await extendPlansAction({ studentIds: [...selected], months, reason });
+			setConfirming(false);
+			setMessage(result ? { ok: result.ok, text: result.message } : null);
+			if (result?.ok) {
+				setSelected(new Set());
+				setReason("");
+			}
+		});
+	}
 
 	return (
 		<TableCard>
@@ -94,6 +111,15 @@ export function ExtendPlansPanel({
 					<p className="m-0 text-small text-ink-2">{note}</p>
 				</div>
 			</TableToolbar>
+
+			{message && (
+				<p
+					className={`m-0 px-6 pb-2 font-semibold ${message.ok ? "text-success" : "text-danger"}`}
+					role="status"
+				>
+					{message.text}
+				</p>
+			)}
 
 			<Table>
 				<TableHeader sticky>
@@ -193,9 +219,12 @@ export function ExtendPlansPanel({
 						</span>
 					</>
 				}
-				confirmLabel="Extend the plans"
+				confirmLabel={reason.trim() ? "Extend the plans" : "Write why first"}
 				cancelLabel="Cancel"
-				onConfirm={() => setConfirming(false)}
+				loading={pending}
+				onConfirm={() => {
+					if (reason.trim()) extend();
+				}}
 			/>
 		</TableCard>
 	);

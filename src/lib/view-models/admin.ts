@@ -19,6 +19,8 @@ export type PlanState = "active" | "expiring" | "expired" | "suspended";
 export type StudentRow = {
 	id: string;
 	name: string;
+	/** Their sign-in address — named in the reset-link confirm on screen 23. */
+	email: string;
 	/** Display form, e.g. "+91 98765 43210". */
 	phone: string;
 	batchName: string | null;
@@ -123,36 +125,11 @@ export type TestLibraryRow = {
 	updatedLabel: string;
 };
 
-/**
- * Screen 27 — Answer key editor.
- *
- * ⚠️ **The only screen in the product that carries correct answers to a
- * browser**, and only for a user holding `test:author` (`lib/rbac.ts`). It is
- * a staff screen behind two gates, never reachable from a student route, and
- * the rows below must never be reused by any student-facing view-model.
- */
-export type AnswerKeyEditor = {
-	testId: string;
-	testTitle: string;
-	skill: Skill;
-	rows: AnswerKeyRow[];
-};
-
-/** One question's key. */
-export type AnswerKeyRow = {
-	number: number;
-	questionType: string;
-	questionTypeLabel: string;
-	/** The canonical answer. Empty string means "not entered yet". */
-	answer: string;
-	/** Other spellings that also score — "20" and "twenty". */
-	acceptedVariants: string[];
-	marks: number;
-};
-
 /** Screen 28 — Users & roles (M9-03). */
 export type UsersAndRoles = {
 	users: StaffUserRow[];
+	/** Staff invitations not yet accepted, newest first — resend or revoke them here. */
+	pendingInvites: { id: string; name: string; email: string; roleKey: string; roleLabel: string; sentLabel: string; expired: boolean }[];
 	/** The matrix, read from `roles.permissions` — not hardcoded in the UI. */
 	roles: { key: string; label: string; userCount: number }[];
 	/** One row per permission, with the scope each role holds it at (or null). */

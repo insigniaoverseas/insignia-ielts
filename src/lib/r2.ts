@@ -131,3 +131,18 @@ export async function streamR2Object(bucket: R2Bucket, key: string, request: Req
 	headers.set("content-length", String(object.size));
 	return new Response(object.body, { status: 200, headers });
 }
+
+/**
+ * Replaces `key.json` through the binding — the answer key editor's save
+ * (M5-09). Like the read, it never creates a URL. Same metadata as the
+ * importer writes. A key-only correction is written in place: no browser
+ * ever reads `key.json`, and attempts are marked from it only once finished,
+ * so a student mid-test is simply marked with the corrected key.
+ */
+export async function writeAnswerKeyObject(key: string, body: string): Promise<void> {
+	const object = parseR2ObjectKey(key);
+	if (object.kind !== "answer_key") throw new R2AccessError(`Expected answer_key, received ${object.kind}`);
+	await getCloudflareContext().env.CONTENT_BUCKET.put(object.key, body, {
+		httpMetadata: { contentType: "application/json; charset=utf-8", cacheControl: "private, no-store" },
+	});
+}
