@@ -42,9 +42,9 @@ Light theme is primary. Design a dark theme for the palette too, but all screens
 
 | Token | Value | Use |
 |---|---|---|
-| `--brand` | `#1D4ED8` (deep blue) | Primary buttons, active nav, links, focus |
-| `--brand-hover` | `#1E40AF` | Hover/pressed |
-| `--brand-soft` | `#EFF4FF` | Selected rows, info panels, active chips |
+| `--brand` | `#B42D7F` (Insignia magenta, from the logo) | Primary buttons, active nav, links, focus |
+| `--brand-hover` | `#93225F` | Hover/pressed |
+| `--brand-soft` | `#FDF0F7` | Selected rows, info panels, active chips |
 | `--success` | `#15803D` | Correct answers, passed, active plan |
 | `--success-soft` | `#ECFDF3` | Correct-answer row background |
 | `--warning` | `#B45309` | Expiring soon, time running low |

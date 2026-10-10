@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminNav, AdminNavCompact } from "@/components/staff/staff-nav";
 import { requireRole } from "@/lib/auth/guard";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 /**
  * The admin shell (M5-01) — screens 20–27.
@@ -18,12 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 		<div className="flex min-h-screen flex-col bg-bg">
 			<header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-6 border-b border-line bg-surface px-4 md:px-8">
 				<Link href="/admin/overview" className="flex items-center gap-3 text-ink no-underline hover:no-underline">
-					<span
-						className="grid size-8 place-items-center rounded-control bg-night font-bold text-white"
-						aria-hidden="true"
-					>
-						I
-					</span>
+					<BrandMark />
 					<span className="text-h3">Insignia IELTS</span>
 					<span className="rounded-full bg-brand-soft px-3 py-1 text-small font-semibold text-brand">Admin</span>
 				</Link>

@@ -24,9 +24,9 @@
  * ------------------------------------------------------------------------- */
 :root {
 	/* A2 · Colour — from the design system */
-	--brand: #1d4ed8; /* primary buttons, active nav, links, focus */
-	--brand-hover: #1e40af;
-	--brand-soft: #eff4ff; /* selected rows, info panels, active chips */
+	--brand: #b42d7f; /* primary buttons, active nav, links, focus — the logo's magenta, darkened for AA on white */
+	--brand-hover: #93225f;
+	--brand-soft: #fdf0f7; /* selected rows, info panels, active chips */
 	--success: #15803d; /* correct, passed, active plan */
 	--success-soft: #ecfdf3;
 	--warning: #b45309; /* expiring soon, time running low */
@@ -42,7 +42,7 @@
 
 	/* Supporting tints — used in the design files but not named in the token table.
 	   Named here so nobody hardcodes them. */
-	--brand-line: #d6e0ff; /* info banner border */
+	--brand-line: #f6cfe3; /* info banner border */
 	--success-muted: #bfe3cb; /* difficulty bars, unfilled (Easy) */
 	--warning-line: #f5d9a0; /* warning banner + timer border */
 	--warning-muted: #ebd5ae; /* difficulty bars, unfilled (Medium) */
@@ -95,10 +95,10 @@
  * complete. Check contrast (WCAG AA) before enabling dark mode for real.
  */
 [data-theme="dark"] {
-	--brand: #4f7dfb; /* DESIGN */
-	--brand-hover: #6b90fc; /* DERIVED */
-	--brand-soft: #1b2a4a; /* DESIGN */
-	--brand-line: #2a3d66; /* DERIVED */
+	--brand: #ee7dbd; /* DERIVED from the logo */
+	--brand-hover: #f39bcd; /* DERIVED */
+	--brand-soft: #2e1426; /* DERIVED */
+	--brand-line: #4a2240; /* DERIVED */
 	--success: #4ade80; /* DESIGN */
 	--success-soft: #0f2a1c; /* DERIVED */
 	--success-muted: #1f4d33; /* DERIVED */

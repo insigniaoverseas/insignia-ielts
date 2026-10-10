@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 export const metadata: Metadata = {
 	title: "Forgotten password",
@@ -19,12 +20,7 @@ export default function ForgotPasswordPage() {
 	return (
 		<>
 			<div className="flex flex-col items-center gap-4 text-center">
-				<span
-					className="grid size-12 place-items-center rounded-card bg-night text-h2 font-bold text-white"
-					aria-hidden="true"
-				>
-					I
-				</span>
+				<BrandMark size={64} />
 				<div className="flex flex-col gap-1">
 					<h1 className="m-0 text-h1">Forgotten your password?</h1>
 					<p className="m-0 text-ink-2">

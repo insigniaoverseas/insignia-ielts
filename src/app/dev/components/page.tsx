@@ -33,9 +33,9 @@ export const metadata: Metadata = {
 };
 
 const SWATCHES: { token: string; hex: string; use: string; className: string }[] = [
-	{ token: "brand", hex: "#1D4ED8", use: "Primary buttons, links, focus", className: "bg-brand" },
-	{ token: "brand-hover", hex: "#1E40AF", use: "Hover, pressed", className: "bg-brand-hover" },
-	{ token: "brand-soft", hex: "#EFF4FF", use: "Selected rows, info panels", className: "bg-brand-soft" },
+	{ token: "brand", hex: "#B42D7F", use: "Primary buttons, links, focus", className: "bg-brand" },
+	{ token: "brand-hover", hex: "#93225F", use: "Hover, pressed", className: "bg-brand-hover" },
+	{ token: "brand-soft", hex: "#FDF0F7", use: "Selected rows, info panels", className: "bg-brand-soft" },
 	{ token: "success", hex: "#15803D", use: "Correct, passed, active plan", className: "bg-success" },
 	{ token: "success-soft", hex: "#ECFDF3", use: "Correct-answer rows", className: "bg-success-soft" },
 	{ token: "warning", hex: "#B45309", use: "Expiring soon, time low", className: "bg-warning" },

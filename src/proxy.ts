@@ -122,9 +122,10 @@ function copyCookies(from: NextResponse, to: NextResponse): NextResponse {
 export const config = {
 	matcher: [
 		{
-			// Everything except build output and the favicon, which Cloudflare serves as static files
-			// (they get their headers from public/_headers). Prefetches skip the proxy, per Next's guide.
-			source: "/((?!_next/static|_next/image|favicon).*)",
+			// Everything except build output, the favicon and the logo files, which Cloudflare serves
+			// as static files (they get their headers from public/_headers). Prefetches skip the proxy,
+			// per Next's guide.
+			source: "/((?!_next/static|_next/image|favicon|brand/).*)",
 			missing: [
 				{ type: "header", key: "next-router-prefetch" },
 				{ type: "header", key: "purpose", value: "prefetch" },

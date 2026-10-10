@@ -29,10 +29,18 @@ export const metadata: Metadata = {
 		template: "%s · Insignia IELTS",
 	},
 	description: "IELTS Listening and Reading practice tests.",
+	// Static files in public/ — Cloudflare serves them without running the Worker.
+	icons: {
+		icon: [
+			{ url: "/favicon.ico", sizes: "48x48" },
+			{ url: "/brand/icon-32.png", type: "image/png", sizes: "32x32" },
+		],
+		apple: { url: "/brand/apple-touch-icon.png", sizes: "180x180" },
+	},
 };
 
 export const viewport: Viewport = {
-	themeColor: "#1d4ed8",
+	themeColor: "#b42d7f",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -43,9 +51,6 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
 	return (
 		<html lang="en" className={`${inter.variable} ${plexMono.variable}`}>
-			<head>
-				<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-			</head>
 			<body>
 				{children}
 				<Toaster />

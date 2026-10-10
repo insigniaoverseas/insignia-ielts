@@ -3,6 +3,13 @@
 /_next/static/*
   Cache-Control: public,max-age=31536000,immutable
 
+# Logo and icons keep fixed names, so they cannot be immutable: a day, then
+# revalidate in the background. See src/components/brand/README.md.
+/brand/*
+  Cache-Control: public,max-age=86400,stale-while-revalidate=604800
+/favicon.ico
+  Cache-Control: public,max-age=86400,stale-while-revalidate=604800
+
 # Security headers for files served without running the Worker (JS/CSS chunks,
 # fonts, favicon). Pages and API routes get theirs — including the per-request
 # CSP — from src/proxy.ts. Keep in step with STATIC_SECURITY_HEADERS in
