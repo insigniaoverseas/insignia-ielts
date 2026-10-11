@@ -60,7 +60,14 @@ export default async function LoginPage({
 			    admin. Said plainly, so it does not read as an error they caused,
 			    and `next` takes them back to where they were — mid-test, into the
 			    test. Their answers were saved as they went. */}
-			{ended && (
+			{ended === "staff" && (
+				<Banner tone="info">
+					You&rsquo;ve been signed out on this device. That happens when it&rsquo;s signed out from{" "}
+					<strong className="font-semibold">My account</strong> on another device, or the password is changed.
+					Sign in again to carry on.
+				</Banner>
+			)}
+			{ended && ended !== "staff" && (
 				<Banner tone="info">
 					You&rsquo;ve been signed out, because this account was signed in on another device or signed out
 					from one. <strong className="font-semibold">Your answers are saved.</strong> Sign in again to carry

@@ -102,6 +102,17 @@ describe("entry and login routing", () => {
     assert.deepEqual(routeDecision({ pathname: "/", userId: "u1", role: "student", session: "ended" }), ended);
   });
 
+  test("an admin whose session ended is sent to the staff message (M10-13)", () => {
+    assert.deepEqual(routeDecision({ pathname: "/admin/overview", userId: "a1", role: "admin", session: "ended" }), {
+      kind: "endSession",
+      to: "/login?ended=staff&next=%2Fadmin%2Foverview",
+    });
+    assert.deepEqual(routeDecision({ pathname: "/login", userId: "t1", role: "teacher", session: "ended" }), {
+      kind: "endSession",
+      to: "/login?ended=staff",
+    });
+  });
+
   test("a session ended at /login keeps where they were going (M9-04)", () => {
     // The guard sends a student pulled out of a test to /login?ended=1&next=…;
     // Proxy ends the session there and must not drop the way back.
@@ -171,5 +182,15 @@ describe("endedSignInPath", () => {
     assert.equal(endedSignInPath("/login"), "/login?ended=1");
     assert.equal(endedSignInPath("https://evil.com/x"), "/login?ended=1");
     assert.equal(endedSignInPath("/\\evil.com"), "/login?ended=1");
+  });
+  test("staff get their own sign-in message — no 'your answers are saved'", () => {
+    assert.equal(endedSignInPath("/admin/overview", "admin"), "/login?ended=staff&next=%2Fadmin%2Foverview");
+    assert.equal(endedSignInPath(null, "super_admin"), "/login?ended=staff");
+    assert.equal(endedSignInPath(null, "teacher"), "/login?ended=staff");
+    assert.equal(endedSignInPath(null, "invigilator"), "/login?ended=staff");
+  });
+  test("students, and an unknown role, keep the student message", () => {
+    assert.equal(endedSignInPath("/attempt/a1", "student"), "/login?ended=1&next=%2Fattempt%2Fa1");
+    assert.equal(endedSignInPath(null, null), "/login?ended=1");
   });
 });
