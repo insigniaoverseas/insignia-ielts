@@ -8,7 +8,7 @@ import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
 import { timeTakenSeconds } from "@/lib/attempts/clock";
 import { buildReview } from "@/lib/attempts/review";
 import { audioCacheKey } from "@/lib/audio-cache-key";
-import { deviceLabel } from "@/lib/auth/device-label";
+import { deviceRows } from "@/lib/auth/devices";
 import { QUESTION_TYPES, isQuestionType } from "@/lib/question-types";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { readAnswerKeyObject, readContentObject } from "@/lib/r2";
@@ -570,12 +570,7 @@ export async function getStudentProfile(): Promise<StudentProfile> {
 	const currentId = (await cookies()).get(SESSION_COOKIE)?.value;
 	return {
 		...context,
-		devices: sessions.map((session) => ({
-			id: session.id,
-			label: deviceLabel(session.user_agent),
-			lastUsedLabel: relativeActivity(session.last_seen_at),
-			current: session.id === currentId,
-		})),
+		devices: deviceRows(sessions, currentId, (iso) => relativeActivity(iso)),
 	};
 }
 

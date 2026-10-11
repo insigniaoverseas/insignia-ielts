@@ -208,3 +208,36 @@ export async function revokeSession(actorId: string, ownerId: string, sessionId:
 	});
 	return true;
 }
+
+/**
+ * Signs out every session a user holds **except** `keepId` — "Sign out
+ * everywhere else" on My account (M10-12). For the admin who remembers, at
+ * home, that they never logged out of the lab PC.
+ *
+ * @returns How many were signed out.
+ */
+export async function revokeOtherSessions(userId: string, keepId: string): Promise<number> {
+	const { data, error } = await createAdminClient()
+		.from("user_sessions")
+		.update({ revoked_at: new Date().toISOString() })
+		.eq("user_id", userId)
+		.neq("id", keepId)
+		.is("revoked_at", null)
+		.select("id");
+	if (error) {
+		console.error("revokeOtherSessions failed:", error.message);
+		return 0;
+	}
+	const count = data?.length ?? 0;
+	if (count > 0) {
+		await recordAudit({
+			actorId: userId,
+			branchId: null,
+			action: "session.revoke",
+			entity: "user",
+			entityId: userId,
+			meta: { owner_id: userId, self: true, everywhere_else: true, count },
+		});
+	}
+	return count;
+}
