@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { requestSignInCodeAction, signInWithCodeAction } from "@/lib/actions/auth";
 import type { SignInCodeState } from "@/lib/actions/types";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Sign in with an emailed code (M10-10), in two steps on one screen: your
@@ -109,7 +110,7 @@ export function SignInCodeForm({ next }: { next?: string }) {
 function ErrorLine({ text }: { text: string }) {
 	return (
 		<p className="m-0 flex items-start gap-2 font-semibold text-danger" role="alert">
-			<span aria-hidden="true">✕</span>
+			<Icon name="alert" />
 			<span>{text}</span>
 		</p>
 	);

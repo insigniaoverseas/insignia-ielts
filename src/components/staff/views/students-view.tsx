@@ -20,6 +20,7 @@ import {
 import { pageData, useAdminData } from "@/components/staff/staff-data";
 import { filterStudents } from "@/lib/staff-filters";
 import type { PlanState } from "@/lib/view-models/admin";
+import { Icon } from "@/components/ui/icon";
 
 /** The plan pill, so "expiring" always says *how* expiring. */
 function PlanPill({ state, days, endsLabel }: { state: PlanState; days: number; endsLabel: string }) {
@@ -137,7 +138,7 @@ export function StudentsView({ q, batch, status }: { q?: string; batch?: string;
 
 			{data.rows.length === 0 ? (
 				<EmptyState
-					icon="🔍"
+					icon={<Icon name="search" />}
 					title="No students match that"
 					action={
 						<Button variant="secondary" asChild>

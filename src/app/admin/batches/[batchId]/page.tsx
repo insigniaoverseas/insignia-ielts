@@ -10,6 +10,7 @@ import { getBatchDetail } from "@/lib/queries/admin";
 import { previewBatchPurge } from "@/lib/batches";
 import { listStudentOptions, listTeacherOptions } from "@/lib/queries/batches";
 import { requirePermission } from "@/lib/rbac";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Batch" };
 
@@ -38,7 +39,8 @@ export default async function BatchPage({ params }: { params: Promise<{ batchId:
 	return (
 		<div className="flex max-w-[640px] flex-col gap-6">
 			<Link href="/admin/batches" className="font-semibold">
-				← Back to batches
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to batches
 			</Link>
 
 			<div className="flex flex-col gap-1">

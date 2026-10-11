@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { requestPasswordResetAction } from "@/lib/actions/auth";
 import type { ResetRequestState } from "@/lib/actions/types";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Ask for a reset link (M1-15).
@@ -56,7 +57,7 @@ export function ForgotPasswordForm() {
 
 			{state?.message && !state.sent && (
 				<p className="m-0 flex items-start gap-2 font-semibold text-danger" role="alert">
-					<span aria-hidden="true">✕</span>
+					<Icon name="alert" />
 					<span>{state.message}</span>
 				</p>
 			)}

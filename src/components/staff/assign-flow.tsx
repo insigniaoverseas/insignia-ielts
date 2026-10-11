@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SKILL_LABEL } from "@/components/student/labels";
 import type { AssignOptions } from "@/lib/view-models/teacher";
+import { Icon } from "@/components/ui/icon";
 
 /** One numbered step, so the page reads as a sequence rather than a wall of form. */
 function Step({
@@ -172,7 +173,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 										}`}
 										aria-hidden="true"
 									>
-										{on ? "✓" : ""}
+										{on && <Icon name="check" strokeWidth={3} />}
 									</span>
 									<span className="min-w-[200px] flex-1 font-semibold">{t.title}</span>
 									<span className="text-small text-ink-2">{SKILL_LABEL[t.skill]}</span>

@@ -6,12 +6,13 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { formatBand } from "@/components/ui/band-score";
 import { SKILL_LABEL } from "@/components/student/labels";
 import { pageData, useTeacherData } from "@/components/staff/staff-data";
+import { Icon, type IconName } from "@/components/ui/icon";
 
 /** What each kind of attention item looks like, so the list scans by shape. */
-const KIND: Record<string, { glyph: string; tone: string; action: string }> = {
-	release: { glyph: "✓", tone: "text-brand", action: "Release them" },
-	override: { glyph: "!", tone: "text-warning", action: "Take a look" },
-	expiring: { glyph: "⏳", tone: "text-warning", action: "See the batch" },
+const KIND: Record<string, { glyph: IconName; tone: string; action: string }> = {
+	release: { glyph: "check", tone: "text-brand", action: "Release them" },
+	override: { glyph: "warning", tone: "text-warning", action: "Take a look" },
+	expiring: { glyph: "hourglass", tone: "text-warning", action: "See the batch" },
 };
 
 /**
@@ -69,9 +70,7 @@ export function TeacherDashboardView() {
 									key={n.id}
 									className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line py-3 last:border-b-0"
 								>
-									<span className={`font-bold ${k.tone}`} aria-hidden="true">
-										{k.glyph}
-									</span>
+									<Icon name={k.glyph} strokeWidth={2.5} className={`size-5 ${k.tone}`} />
 									<span className="min-w-[240px] flex-1">{n.summary}</span>
 									<Button variant="secondary" asChild>
 										<Link href={n.href}>{k.action}</Link>

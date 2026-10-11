@@ -4,6 +4,7 @@ import Link from "next/link";
 import { InviteStudentForm } from "@/components/admin/invite-student-form";
 import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { listBatchOptions } from "@/lib/queries/batches";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Invite a student" };
 
@@ -25,7 +26,8 @@ export default async function NewStudentPage() {
 	return (
 		<div className="flex max-w-[640px] flex-col gap-6">
 			<Link href="/admin/students" className="font-semibold">
-				← Back to students
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to students
 			</Link>
 
 			<div className="flex flex-col gap-1">

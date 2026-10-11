@@ -11,6 +11,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow, TableToolbar } from "@/components/ui/table";
 import { NO_FILTERS, filterTests, filtersToQuery, type LibraryFilters } from "@/lib/library-filters";
 import type { TestLibraryRow } from "@/lib/view-models/admin";
+import { Icon } from "@/components/ui/icon";
 
 const VARIANT_LABEL = { academic: "Academic", general: "General Training", n_a: "—" } as const;
 const KIND_LABEL = { mock: "Mock", class: "Class", practice: "Practice" } as const;
@@ -115,10 +116,10 @@ export function LibraryBrowser({ rows, initial }: { rows: TestLibraryRow[]; init
 									</Link>
 									{t.tags.length > 0 && <div className="text-small text-ink-2">{t.tags.join(" · ")}</div>}
 									<Link href={`/admin/library/${t.id}/preview`} className="block text-small font-semibold">
-										Preview as a student →
+										Preview as a student <Icon name="arrow-right" />
 									</Link>
 									<Link href={`/admin/library/${t.id}/answer-key`} className="block text-small font-semibold">
-										{t.status === "draft" ? "Review and publish →" : "Answer key →"}
+										{t.status === "draft" ? "Review and publish" : "Answer key"} <Icon name="arrow-right" />
 									</Link>
 								</TableCell>
 								<TableCell className="text-ink-2">{SKILL_LABEL[t.skill]}</TableCell>

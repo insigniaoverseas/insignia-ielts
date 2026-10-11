@@ -1,3 +1,4 @@
+import { Icon, type IconName } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 
 /** Every status a test, attempt or plan can be shown in. */
@@ -10,14 +11,14 @@ export type Status =
 	| "active"
 	| "expiring";
 
-const STATUS: Record<Status, { label: string; glyph: string; tone: string }> = {
-	not_started: { label: "Not started", glyph: "○", tone: "bg-bg border border-line text-ink-2" },
-	in_progress: { label: "In progress", glyph: "▶", tone: "bg-brand-soft text-brand" },
-	submitted: { label: "Submitted", glyph: "✓", tone: "bg-success-soft text-success" },
-	locked: { label: "Locked", glyph: "🔒", tone: "bg-bg border border-line text-ink-2" },
-	expired: { label: "Expired", glyph: "✕", tone: "bg-danger-soft text-danger" },
-	active: { label: "Active", glyph: "●", tone: "bg-success-soft text-success" },
-	expiring: { label: "Expiring soon", glyph: "!", tone: "bg-warning-soft text-warning" },
+const STATUS: Record<Status, { label: string; glyph: IconName; tone: string }> = {
+	not_started: { label: "Not started", glyph: "circle", tone: "bg-bg border border-line text-ink-2" },
+	in_progress: { label: "In progress", glyph: "play", tone: "bg-brand-soft text-brand" },
+	submitted: { label: "Submitted", glyph: "check", tone: "bg-success-soft text-success" },
+	locked: { label: "Locked", glyph: "lock", tone: "bg-bg border border-line text-ink-2" },
+	expired: { label: "Expired", glyph: "x", tone: "bg-danger-soft text-danger" },
+	active: { label: "Active", glyph: "dot", tone: "bg-success-soft text-success" },
+	expiring: { label: "Expiring soon", glyph: "warning", tone: "bg-warning-soft text-warning" },
 };
 
 /**
@@ -48,7 +49,7 @@ export function StatusPill({
 				className,
 			)}
 		>
-			<span aria-hidden="true">{s.glyph}</span>
+			<Icon name={s.glyph} strokeWidth={2.5} />
 			{label ?? s.label}
 		</span>
 	);

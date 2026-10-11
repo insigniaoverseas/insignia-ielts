@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * PIN input — 4 or 6 large boxes, numeric keypad, masked, with a "Show my PIN"
@@ -135,7 +136,7 @@ export function PinInput({
 			</div>
 			{error && (
 				<span id={errorId} className="flex items-center gap-2 text-danger">
-					<span aria-hidden="true">✕</span>
+					<Icon name="alert" />
 					{error}
 				</span>
 			)}

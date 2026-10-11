@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getBatchView } from "@/lib/queries/teacher";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Batch" };
 
@@ -45,7 +46,8 @@ export default async function BatchPage({ params }: { params: Promise<{ batchId:
 	return (
 		<div className="flex flex-col gap-6">
 			<Link href="/teacher/dashboard" className="font-semibold">
-				← Back to dashboard
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to dashboard
 			</Link>
 
 			<div className="flex flex-wrap items-center justify-between gap-4">

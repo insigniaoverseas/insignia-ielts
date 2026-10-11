@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { formatClock } from "./countdown";
+import { Icon } from "@/components/ui/icon";
 
 const controlButton =
 	"min-h-12 rounded-control border border-line bg-surface px-4 font-semibold text-ink hover:border-ink-3 disabled:cursor-not-allowed disabled:text-ink-3";
@@ -78,7 +79,7 @@ export function AudioPlayer({
 					aria-label={playing ? (canPause ? "Pause the audio" : "The audio is playing") : "Play the audio"}
 					className="grid size-16 flex-none place-items-center rounded-full bg-white text-h1 text-night hover:bg-brand-soft disabled:cursor-default disabled:bg-white"
 				>
-					<span aria-hidden="true">{playing ? "❚❚" : "▶"}</span>
+					<Icon name={playing ? "pause" : "play"} className="size-7" />
 				</button>
 
 				<div className="flex min-w-[220px] flex-1 flex-col gap-2">
@@ -103,7 +104,7 @@ export function AudioPlayer({
 
 				{mode === "mock" && (
 					<div className="flex items-center gap-2.5 rounded-control bg-white/10 px-4 py-2.5">
-						<span aria-hidden="true">🔒</span>
+						<Icon name="lock" className="size-5" />
 						<span className="text-[#dce3f5]">You can&apos;t rewind in a real test.</span>
 					</div>
 				)}
@@ -121,7 +122,7 @@ export function AudioPlayer({
 					aria-label={playing ? (canPause ? "Pause the audio" : "The audio is playing") : "Play the audio"}
 					className="grid size-18 flex-none place-items-center rounded-full bg-brand text-h1 text-white hover:bg-brand-hover disabled:cursor-default disabled:bg-brand"
 				>
-					<span aria-hidden="true">{playing ? "❚❚" : "▶"}</span>
+					<Icon name={playing ? "pause" : "play"} className="size-7" />
 				</button>
 				<div className="flex min-w-0 flex-1 flex-col gap-2">
 					{title && <span className="font-semibold">{title}</span>}
@@ -145,7 +146,7 @@ export function AudioPlayer({
 
 			{mode === "mock" && (
 				<div className="flex items-center gap-3 rounded-control border border-line bg-bg px-4 py-3">
-					<span aria-hidden="true">🔒</span>
+					<Icon name="lock" className="size-5" />
 					<span className="text-ink-2">You can&apos;t rewind in a real test.</span>
 				</div>
 			)}
@@ -166,7 +167,8 @@ export function AudioPlayer({
 			{mode === "practice" && (
 				<div className="flex flex-wrap gap-2 border-t border-line pt-6">
 					<button type="button" onClick={onBack10} className={controlButton}>
-						<span aria-hidden="true">◀ </span>Back 10s
+						<Icon name="rewind" className="mr-1.5" />
+						Back 10s
 					</button>
 					<button type="button" onClick={onReplay} className={controlButton}>
 						Play again

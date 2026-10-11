@@ -16,6 +16,7 @@ import {
 import { PendingInviteControls, StaffRowControls } from "@/components/admin/staff-controls";
 import { can, canInviteRole } from "@/lib/permissions";
 import { pageData, useAdminData } from "@/components/staff/staff-data";
+import { Icon } from "@/components/ui/icon";
 
 /** How a scope reads to someone who has never seen the word "scope". */
 const SCOPE_LABEL: Record<string, string> = {
@@ -197,7 +198,7 @@ export function UsersView() {
 										<TableCell key={r.key} className="text-center">
 											{scope ? (
 												<span className="inline-flex items-center gap-1.5 text-small font-semibold text-success">
-													<span aria-hidden="true">✓</span>
+													<Icon name="check" strokeWidth={2.5} />
 													{SCOPE_LABEL[scope] ?? scope}
 												</span>
 											) : (

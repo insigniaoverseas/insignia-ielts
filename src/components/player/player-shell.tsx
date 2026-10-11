@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { readAudio } from "@/lib/audio-cache";
 import type { AttemptSession } from "@/lib/view-models/attempt";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * The test player (M2-15 Listening, M3-01 Reading) — screens 06, 07 and the
@@ -284,7 +285,7 @@ export function PlayerShell({
 						className="grid size-6 flex-none place-items-center rounded-full bg-danger text-small font-bold text-white"
 						aria-hidden="true"
 					>
-						✕
+						<Icon name="x" strokeWidth={3} className="size-4" />
 					</span>
 					<span className="min-w-[200px] flex-1">
 						The sound didn&rsquo;t start. Your answers are safe. Check your headphones are plugged in, then

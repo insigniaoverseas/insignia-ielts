@@ -23,7 +23,7 @@ export function HomeView() {
 		<div className="flex flex-col gap-5 md:gap-8">
 			<div className="flex flex-wrap items-baseline justify-between gap-4">
 				<h1 className="m-0 text-[1.75rem] leading-9 font-bold md:text-display">
-					Hi {student.firstName} <span aria-hidden="true">👋</span>
+					Hi {student.firstName}
 				</h1>
 				<span className="hidden text-ink-2 md:inline">{data.todayLabel}</span>
 			</div>
@@ -39,14 +39,14 @@ export function HomeView() {
 						links={[
 							{
 								href: "/tests",
-								icon: "📄",
+								icon: "test",
 								label: "My Tests",
 								detail: `${counts.testsToDo} to do · ${counts.testsDone} done`,
 							},
-							{ href: "/progress", icon: "📈", label: "My Progress", detail: progressHint },
+							{ href: "/progress", icon: "progress", label: "My Progress", detail: progressHint },
 							{
 								href: "/progress#mistakes",
-								icon: "✓",
+								icon: "check",
 								label: "My Mistakes",
 								detail:
 									counts.mistakesToReview > 0

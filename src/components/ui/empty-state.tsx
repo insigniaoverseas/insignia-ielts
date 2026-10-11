@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils";
  * Empty state — a friendly one-line explanation plus exactly one way forward.
  * Every list in the product has one (DESIGN-PROMPT §A5.15).
  *
- * @param icon  A decorative glyph; hidden from screen readers.
+ * @param icon  A decorative `<Icon>`; hidden from screen readers.
  * @param action The one next step — usually a primary button or link.
  *
  * @example
- * <EmptyState icon="📄" title="No tests for you right now"
+ * <EmptyState icon={<Icon name="test" />} title="No tests for you right now"
  *   action={<Link href="/practice">Practice at Home</Link>}>
  *   Your teacher will add one soon. Until then you can practise on your own.
  * </EmptyState>
@@ -34,7 +34,7 @@ export function EmptyState({
 			)}
 		>
 			{icon && (
-				<div className="grid size-14 place-items-center rounded-full bg-brand-soft text-h1" aria-hidden="true">
+				<div className="grid size-14 place-items-center rounded-full bg-brand-soft text-h1 text-brand [&>svg]:size-7" aria-hidden="true">
 					{icon}
 				</div>
 			)}

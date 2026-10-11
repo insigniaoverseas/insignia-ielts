@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Screen 30a — page not found (M9-04).
@@ -11,7 +12,7 @@ export default function NotFound() {
 	return (
 		<main className="mx-auto flex min-h-screen max-w-[520px] flex-col items-center justify-center gap-5 px-4 text-center">
 			<span className="grid size-14 place-items-center rounded-full bg-brand-soft text-h1" aria-hidden="true">
-				🔍
+				<Icon name="search" className="size-7 text-brand" />
 			</span>
 			<h1 className="m-0 text-h1">We couldn&rsquo;t find that page</h1>
 			<p className="m-0 text-ink-2">

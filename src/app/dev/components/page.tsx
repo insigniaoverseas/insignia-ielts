@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AudioDemo, DialogDemo, NavigatorDemo, PinDemo, TableDemo, ToastDemo, WidgetsDemo } from "./demos";
+import { Icon } from "@/components/ui/icon";
 
 /*
  * /dev/components — the design system, live (MVP-1 D13, task M0-23).
@@ -261,7 +262,8 @@ export default function DesignSystemPage() {
 							<Label htmlFor="ds-error">Your name</Label>
 							<Input id="ds-error" aria-invalid aria-describedby="ds-error-msg" />
 							<span id="ds-error-msg" className="flex items-center gap-2 text-danger">
-								<span aria-hidden="true">✕</span>Please enter your name.
+								<Icon name="alert" />
+								Please enter your name.
 							</span>
 						</div>
 						<div className="group flex flex-col gap-2" data-disabled="true">
@@ -393,7 +395,7 @@ export default function DesignSystemPage() {
 						<Banner tone="danger">Your access has ended. You can still see your old results.</Banner>
 					</div>
 					<EmptyState
-						icon="📄"
+						icon={<Icon name="test" />}
 						title="No tests for you right now"
 						action={<Button size="student">Practice at Home</Button>}
 					>
@@ -475,7 +477,7 @@ export default function DesignSystemPage() {
 								{
 									title: "Teach",
 									items: [
-										{ href: "/overview", label: "Overview", icon: "▦" },
+										{ href: "/overview", label: "Overview", icon: "overview" },
 										{ href: "/batches", label: "Batches" },
 										{ href: "/assign", label: "Assign a test" },
 										{ href: "/live", label: "Live sessions" },

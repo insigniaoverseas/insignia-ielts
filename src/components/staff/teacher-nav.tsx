@@ -6,15 +6,15 @@ import { StaffSidebar, type SidebarGroup } from "@/components/ui/staff-sidebar";
 
 /** The teacher destinations. Fewer than admin's, and all about one batch at a time. */
 export const TEACHER_GROUPS: SidebarGroup[] = [
-	{ title: "Teaching", items: [{ href: "/teacher/dashboard", label: "Dashboard", icon: "▤" }] },
+	{ title: "Teaching", items: [{ href: "/teacher/dashboard", label: "Dashboard", icon: "overview" }] },
 	{
 		title: "Tests",
 		items: [
-			{ href: "/teacher/assign", label: "Assign a test", icon: "＋" },
-			{ href: "/teacher/results", label: "Results", icon: "✓" },
+			{ href: "/teacher/assign", label: "Assign a test", icon: "plus" },
+			{ href: "/teacher/results", label: "Results", icon: "results" },
 		],
 	},
-	{ title: "You", items: [{ href: "/teacher/account", label: "My account", icon: "◉" }] },
+	{ title: "You", items: [{ href: "/teacher/account", label: "My account", icon: "account" }] },
 ];
 
 function useActive() {

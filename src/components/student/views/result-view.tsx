@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { MODE_LABEL, SKILL_LABEL } from "@/components/student/labels";
 import { useReviewLoader, useStudentData } from "@/components/student/student-data";
 import { markMyResultAction } from "@/lib/actions/attempts";
+import { Icon } from "@/components/ui/icon";
 
 /** One section's score as a labelled bar. Never colour alone — the numbers are right there. */
 function SectionBar({ label, correct, total }: { label: string; correct: number; total: number }) {
@@ -84,7 +85,7 @@ export function ResultView({ attemptId }: { attemptId: string }) {
 			<div className="mx-auto flex w-full max-w-[720px] flex-col gap-6">
 				<h1 className="m-0 text-[1.75rem] leading-9 font-bold md:text-h1">{test.title}</h1>
 				<EmptyState
-					icon="⏳"
+					icon={<Icon name="hourglass" />}
 					title="Your teacher will release this result"
 					action={
 						<Link
@@ -156,7 +157,7 @@ export function ResultView({ attemptId }: { attemptId: string }) {
 					className="flex h-primary items-center justify-center gap-2.5 rounded-control bg-brand text-h3 font-semibold text-white no-underline hover:bg-brand-hover hover:no-underline"
 				>
 					See my mistakes
-					<span aria-hidden="true">→</span>
+					<Icon name="arrow-right" />
 				</Link>
 				<Link
 					href="/home"

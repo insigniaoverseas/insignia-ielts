@@ -12,6 +12,7 @@ import { Turnstile } from "@/components/auth/turnstile";
 import { signInAction } from "@/lib/actions/auth";
 import { formatTime } from "@/lib/time";
 import type { LoginFormState } from "@/lib/actions/types";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Screen 01's form (M1-08).
@@ -115,7 +116,7 @@ function SubmitButton({ locked }: { locked: boolean }) {
 function ErrorLine({ text, children }: { text: string; children?: ReactNode }) {
 	return (
 		<p id="login-error" className="m-0 flex items-start gap-2 font-semibold text-danger" role="alert">
-			<span aria-hidden="true">✕</span>
+			<Icon name="alert" />
 			<span>
 				{text}
 				{children}

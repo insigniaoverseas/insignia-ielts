@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import type { Option } from "./radio";
+import { Icon } from "@/components/ui/icon";
 
 const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five"];
 
@@ -77,7 +78,7 @@ export function ChooseN({
 									"peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand",
 								)}
 							>
-								✓
+								<Icon name="check" strokeWidth={3} />
 							</span>
 							{o.label}
 						</label>

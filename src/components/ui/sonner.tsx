@@ -2,6 +2,8 @@
 
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
+import { Icon, type IconName } from "@/components/ui/icon";
+
 /*
  * Toast — sonner, restyled to the tokens (M0-03).
  * Section 13 of "00 Design System.dc.html": a dark --color-ink pill with a
@@ -12,19 +14,14 @@ import { Toaster as Sonner, type ToasterProps } from "sonner";
  * shows the toast dark in both themes anyway, so the theme is fixed here and
  * the dependency is gone.
  *
- * Icons are text glyphs, matching the banners: words and simple marks over an
- * icon library, and nothing extra in the bundle.
+ * Icons come from the app's one SVG set (`Icon`), matching the banners.
  *
  * Mount <Toaster /> once, in the root layout. Then: `toast.success("Results released to 42 students.")`.
  * Toasts confirm something that already happened. Anything the user must act on
  * belongs in a Banner, which stays put.
  */
 
-const glyph = (char: string, className: string) => (
-	<span aria-hidden="true" className={`font-bold ${className}`}>
-		{char}
-	</span>
-);
+const glyph = (name: IconName, className: string) => <Icon name={name} className={`size-5 ${className}`} strokeWidth={2.5} />;
 
 /** The app's toast region. Bottom-centre, so it clears the student tab bar. */
 function Toaster(props: ToasterProps) {
@@ -35,10 +32,10 @@ function Toaster(props: ToasterProps) {
 			offset={96}
 			mobileOffset={96}
 			icons={{
-				success: glyph("✓", "text-success-bright"),
-				info: glyph("i", "text-white"),
-				warning: glyph("!", "text-warning-line"),
-				error: glyph("✕", "text-danger-line"),
+				success: glyph("check", "text-success-bright"),
+				info: glyph("info", "text-white"),
+				warning: glyph("warning", "text-warning-line"),
+				error: glyph("alert", "text-danger-line"),
 			}}
 			toastOptions={{
 				unstyled: true,

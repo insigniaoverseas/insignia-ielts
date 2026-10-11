@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { completeFirstRunSetupAction } from "@/lib/actions/auth";
 import type { FormState } from "@/lib/actions/types";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * First-run setup (M1-02 bootstrap).
@@ -62,7 +63,7 @@ export function FirstRunForm({ email }: { email: string }) {
 
 			{state && !state.ok && (
 				<p className="m-0 flex items-start gap-2 font-semibold text-danger" role="alert">
-					<span aria-hidden="true">✕</span>
+					<Icon name="alert" />
 					<span>{state.message}</span>
 				</p>
 			)}

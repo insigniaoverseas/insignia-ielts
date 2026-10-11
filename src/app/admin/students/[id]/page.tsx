@@ -8,6 +8,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { SKILL_LABEL } from "@/components/student/labels";
 import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getStudentDetail } from "@/lib/queries/admin";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Student" };
 
@@ -66,7 +67,8 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 	return (
 		<div className="flex flex-col gap-6">
 			<Link href="/admin/students" className="font-semibold">
-				← Back to students
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to students
 			</Link>
 
 			<div className="flex flex-wrap items-start justify-between gap-4">

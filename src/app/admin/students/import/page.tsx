@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CsvImporter } from "@/components/staff/csv-importer";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Import students" };
 
@@ -16,7 +17,8 @@ export default function ImportStudentsPage() {
 	return (
 		<div className="flex flex-col gap-6">
 			<Link href="/admin/students" className="font-semibold">
-				← Back to students
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to students
 			</Link>
 
 			<div className="flex flex-col gap-1">

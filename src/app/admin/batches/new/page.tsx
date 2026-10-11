@@ -5,6 +5,7 @@ import { CreateBatchForm } from "@/components/admin/create-batch-form";
 import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { listBranchOptions, listTeacherOptions } from "@/lib/queries/batches";
 import { instituteToday } from "@/lib/queries/shared";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Create a batch" };
 
@@ -27,7 +28,8 @@ export default async function NewBatchPage() {
 	return (
 		<div className="flex max-w-[640px] flex-col gap-6">
 			<Link href="/admin/batches" className="font-semibold">
-				← Back to batches
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to batches
 			</Link>
 
 			<div className="flex flex-col gap-1">

@@ -8,30 +8,30 @@ import { StaffSidebar, type SidebarGroup } from "@/components/ui/staff-sidebar";
 export const ADMIN_GROUPS: SidebarGroup[] = [
 	{
 		title: "Overview",
-		items: [{ href: "/admin/overview", label: "Overview", icon: "▤" }],
+		items: [{ href: "/admin/overview", label: "Overview", icon: "overview" }],
 	},
 	{
 		title: "People",
 		items: [
-			{ href: "/admin/students", label: "Students", icon: "👤" },
-			{ href: "/admin/plans", label: "Plans & validity", icon: "⏳" },
-			{ href: "/admin/batches", label: "Batches", icon: "▦" },
+			{ href: "/admin/students", label: "Students", icon: "students" },
+			{ href: "/admin/plans", label: "Plans & validity", icon: "hourglass" },
+			{ href: "/admin/batches", label: "Batches", icon: "batches" },
 		],
 	},
 	{
 		title: "Content",
-		items: [{ href: "/admin/library", label: "Test library", icon: "📄" }],
+		items: [{ href: "/admin/library", label: "Test library", icon: "test" }],
 	},
 	{
 		title: "Institute",
 		items: [
-			{ href: "/admin/users", label: "Users & roles", icon: "🔑" },
-			{ href: "/admin/audit", label: "Audit log", icon: "▤" },
+			{ href: "/admin/users", label: "Users & roles", icon: "key" },
+			{ href: "/admin/audit", label: "Audit log", icon: "audit" },
 		],
 	},
 	{
 		title: "You",
-		items: [{ href: "/admin/account", label: "My account", icon: "◉" }],
+		items: [{ href: "/admin/account", label: "My account", icon: "account" }],
 	},
 ];
 

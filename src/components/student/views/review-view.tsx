@@ -11,6 +11,7 @@ import { useReviewLoader } from "@/components/student/student-data";
 import StudentLoading from "@/app/(student)/loading";
 import { cn } from "@/lib/utils";
 import type { ReviewQuestion } from "@/lib/view-models/student";
+import { Icon } from "@/components/ui/icon";
 
 /** `useSyncExternalStore` needs a subscribe function; nothing here ever changes. */
 const noSubscription = () => () => {};
@@ -48,7 +49,8 @@ export function ReviewView({ attemptId, show }: { attemptId: string; show?: stri
 
 	const back = (
 		<Link href={`/results/${attemptId}`} className="font-semibold">
-			← Back to my result
+			<Icon name="arrow-left" className="mr-1.5" />
+			Back to my result
 		</Link>
 	);
 
@@ -81,7 +83,7 @@ export function ReviewView({ attemptId, show }: { attemptId: string; show?: stri
 			<section className="flex flex-wrap gap-8 rounded-card border border-line bg-surface p-6">
 				<div className="flex items-center gap-3">
 					<span className="grid size-10 place-items-center rounded-full bg-success-soft font-bold text-success" aria-hidden="true">
-						✓
+						<Icon name="check" strokeWidth={3} className="size-5" />
 					</span>
 					<span className="flex flex-col">
 						<span className="font-mono text-h2 font-medium">{mistakes.summary.correct}</span>
@@ -90,7 +92,7 @@ export function ReviewView({ attemptId, show }: { attemptId: string; show?: stri
 				</div>
 				<div className="flex items-center gap-3">
 					<span className="grid size-10 place-items-center rounded-full bg-danger-soft font-bold text-danger" aria-hidden="true">
-						✕
+						<Icon name="x" strokeWidth={3} className="size-5" />
 					</span>
 					<span className="flex flex-col">
 						<span className="font-mono text-h2 font-medium">{mistakes.summary.wrong}</span>
@@ -112,7 +114,7 @@ export function ReviewView({ attemptId, show }: { attemptId: string; show?: stri
 
 			{shown.length === 0 ? (
 				<EmptyState
-					icon="✓"
+					icon={<Icon name="check" />}
 					title="You got everything right"
 					action={
 						<Link href={`/review/${attemptId}?show=all`} className="font-semibold">
@@ -145,7 +147,7 @@ export function ReviewView({ attemptId, show }: { attemptId: string; show?: stri
 					className="flex h-primary items-center justify-center gap-2.5 rounded-control bg-brand text-h3 font-semibold text-white no-underline hover:bg-brand-hover hover:no-underline"
 				>
 					See what to practise
-					<span aria-hidden="true">→</span>
+					<Icon name="arrow-right" />
 				</Link>
 				<Link
 					href="/home"
@@ -191,9 +193,11 @@ function ReviewCard({ q, part }: { q: ReviewQuestion; part: "Section" | "Passage
 					q.correct ? "bg-success-soft" : "bg-danger-soft",
 				)}
 			>
-				<span className={cn("font-bold", q.correct ? "text-success" : "text-danger")} aria-hidden="true">
-					{q.correct ? "✓" : "✕"}
-				</span>
+				<Icon
+					name={q.correct ? "check" : "x"}
+					strokeWidth={3}
+					className={cn("mt-1", q.correct ? "text-success" : "text-danger")}
+				/>
 				<span>
 					<span className="font-semibold">{q.correct ? "Your answer (right)" : "Your answer (wrong)"}</span> —{" "}
 					{q.givenAnswer ?? <em>You left this empty</em>}
@@ -202,9 +206,7 @@ function ReviewCard({ q, part }: { q: ReviewQuestion; part: "Section" | "Passage
 
 			{!q.correct && (
 				<div className="flex items-start gap-3 rounded-control border border-line px-4 py-3">
-					<span className="font-bold text-success" aria-hidden="true">
-						✓
-					</span>
+					<Icon name="check" strokeWidth={3} className="mt-1 text-success" />
 					<span>
 						<span className="font-semibold">Correct answer</span> — {q.correctAnswer}
 					</span>

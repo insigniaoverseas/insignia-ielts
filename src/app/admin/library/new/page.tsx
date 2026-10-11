@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { UploadTestForm } from "@/components/admin/upload-test-form";
 import { requirePermissionOrRedirect } from "@/lib/auth/guard";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Add a test" };
 
@@ -23,7 +24,8 @@ export default async function NewTestPage() {
 	return (
 		<div className="flex max-w-[840px] flex-col gap-6">
 			<Link href="/admin/library" className="font-semibold">
-				← Back to the library
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to the library
 			</Link>
 
 			<div className="flex flex-col gap-1">
