@@ -1,7 +1,7 @@
 import "server-only";
 
 import { recordAudit } from "@/lib/audit";
-import { planBatchRemoval, type RemovalPlan } from "@/lib/batch-removal";
+import { planBatchRemoval, type PurgePreview, type RemovalPlan } from "@/lib/batch-removal";
 import { validateBatch, validateBatchEdit, type BatchEdit, type BatchField, type BatchInput } from "@/lib/batch-input";
 import {
 	describeMembershipPlan,
@@ -342,10 +342,34 @@ export async function addStudentsToBatch(
 		return { ok: false, message: "Something went wrong. Try again." };
 	}
 
+	// A membership left open in a **removed** batch (archived before removing
+	// freed students, M10-14) is not a real batch to stay in: close it, whatever
+	// the mode, so it never shows as "still in" anywhere.
+	const openElsewhere = [...new Set((rows ?? []).filter((r) => r.left_at === null && r.batch_id !== batchId).map((r) => r.batch_id))];
+	const removedIds = new Set<string>();
+	if (openElsewhere.length > 0) {
+		const { data: removed } = await db.from("batches").select("id").in("id", openElsewhere).eq("status", "archived");
+		for (const row of removed ?? []) removedIds.add(row.id);
+		if (removedIds.size > 0) {
+			const { error } = await db
+				.from("batch_students")
+				.update({ left_at: new Date().toISOString() })
+				.in("batch_id", [...removedIds])
+				.in("student_id", wanted)
+				.is("left_at", null);
+			if (error) {
+				console.error("closing removed-batch memberships failed:", error.message);
+				return { ok: false, message: "Something went wrong. Try again." };
+			}
+		}
+	}
+
 	const plan = planMembershipAdd(
 		batchId,
 		wanted,
-		(rows ?? []).map((row) => ({ batchId: row.batch_id, studentId: row.student_id, leftAt: row.left_at })),
+		(rows ?? [])
+			.filter((row) => !removedIds.has(row.batch_id))
+			.map((row) => ({ batchId: row.batch_id, studentId: row.student_id, leftAt: row.left_at })),
 		mode,
 	);
 
@@ -512,7 +536,7 @@ export async function removeBatch(actor: Actor, scope: Scope, batchId: string): 
 			? // Memberships and teacher links go with it (on delete cascade);
 			  // invitations naming it keep their row with no batch (set null).
 			  await db.from("batches").delete().eq("id", batchId)
-			: await db.from("batches").update({ status: "archived" }).eq("id", batchId);
+			: await archiveAndFree(db, batchId);
 	if (error) {
 		console.error(`batch ${plan.kind} failed:`, error.message);
 		return { ok: false, message: "That batch couldn't be removed. Try again." };
@@ -549,5 +573,112 @@ export async function restoreBatch(actor: Actor, scope: Scope, batchId: string):
 		entityId: batchId,
 		meta: { name: batch.name },
 	});
-	return { ok: true, id: batchId, name: batch.name, message: `${batch.name} is back.` };
+	return {
+		ok: true,
+		id: batchId,
+		name: batch.name,
+		message: `${batch.name} is back. Its students were freed when it was removed — add them again below if they belong here.`,
+	};
+}
+
+/**
+ * Archives a batch and **frees its students** (closes their membership), so
+ * they can be added to another batch straight away (M10-14). Their results
+ * stay; only the link to this batch closes.
+ */
+async function archiveAndFree(db: ReturnType<typeof createAdminClient>, batchId: string) {
+	const freed = await db
+		.from("batch_students")
+		.update({ left_at: new Date().toISOString() })
+		.eq("batch_id", batchId)
+		.is("left_at", null);
+	if (freed.error) return freed;
+	return db.from("batches").update({ status: "archived" }).eq("id", batchId);
+}
+
+/**
+ * Splits the assignments that target a batch into those made **only** to it
+ * and those **shared** with other batches or students. Only the first kind is
+ * deleted by "Delete permanently"; the second keeps working for everyone else.
+ */
+async function assignmentSplit(db: ReturnType<typeof createAdminClient>, batchId: string) {
+	const mine = await db.from("assignment_targets").select("assignment_id").eq("batch_id", batchId);
+	if (mine.error) throw new Error(mine.error.message);
+	const ids = [...new Set((mine.data ?? []).map((row) => row.assignment_id))];
+	if (ids.length === 0) return { own: [] as string[], shared: [] as string[] };
+
+	const all = await db.from("assignment_targets").select("assignment_id, batch_id").in("assignment_id", ids);
+	if (all.error) throw new Error(all.error.message);
+	const shared = new Set(
+		(all.data ?? []).filter((row) => row.batch_id !== batchId).map((row) => row.assignment_id),
+	);
+	return { own: ids.filter((id) => !shared.has(id)), shared: [...shared] };
+}
+
+/** The counts the "Delete permanently" box shows, before anything happens. */
+export async function previewBatchPurge(actor: Actor, scope: Scope, batchId: string): Promise<PurgePreview | null> {
+	const found = await batchInScope(actor, scope, batchId);
+	if (!found.ok) return null;
+	const { db } = found;
+	const { own, shared } = await assignmentSplit(db, batchId);
+	const [attempts, members] = await Promise.all([
+		own.length
+			? db.from("attempts").select("id", { count: "exact", head: true }).in("assignment_id", own)
+			: Promise.resolve({ count: 0, error: null }),
+		db.from("batch_students").select("student_id", { count: "exact", head: true }).eq("batch_id", batchId).is("left_at", null),
+	]);
+	return {
+		ownAssignments: own.length,
+		sharedAssignments: shared.length,
+		attempts: attempts.count ?? 0,
+		students: members.count ?? 0,
+	};
+}
+
+/**
+ * "Delete permanently" (M10-14): deletes the batch, every assignment made only
+ * to it and every attempt on those assignments (answers, marks, scores and
+ * events cascade from the attempt). Assignments shared with others lose only
+ * this batch as a target. **Tests are never touched** — nothing here deletes
+ * from `tests`, and nothing cascades into it.
+ *
+ * Each step is safe to run again, in this order, so a failure part-way is
+ * finished by pressing the button again: attempts before their assignments
+ * (`attempts.assignment_id` does not cascade), assignments before the batch.
+ */
+export async function purgeBatch(actor: Actor, scope: Scope, batchId: string): Promise<BatchOutcome> {
+	const found = await batchInScope(actor, scope, batchId);
+	if (!found.ok) return found;
+	const { db, batch } = found;
+
+	try {
+		const { own, shared } = await assignmentSplit(db, batchId);
+		let attemptsDeleted = 0;
+		if (own.length > 0) {
+			const gone = await db.from("attempts").delete().in("assignment_id", own).select("id");
+			if (gone.error) throw new Error(gone.error.message);
+			attemptsDeleted = gone.data?.length ?? 0;
+			const assignments = await db.from("assignments").delete().in("id", own);
+			if (assignments.error) throw new Error(assignments.error.message);
+		}
+		if (shared.length > 0) {
+			const unlinked = await db.from("assignment_targets").delete().eq("batch_id", batchId);
+			if (unlinked.error) throw new Error(unlinked.error.message);
+		}
+		const deleted = await db.from("batches").delete().eq("id", batchId);
+		if (deleted.error) throw new Error(deleted.error.message);
+
+		await recordAudit({
+			actorId: actor.id,
+			branchId: batch.branch_id,
+			action: "batch.purge",
+			entity: "batch",
+			entityId: batchId,
+			meta: { name: batch.name, assignments_deleted: own.length, assignments_unlinked: shared.length, attempts_deleted: attemptsDeleted },
+		});
+		return { ok: true, id: batchId, name: batch.name, message: `${batch.name} was deleted for good.` };
+	} catch (error) {
+		console.error("batch purge failed:", error instanceof Error ? error.message : error);
+		return { ok: false, message: "That batch couldn't be fully deleted. Press Delete permanently again to finish." };
+	}
 }

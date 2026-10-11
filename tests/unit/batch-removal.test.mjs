@@ -33,3 +33,42 @@ describe("Remove batch decides delete or archive (M10-14)", () => {
     assert.match(removalDoneMessage("B", "archive"), /removed\. Its results are kept/);
   });
 });
+
+import { describePurge, purgeConfirmed } from "../../src/lib/batch-removal.ts";
+
+describe("Remove batch frees its students (M10-14)", () => {
+  test("archiving says the students can join another batch", () => {
+    assert.match(planBatchRemoval("B", 2, 18).description, /18 students are freed to join another batch/);
+    assert.match(planBatchRemoval("B", 2, 1).description, /student is freed/);
+  });
+});
+
+describe("Delete permanently (M10-14)", () => {
+  const preview = { ownAssignments: 3, sharedAssignments: 1, attempts: 42, students: 18 };
+
+  test("says it can't be undone, and counts what goes", () => {
+    const lines = describePurge("Morning A", preview).join(" ");
+    assert.match(lines, /deleted for good\. This can't be undone/);
+    assert.match(lines, /3 assignments made to this batch will be removed, with 42 attempts/);
+    assert.match(lines, /1 assignment also given to other batches or students will be kept/);
+    assert.match(lines, /18 students will be freed/);
+  });
+  test("always says the Test library is untouched", () => {
+    for (const p of [preview, { ownAssignments: 0, sharedAssignments: 0, attempts: 0, students: 0 }]) {
+      assert.match(describePurge("B", p).join(" "), /tests themselves stay in the Test library/);
+    }
+  });
+  test("never calls an assignment a test being deleted", () => {
+    assert.doesNotMatch(describePurge("B", preview).join(" "), /tests? (will be|are) deleted/i);
+  });
+  test("nothing to mention, nothing mentioned", () => {
+    const lines = describePurge("B", { ownAssignments: 0, sharedAssignments: 0, attempts: 0, students: 0 });
+    assert.equal(lines.length, 2);
+  });
+  test("typing the batch name confirms — case and extra spaces forgiven", () => {
+    assert.equal(purgeConfirmed("Morning A", "morning   a "), true);
+    assert.equal(purgeConfirmed("Morning A", "Morning"), false);
+    assert.equal(purgeConfirmed("Morning A", ""), false);
+    assert.equal(purgeConfirmed("Morning A", "   "), false);
+  });
+});

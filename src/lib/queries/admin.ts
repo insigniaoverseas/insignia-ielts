@@ -106,7 +106,8 @@ const allStudentRows = cache(async function allStudentRows(): Promise<{
 			supabase.from("users").select("*, roles!inner(key)").eq("roles.key", "student").order("name"),
 			supabase.from("student_plans").select("*").order("expires_on", { ascending: false }),
 			supabase.from("batch_students").select("batch_id, student_id, left_at"),
-			supabase.from("batches").select("id, name"),
+			// Removed batches aren't a student's batch any more (M10-14).
+			supabase.from("batches").select("id, name").neq("status", "archived"),
 			supabase.from("attempts").select("id, student_id, status, submitted_at"),
 			supabase.from("attempt_scores").select("attempt_id, band"),
 			supabase.from("user_sessions").select("user_id, last_seen_at"),
@@ -124,7 +125,9 @@ const allStudentRows = cache(async function allStudentRows(): Promise<{
 	const attempts = (attemptsResult.data ?? []) as Pick<Attempt, "id" | "student_id" | "status" | "submitted_at">[];
 	const scoreByAttempt = new Map((scoresResult.data ?? []).map((score) => [score.attempt_id, score.band]));
 	const batchById = new Map((batchesResult.data ?? []).map((batch) => [batch.id, batch.name]));
-	const activeMemberships = (membershipsResult.data ?? []).filter((membership) => membership.left_at === null);
+	const activeMemberships = (membershipsResult.data ?? []).filter(
+		(membership) => membership.left_at === null && batchById.has(membership.batch_id),
+	);
 	const membershipByStudent = new Map(activeMemberships.map((membership) => [membership.student_id, membership.batch_id]));
 	const latestSession = new Map<string, string>();
 	for (const session of sessionsResult.data ?? []) {

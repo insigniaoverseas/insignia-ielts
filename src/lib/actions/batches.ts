@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { addStudentsToBatch, createBatch, removeBatch, removeStudentFromBatch, restoreBatch, updateBatch } from "@/lib/batches";
-import { removalDoneMessage } from "@/lib/batch-removal";
+import { addStudentsToBatch, createBatch, purgeBatch, removeBatch, removeStudentFromBatch, restoreBatch, updateBatch } from "@/lib/batches";
+import { purgeConfirmed, removalDoneMessage } from "@/lib/batch-removal";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ForbiddenError, requirePermission } from "@/lib/rbac";
 import type { FormState } from "@/lib/actions/types";
 
@@ -175,4 +176,31 @@ export async function restoreBatchAction(batchId: string): Promise<FormState> {
 		if (error instanceof ForbiddenError) return { ok: false, message: "You don't have permission to restore this batch." };
 		throw error;
 	}
+}
+
+/**
+ * "Delete permanently" (M10-14). The typed name is checked here as well as in
+ * the browser: a Server Action is a public endpoint, and this one deletes
+ * results. Lands on the list, which says it's done.
+ */
+export async function purgeBatchAction(batchId: string, typedName: string): Promise<FormState> {
+	let done: string;
+	try {
+		const { actor, scope } = await requirePermission("student:manage");
+		const { data: batch } = await createAdminClient().from("batches").select("name").eq("id", String(batchId)).maybeSingle();
+		if (!batch) return { ok: false, message: "That batch no longer exists." };
+		if (!purgeConfirmed(batch.name, String(typedName ?? ""))) {
+			return { ok: false, message: `Type the batch's name, ${batch.name}, to confirm.` };
+		}
+		const result = await purgeBatch(actor, scope, String(batchId));
+		if (!result.ok) return { ok: false, message: result.message };
+		done = result.message ?? `${result.name} was deleted for good.`;
+	} catch (error) {
+		if (error instanceof ForbiddenError) return { ok: false, message: "You don't have permission to delete this batch." };
+		throw error;
+	}
+	revalidatePath("/admin/batches");
+	revalidatePath("/admin/students");
+	revalidatePath("/teacher/results");
+	redirect(`/admin/batches?done=${encodeURIComponent(done)}`);
 }

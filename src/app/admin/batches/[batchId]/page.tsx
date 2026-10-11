@@ -7,7 +7,9 @@ import { EditBatchForm } from "@/components/admin/edit-batch-form";
 import { RemoveBatch } from "@/components/admin/remove-batch";
 import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getBatchDetail } from "@/lib/queries/admin";
+import { previewBatchPurge } from "@/lib/batches";
 import { listStudentOptions, listTeacherOptions } from "@/lib/queries/batches";
+import { requirePermission } from "@/lib/rbac";
 
 export const metadata: Metadata = { title: "Batch" };
 
@@ -29,6 +31,9 @@ export default async function BatchPage({ params }: { params: Promise<{ batchId:
 		Promise.all([getBatchDetail(batchId), listTeacherOptions(), listStudentOptions()]),
 	);
 	if (!batch) notFound();
+	// The guard above has already turned away anyone without this permission.
+	const { actor, scope } = await requirePermission("student:manage");
+	const purge = await previewBatchPurge(actor, scope, batch.id);
 
 	return (
 		<div className="flex max-w-[640px] flex-col gap-6">
@@ -45,7 +50,7 @@ export default async function BatchPage({ params }: { params: Promise<{ batchId:
 
 			<BatchRoster batchId={batch.id} members={batch.students} candidates={students} />
 
-			<RemoveBatch batch={batch} />
+			<RemoveBatch batch={batch} purge={purge} />
 
 		</div>
 	);
