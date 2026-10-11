@@ -128,7 +128,16 @@ const allStudentRows = cache(async function allStudentRows(): Promise<{
 	const activeMemberships = (membershipsResult.data ?? []).filter(
 		(membership) => membership.left_at === null && batchById.has(membership.batch_id),
 	);
-	const membershipByStudent = new Map(activeMemberships.map((membership) => [membership.student_id, membership.batch_id]));
+	// A student can be in more than one batch (an add-on course): keep them all,
+	// so the batch filter finds them under each (M10-15). Ordered by name.
+	const batchesByStudent = new Map<string, string[]>();
+	for (const membership of activeMemberships) {
+		const list = batchesByStudent.get(membership.student_id) ?? [];
+		list.push(membership.batch_id);
+		batchesByStudent.set(membership.student_id, list);
+	}
+	for (const list of batchesByStudent.values()) list.sort((a, b) => (batchById.get(a) ?? "").localeCompare(batchById.get(b) ?? ""));
+	const membershipByStudent = new Map([...batchesByStudent].map(([student, ids]) => [student, ids[0]]));
 	const latestSession = new Map<string, string>();
 	for (const session of sessionsResult.data ?? []) {
 		const existing = latestSession.get(session.user_id);
@@ -145,14 +154,15 @@ const allStudentRows = cache(async function allStudentRows(): Promise<{
 				finished.filter((attempt) => scoreByAttempt.has(attempt.id)),
 				(attempt) => attempt.submitted_at ?? "",
 			);
-			const batchId = membershipByStudent.get(user.id);
+			const batchIds = batchesByStudent.get(user.id) ?? [];
 			return {
 				id: user.id,
 				name: user.name,
 				email: user.email,
 				phone: displayPhone(user.country_code, user.phone),
-				batchId: batchId ?? null,
-				batchName: batchId ? batchById.get(batchId) ?? null : null,
+				batchId: batchIds[0] ?? null,
+				batchName: batchIds.length ? batchIds.map((id) => batchById.get(id)).join(", ") : null,
+				batchIds,
 				status: user.status === "inactive" || user.status === "suspended" ? user.status : "active",
 				planState: access.state,
 				planEndsLabel: access.label,
@@ -258,7 +268,8 @@ export async function getStudentsList(): Promise<StudentsList> {
 	const supabase = await createClient();
 	const [{ rows }, batchesResult] = await Promise.all([
 		allStudentRows(),
-		supabase.from("batches").select("id, name").order("name"),
+		// Removed batches have no students to filter by (M10-14).
+		supabase.from("batches").select("id, name").neq("status", "archived").order("name"),
 	]);
 	if (batchesResult.error) queryFailed("student filters", batchesResult.error);
 	return { rows, total: rows.length, batches: batchesResult.data ?? [] };

@@ -31,11 +31,11 @@ describe("layout bundle slots", () => {
 });
 
 describe("admin list filters in the browser", () => {
-  const row = (id, extra) => ({ id, name: `Student ${id}`, phone: `+91 98${id}`, batchId: "x", planState: "active", ...extra });
+  const row = (id, extra) => ({ id, name: `Student ${id}`, phone: `+91 98${id}`, batchIds: ["x"], planState: "active", ...extra });
   const rows = [
-    row("1", { name: "Asha Rao", batchId: "morning" }),
+    row("1", { name: "Asha Rao", batchIds: ["morning"], batchName: "Morning A" }),
     row("2", { name: "Ravi Kumar", planState: "expiring" }),
-    row("3", { name: "Asha Mehta", planState: "expired", batchId: "morning" }),
+    row("3", { name: "Asha Mehta", planState: "expired", batchIds: ["morning"], batchName: "Morning A" }),
   ];
 
   test("search matches name or phone, case-insensitively", () => {
@@ -46,6 +46,17 @@ describe("admin list filters in the browser", () => {
   test("batch and status combine; 'all' means no filter", () => {
     assert.deepEqual(filterStudents(rows, { batch: "morning", status: "expired" }).rows.map((r) => r.id), ["3"]);
     assert.equal(filterStudents(rows, { batch: "all", status: "all" }).total, 3);
+  });
+
+  test("the batch filter is by id — a batch's *name* matches nothing (M10-15)", () => {
+    assert.deepEqual(filterStudents(rows, { batch: "morning" }).rows.map((r) => r.id), ["1", "3"]);
+    assert.equal(filterStudents(rows, { batch: "Morning A" }).total, 0);
+  });
+
+  test("a student in two batches is found under each (M10-15)", () => {
+    const both = [row("9", { batchIds: ["morning", "weekend"] }), row("8", { batchIds: [] })];
+    assert.deepEqual(filterStudents(both, { batch: "morning" }).rows.map((r) => r.id), ["9"]);
+    assert.deepEqual(filterStudents(both, { batch: "weekend" }).rows.map((r) => r.id), ["9"]);
   });
 
   test("shows one page but counts every match", () => {
