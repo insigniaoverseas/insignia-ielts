@@ -87,7 +87,9 @@ export async function requestSignInCode(email: string, sentBy: string | null = n
 		p_user: user.id,
 		p_code_hash: await hashSignInCode(user.id, code),
 		p_ttl_seconds: CODE_TTL_MINUTES * 60,
-		p_sent_by: sentBy,
+		// SQL takes null here (self-requested); the generated types call every
+		// function argument non-null.
+		p_sent_by: sentBy as string,
 		p_requested_ip: ip,
 	});
 	if (error) {

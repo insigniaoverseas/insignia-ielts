@@ -1338,7 +1338,7 @@ export type Database = {
         Args: {
           p_code_hash: string
           p_requested_ip: unknown
-          p_sent_by: string | null
+          p_sent_by: string
           p_ttl_seconds: number
           p_user: string
         }
