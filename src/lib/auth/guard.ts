@@ -68,7 +68,7 @@ export async function requireUser(currentPath?: string): Promise<Actor> {
 	if (state !== "live") {
 		// Proxy clears both cookies on the redirected request. Server Components
 		// cannot mutate cookies themselves.
-		redirect(endedSignInPath(currentPath));
+		redirect(endedSignInPath(currentPath, actor.role));
 	}
 
 	// Both of these are memoised for the request, so a layout and the page it
