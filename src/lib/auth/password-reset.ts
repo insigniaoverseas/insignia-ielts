@@ -2,6 +2,7 @@ import "server-only";
 
 import { headers } from "next/headers";
 
+import { clearSignInFailures } from "@/lib/auth/lockout";
 import { hashInvitationToken, isPlausibleToken, mintInvitationToken } from "@/lib/auth/tokens";
 import { firstPasswordProblem } from "@/lib/auth/password";
 import { recordAudit } from "@/lib/audit";
@@ -191,7 +192,8 @@ export type ResetOutcome = { ok: true; email: string } | { ok: false; message: s
  * mistake. Replay is still refused: a token whose `used_at` is set never gets
  * past the lookup.
  *
- * Completing a reset **revokes every session that user holds** (in
+ * Completing a reset also **lifts any sign-in lock** on the account, and
+ * **revokes every session that user holds** (in
  * `complete_password_reset`). If someone else was signed in as them, changing
  * the password has to put them out, or the reset has fixed nothing.
  */
@@ -220,6 +222,11 @@ export async function completePasswordReset(token: string, password: string): Pr
 				: "Something went wrong changing your password. Please try again.",
 		};
 	}
+
+	// Proving the inbox is a better answer than the wrong guesses that locked
+	// the account: a student who resets should be able to use the new password
+	// at once, not wait out the lock. The IP counter stays, as on any success.
+	await clearSignInFailures(found.email);
 
 	const { error: rpcError } = await db.rpc("complete_password_reset", { p_token_hash: tokenHash });
 	if (rpcError) {

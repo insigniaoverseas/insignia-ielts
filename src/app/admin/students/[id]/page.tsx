@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StudentAccountActions } from "@/components/admin/student-account-actions";
+import { UnlockSignIn } from "@/components/staff/unlock-sign-in";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -50,9 +51,10 @@ function Timeline({
  * colleague, and a drawer has no address. It keeps the drawer's content and
  * ordering — plan first, because that is what the call is almost always about.
  *
- * Staff never set a password. To get a locked-out student back in, "Send a
- * password reset link" emails them the same link `/forgot` would; they choose
- * the new password themselves (`StudentAccountActions`).
+ * Staff never set a password. A student locked out by wrong guesses gets
+ * "Unlock sign-in" while the lock lasts; one who has forgotten their password
+ * gets "Send a password reset link" — the same link `/forgot` would send — and
+ * chooses the new password themselves (`StudentAccountActions`).
  */
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
@@ -71,6 +73,11 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 				<div className="flex flex-col gap-1">
 					<h1 className="m-0 text-h1">{s.name}</h1>
 					<span className="font-mono text-ink-2">{s.phone}</span>
+					{data.lockedUntilLabel && (
+						<div className="mt-2">
+							<UnlockSignIn studentId={s.id} lockedUntilLabel={data.lockedUntilLabel} revalidate={`/admin/students/${s.id}`} />
+						</div>
+					)}
 				</div>
 				<div className="flex flex-wrap gap-3">
 					<StudentAccountActions studentId={s.id} email={s.email} />

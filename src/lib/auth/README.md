@@ -43,6 +43,7 @@ returning student
 | `sessions.ts` | `user_sessions` records, the session cookie, revocation. |
 | `device-label.ts` | **Pure.** "Chrome on Android" from a user-agent, for Profile's device list. |
 | `lockout.ts` | Five wrong passwords → a fifteen-minute lock, by account **and** IP. |
+| `lockout-rules.ts` | The lockout's numbers, `rate_limits` keys and windows, and who may unlock (`canUnlockSignIn`) — pure, unit-tested. Staff lift a lock with `unlockStudentSignIn` in `lib/student-account.ts`; `lockedAccounts()` in `lockout.ts` tells a roster who is locked. |
 | `password-reset.ts` | `/forgot` and `/reset/[token]`. Same answer whether or not the account exists. |
 | `guard.ts` | Page-level guards that redirect, rather than throw. |
 | `access.ts` | **Pure.** Route areas, role access, and `routeDecision` — the one routing rule Proxy and the guards share. |

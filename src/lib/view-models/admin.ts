@@ -64,6 +64,8 @@ export type StudentsList = {
 /** Screen 23 — Student detail drawer. */
 export type StudentDetail = {
 	student: StudentRow;
+	/** "4:35 pm" while too many wrong passwords have locked them out, else `null`. */
+	lockedUntilLabel: string | null;
 	planHistory: { id: string; whenLabel: string; action: string; detail: string; actor: string }[];
 	attempts: {
 		attemptId: string;

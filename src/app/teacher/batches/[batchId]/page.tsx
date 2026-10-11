@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { UnlockSignIn } from "@/components/staff/unlock-sign-in";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { formatBand } from "@/components/ui/band-score";
@@ -26,6 +27,10 @@ export const metadata: Metadata = { title: "Batch" };
  * first that a student is about to lose access — they see them twice a week —
  * so the warning belongs on the register they already read, not only in the
  * admin's queue.
+ *
+ * Likewise a student who typed the wrong password too often: the login screen
+ * tells them to ask their teacher, so their row says "Locked out" and offers
+ * "Unlock sign-in" here.
  */
 export default async function BatchPage({ params }: { params: Promise<{ batchId: string }> }) {
 	const { batchId } = await params;
@@ -33,6 +38,7 @@ export default async function BatchPage({ params }: { params: Promise<{ batchId:
 	if (!data) notFound();
 
 	const expiringSoon = data.roster.filter((r) => r.daysRemaining <= 7).length;
+	const lockedOut = data.roster.filter((r) => r.lockedUntilLabel).length;
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -56,6 +62,14 @@ export default async function BatchPage({ params }: { params: Promise<{ batchId:
 				<TableToolbar>
 					<span className="text-small text-ink-2">
 						{data.roster.length} {data.roster.length === 1 ? "student" : "students"}
+						{lockedOut > 0 && (
+							<>
+								{" · "}
+								<strong className="font-semibold text-danger">
+									{lockedOut} locked out of sign-in
+								</strong>
+							</>
+						)}
 						{expiringSoon > 0 && (
 							<>
 								{" · "}
@@ -83,6 +97,15 @@ export default async function BatchPage({ params }: { params: Promise<{ batchId:
 								<TableCell>
 									<span className="font-semibold">{r.name}</span>
 									<div className="font-mono text-small text-ink-2">{r.phone}</div>
+									{r.lockedUntilLabel && (
+										<div className="mt-2">
+											<UnlockSignIn
+												studentId={r.studentId}
+												lockedUntilLabel={r.lockedUntilLabel}
+												revalidate={`/teacher/batches/${batchId}`}
+											/>
+										</div>
+									)}
 								</TableCell>
 								<TableCell className="text-right font-mono">
 									{r.lastBand === null ? <span className="text-ink-3">—</span> : formatBand(r.lastBand)}

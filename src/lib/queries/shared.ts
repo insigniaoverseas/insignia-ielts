@@ -1,6 +1,6 @@
 import "server-only";
 
-import { INSTITUTE_TIME_ZONE } from "@/lib/time";
+import { INSTITUTE_TIME_ZONE, formatTime } from "@/lib/time";
 import type { Difficulty, Skill, TestSummary, Variant } from "@/lib/view-models/student";
 
 /** Date-only value for today at the institute, never the Worker's timezone. */
@@ -13,6 +13,15 @@ export function instituteToday(now = new Date()): string {
 	}).formatToParts(now);
 	const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
 	return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/**
+ * When a locked-out student can sign in again, as "4:35 pm" in India, or
+ * `null` if they aren't locked out. `locked` is `lockedAccounts()`' map.
+ */
+export function lockedUntilLabel(locked: ReadonlyMap<string, Date>, email: string): string | null {
+	const until = locked.get(email.trim().toLowerCase());
+	return until ? formatTime(until) : null;
 }
 
 /** Whole calendar days from today in India to a database `date`. */

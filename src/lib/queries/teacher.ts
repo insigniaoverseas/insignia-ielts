@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import { timeTakenSeconds } from "@/lib/attempts/clock";
+import { lockedAccounts } from "@/lib/auth/lockout";
 import { overridableAnswers } from "@/lib/attempts/overrides";
 import { readAnswerKeyObject } from "@/lib/r2";
 import { answerKeyObjectKey } from "@/lib/r2-keys";
@@ -23,7 +24,7 @@ import type {
 	TeacherDashboard,
 } from "@/lib/view-models/teacher";
 import { selectAll } from "./shared";
-import { daysUntil, displayPhone, formatDuration, formatShortDate, instituteToday, queryFailed, relativeActivity, testSummary } from "./shared";
+import { daysUntil, displayPhone, formatDuration, formatShortDate, instituteToday, lockedUntilLabel, queryFailed, relativeActivity, testSummary } from "./shared";
 
 type Tables = Database["public"]["Tables"];
 type Attempt = Tables["attempts"]["Row"];
@@ -169,7 +170,7 @@ export async function getBatchView(batchId: string): Promise<BatchView | null> {
 	const studentIds = (membershipResult.data ?? []).filter((row) => row.left_at === null).map((row) => row.student_id);
 	if (studentIds.length === 0) return { batchId, batchName: batch.name, roster: [] };
 	const [usersResult, plansResult, attemptsResult, sessionsResult] = await Promise.all([
-		supabase.from("users").select("id, name, phone, country_code").in("id", studentIds).order("name"),
+		supabase.from("users").select("id, name, email, phone, country_code").in("id", studentIds).order("name"),
 		supabase.from("student_plans").select("student_id, expires_on").in("student_id", studentIds),
 		supabase.from("attempts").select("id, student_id, status, submitted_at").in("student_id", studentIds),
 		supabase.from("user_sessions").select("user_id, last_seen_at").in("user_id", studentIds),
@@ -179,9 +180,12 @@ export async function getBatchView(batchId: string): Promise<BatchView | null> {
 	if (attemptsResult.error) queryFailed("batch attempts", attemptsResult.error);
 	if (sessionsResult.error) queryFailed("batch sessions", sessionsResult.error);
 	const attemptIds = (attemptsResult.data ?? []).map((attempt) => attempt.id);
-	const scoresResult = attemptIds.length
-		? await supabase.from("attempt_scores").select("attempt_id, band").in("attempt_id", attemptIds)
-		: { data: [], error: null };
+	const [scoresResult, locked] = await Promise.all([
+		attemptIds.length
+			? supabase.from("attempt_scores").select("attempt_id, band").in("attempt_id", attemptIds)
+			: Promise.resolve({ data: [], error: null }),
+		lockedAccounts((usersResult.data ?? []).map((user) => user.email)),
+	]);
 	if (scoresResult.error) queryFailed("batch scores", scoresResult.error);
 	const scores = new Map((scoresResult.data ?? []).map((score) => [score.attempt_id, score.band]));
 	return {
@@ -202,6 +206,7 @@ export async function getBatchView(batchId: string): Promise<BatchView | null> {
 				planEndsLabel: plan ? formatShortDate(plan.expires_on) : "No plan",
 				daysRemaining: plan ? daysUntil(plan.expires_on) : -1,
 				lastActiveLabel: relativeActivity(session?.last_seen_at ?? null),
+				lockedUntilLabel: lockedUntilLabel(locked, user.email),
 			};
 		}),
 	};
