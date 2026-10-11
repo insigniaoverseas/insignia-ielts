@@ -114,6 +114,8 @@ export type BatchDetail = {
 	teacherIds: string[];
 	/** The roster, which this screen shows but does not yet edit. */
 	students: { id: string; name: string }[];
+	/** Assignments that ever targeted this batch — decides whether "Remove" deletes or archives (M10-14). */
+	assignedTestCount: number;
 };
 
 /** Screen 26 — Test library. */

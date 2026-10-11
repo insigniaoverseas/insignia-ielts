@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { BatchRoster } from "@/components/admin/batch-roster";
 import { EditBatchForm } from "@/components/admin/edit-batch-form";
+import { RemoveBatch } from "@/components/admin/remove-batch";
 import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getBatchDetail } from "@/lib/queries/admin";
 import { listStudentOptions, listTeacherOptions } from "@/lib/queries/batches";
@@ -43,6 +44,8 @@ export default async function BatchPage({ params }: { params: Promise<{ batchId:
 			<EditBatchForm batch={batch} teachers={teachers} />
 
 			<BatchRoster batchId={batch.id} members={batch.students} candidates={students} />
+
+			<RemoveBatch batch={batch} />
 
 		</div>
 	);

@@ -491,6 +491,12 @@ export async function getBatchDetail(batchId: string): Promise<BatchDetail | nul
 	if (error) queryFailed("batch", error);
 	if (!batch) return null;
 
+	const targets = await supabase
+		.from("assignment_targets")
+		.select("assignment_id", { count: "exact", head: true })
+		.eq("batch_id", batchId);
+	if (targets.error) queryFailed("batch assignments", targets.error);
+
 	return {
 		id: batch.id,
 		name: batch.name,
@@ -502,5 +508,6 @@ export async function getBatchDetail(batchId: string): Promise<BatchDetail | nul
 		students: batch.batch_students
 			.flatMap((row) => (row.users ? [{ id: row.users.id, name: row.users.name }] : []))
 			.sort((a, b) => a.name.localeCompare(b.name)),
+		assignedTestCount: targets.count ?? 0,
 	};
 }

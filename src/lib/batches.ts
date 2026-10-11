@@ -1,6 +1,7 @@
 import "server-only";
 
 import { recordAudit } from "@/lib/audit";
+import { planBatchRemoval, type RemovalPlan } from "@/lib/batch-removal";
 import { validateBatch, validateBatchEdit, type BatchEdit, type BatchField, type BatchInput } from "@/lib/batch-input";
 import {
 	describeMembershipPlan,
@@ -463,4 +464,90 @@ export async function removeStudentFromBatch(
 	});
 
 	return { ok: true, id: batchId, name: batch.name, message: "Student removed from this batch." };
+}
+
+/** What removing a batch came to. */
+export type RemovalOutcome = { ok: true; name: string; kind: RemovalPlan["kind"] } | { ok: false; message: string };
+
+/** Reads a batch the actor may change, or says why not. Same centre rule as `updateBatch`. */
+async function batchInScope(actor: Actor, scope: Scope, batchId: string) {
+	const db = createAdminClient();
+	const { data, error } = await db.from("batches").select("id, name, branch_id, status").eq("id", batchId).maybeSingle();
+	if (error) {
+		console.error("batch read failed:", error.message);
+		return { ok: false as const, message: "Something went wrong. Try again." };
+	}
+	if (!data) return { ok: false as const, message: "That batch no longer exists." };
+	if (scope !== "all" && data.branch_id !== actor.branchId) {
+		return { ok: false as const, message: "You can only change batches at your own centre." };
+	}
+	return { ok: true as const, db, batch: data };
+}
+
+/**
+ * "Remove batch" (M10-14): deletes a batch no test was ever assigned to, and
+ * archives one that was used — see `lib/batch-removal.ts` for why.
+ *
+ * The rule is decided **here**, from the database, not from what the screen
+ * showed: an assignment made between opening the page and pressing the button
+ * must turn a delete into an archive, never the other way round.
+ */
+export async function removeBatch(actor: Actor, scope: Scope, batchId: string): Promise<RemovalOutcome> {
+	const found = await batchInScope(actor, scope, batchId);
+	if (!found.ok) return found;
+	const { db, batch } = found;
+
+	const [targets, members] = await Promise.all([
+		db.from("assignment_targets").select("assignment_id", { count: "exact", head: true }).eq("batch_id", batchId),
+		db.from("batch_students").select("student_id", { count: "exact", head: true }).eq("batch_id", batchId).is("left_at", null),
+	]);
+	if (targets.error || members.error) {
+		console.error("batch usage read failed:", targets.error?.message ?? members.error?.message);
+		return { ok: false, message: "Something went wrong. Try again." };
+	}
+
+	const plan = planBatchRemoval(batch.name, targets.count ?? 0, members.count ?? 0);
+	const { error } =
+		plan.kind === "delete"
+			? // Memberships and teacher links go with it (on delete cascade);
+			  // invitations naming it keep their row with no batch (set null).
+			  await db.from("batches").delete().eq("id", batchId)
+			: await db.from("batches").update({ status: "archived" }).eq("id", batchId);
+	if (error) {
+		console.error(`batch ${plan.kind} failed:`, error.message);
+		return { ok: false, message: "That batch couldn't be removed. Try again." };
+	}
+
+	await recordAudit({
+		actorId: actor.id,
+		branchId: batch.branch_id,
+		action: plan.kind === "delete" ? "batch.delete" : "batch.archive",
+		entity: "batch",
+		entityId: batchId,
+		meta: { name: batch.name, assigned_tests: targets.count ?? 0, students: members.count ?? 0 },
+	});
+	return { ok: true, name: batch.name, kind: plan.kind };
+}
+
+/** Brings a removed (archived) batch back to Active (M10-14). */
+export async function restoreBatch(actor: Actor, scope: Scope, batchId: string): Promise<BatchOutcome> {
+	const found = await batchInScope(actor, scope, batchId);
+	if (!found.ok) return found;
+	const { db, batch } = found;
+	if (batch.status !== "archived") return { ok: false, message: `${batch.name} isn't removed.` };
+
+	const { error } = await db.from("batches").update({ status: "active" }).eq("id", batchId);
+	if (error) {
+		console.error("batch restore failed:", error.message);
+		return { ok: false, message: "That batch couldn't be restored. Try again." };
+	}
+	await recordAudit({
+		actorId: actor.id,
+		branchId: batch.branch_id,
+		action: "batch.restore",
+		entity: "batch",
+		entityId: batchId,
+		meta: { name: batch.name },
+	});
+	return { ok: true, id: batchId, name: batch.name, message: `${batch.name} is back.` };
 }

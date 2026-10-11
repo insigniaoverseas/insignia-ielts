@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { addStudentsToBatch, createBatch, removeStudentFromBatch, updateBatch } from "@/lib/batches";
+import { addStudentsToBatch, createBatch, removeBatch, removeStudentFromBatch, restoreBatch, updateBatch } from "@/lib/batches";
+import { removalDoneMessage } from "@/lib/batch-removal";
 import { ForbiddenError, requirePermission } from "@/lib/rbac";
 import type { FormState } from "@/lib/actions/types";
 
@@ -136,6 +137,42 @@ export async function removeStudentFromBatchAction(_previous: FormState, formDat
 		if (error instanceof ForbiddenError) {
 			return { ok: false, message: "You don't have permission to change this batch." };
 		}
+		throw error;
+	}
+}
+
+/**
+ * "Remove batch" (M10-14). Deletes it if it was never used, archives it if it
+ * was; either way lands on the list, which says which happened.
+ */
+export async function removeBatchAction(batchId: string): Promise<FormState> {
+	let done: string;
+	try {
+		const { actor, scope } = await requirePermission("student:manage");
+		const result = await removeBatch(actor, scope, String(batchId));
+		if (!result.ok) return { ok: false, message: result.message };
+		done = removalDoneMessage(result.name, result.kind);
+	} catch (error) {
+		if (error instanceof ForbiddenError) return { ok: false, message: "You don't have permission to remove this batch." };
+		throw error;
+	}
+	revalidatePath("/admin/batches");
+	revalidatePath("/admin/students");
+	// `redirect` throws to unwind — it must sit outside the try/catch above.
+	redirect(`/admin/batches?done=${encodeURIComponent(done)}`);
+}
+
+/** "Restore" on a removed batch (M10-14). */
+export async function restoreBatchAction(batchId: string): Promise<FormState> {
+	try {
+		const { actor, scope } = await requirePermission("student:manage");
+		const result = await restoreBatch(actor, scope, String(batchId));
+		if (!result.ok) return { ok: false, message: result.message };
+		revalidatePath("/admin/batches");
+		revalidatePath(`/admin/batches/${batchId}`);
+		return { ok: true, message: result.message ?? `${result.name} is back.` };
+	} catch (error) {
+		if (error instanceof ForbiddenError) return { ok: false, message: "You don't have permission to restore this batch." };
 		throw error;
 	}
 }

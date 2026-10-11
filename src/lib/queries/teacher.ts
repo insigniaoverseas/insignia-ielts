@@ -70,6 +70,8 @@ export async function getTeacherDashboard(): Promise<TeacherDashboard> {
 				.from("batches")
 				.select("id, name, batch_teachers!inner ( teacher_id ), batch_students ( batch_id, student_id, left_at )")
 				.eq("batch_teachers.teacher_id", id)
+				// Removed batches leave the dashboard (M10-14); results stay reachable from Results.
+				.neq("status", "archived")
 				.order("name"),
 			// Test titles ride along with the assignments: one round trip, not a
 			// second query once the assignments are back.
