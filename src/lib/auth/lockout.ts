@@ -154,3 +154,20 @@ export async function lockedAccounts(emails: readonly string[]): Promise<Map<str
 	}
 	return locked;
 }
+
+/**
+ * Records a sign-in attempt for an email with no account — against the **IP
+ * only**, so the screen can't be used to check a list of addresses, and a
+ * made-up address never shows as "locked".
+ *
+ * @returns `false` once this IP has used up its allowance.
+ */
+export async function recordUnknownAccount(ip: string | null): Promise<boolean> {
+	if (!ip) return true;
+	const { data } = await createAdminClient().rpc("bump_rate_limit", {
+		p_key: ipKey(ip),
+		p_window_seconds: WINDOW_SECONDS,
+		p_limit: IP_LIMIT,
+	});
+	return !(data as LimitRow[] | null)?.[0]?.locked;
+}

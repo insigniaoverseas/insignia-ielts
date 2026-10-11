@@ -4,6 +4,7 @@ import { recordAudit } from "@/lib/audit";
 import { clearSignInFailures, lockedAccounts } from "@/lib/auth/lockout";
 import { requestPasswordReset } from "@/lib/auth/password-reset";
 import { CODE_TTL_MINUTES } from "@/lib/auth/sign-in-code-rules";
+import { emailRequestProblem } from "@/lib/auth/sign-in-messages";
 import { requestSignInCode } from "@/lib/auth/sign-in-code";
 import type { Actor } from "@/lib/permissions";
 import { normaliseIndianMobile } from "@/lib/phone";
@@ -75,7 +76,8 @@ export async function sendStudentPasswordReset(actor: Actor, studentId: string):
 	if (!student) return { ok: false, message: "That student couldn't be found." };
 	if (student.status !== "active") return { ok: false, message: "Their account isn't active, so no link was sent." };
 
-	await requestPasswordReset(student.email);
+	const outcome = await requestPasswordReset(student.email);
+	if (outcome !== "sent") return { ok: false, message: emailRequestProblem(outcome) ?? "The email couldn't be sent." };
 	await recordAudit({
 		actorId: actor.id,
 		branchId: student.branch_id,
@@ -141,6 +143,7 @@ export async function sendStudentSignInCode(actor: Actor, studentId: string): Pr
 		case "too_many":
 			return { ok: false, message: "Three codes were already sent in the last 15 minutes. Ask them to use the newest one, or try again shortly." };
 		case "no_account":
+		case "switched_off":
 			return { ok: false, message: "Their account isn't active, so no code was sent." };
 		default:
 			return { ok: false, message: "The email couldn't be sent. Please try again." };

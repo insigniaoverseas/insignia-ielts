@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Banner } from "@/components/ui/banner";
@@ -20,12 +20,15 @@ import type { LoginFormState } from "@/lib/actions/types";
  * back. The decision about whether the credentials were right is entirely the
  * server's; nothing here is a check, it is all presentation.
  *
- * The three deliberate absences — no signup link, no per-field error, no
- * self-serve reset — are documented on the page that renders this.
+ * Each error sits under the box it is about (M10-11): "no account with this
+ * email" under Email, "that password isn't right" and the tries left under
+ * Password. The typed email survives a wrong password.
  */
 export function LoginForm({ next, turnstileSiteKey }: { next?: string; turnstileSiteKey: string }) {
 	const [state, formAction] = useActionState<LoginFormState, FormData>(signInAction, null);
 	const locked = Boolean(state?.lockedUntil);
+	const emailWrong = !locked && state?.field === "email";
+	const passwordWrong = !locked && state?.field === "password";
 
 	return (
 		<>
@@ -46,15 +49,19 @@ export function LoginForm({ next, turnstileSiteKey }: { next?: string; turnstile
 				<div className="flex flex-col gap-1.5">
 					<Label htmlFor="email">Email</Label>
 					<Input
+						key={state?.email ?? ""}
 						id="email"
 						name="email"
 						type="email"
 						autoComplete="username"
 						autoCapitalize="off"
+						defaultValue={state?.email ?? ""}
 						required
 						disabled={locked}
-						aria-invalid={state?.message ? true : undefined}
+						aria-invalid={emailWrong ? true : undefined}
+						aria-describedby={emailWrong ? "login-error" : undefined}
 					/>
+					{emailWrong && <ErrorLine text={state!.message} />}
 				</div>
 
 				<div className="flex flex-col gap-1.5">
@@ -65,25 +72,27 @@ export function LoginForm({ next, turnstileSiteKey }: { next?: string; turnstile
 						type="password"
 						autoComplete="current-password"
 						required
+						autoFocus={passwordWrong}
 						disabled={locked}
-						aria-invalid={state?.message ? true : undefined}
+						aria-invalid={passwordWrong ? true : undefined}
+						aria-describedby={passwordWrong ? "login-error" : undefined}
 					/>
-				</div>
-
-				{state?.message && !locked && (
-					<p className="m-0 flex items-start gap-2 font-semibold text-danger" role="alert">
-						<span aria-hidden="true">✕</span>
-						<span>
-							{state.message}
-							{state.triesLeft !== null && state.triesLeft > 0 && (
+					{passwordWrong && (
+						<ErrorLine text={state!.message}>
+							{state!.triesLeft !== null && state!.triesLeft > 0 && (
 								<span className="block font-normal">
-									{state.triesLeft === 1 ? "1 try left" : `${state.triesLeft} tries left`} before this
-									account is locked for a while.
+									{state!.triesLeft === 1 ? "1 try left" : `${state!.triesLeft} tries left`} before this
+									account is locked for a while.{" "}
+									<Link href="/forgot" className="font-semibold underline">
+										Forgotten it?
+									</Link>
 								</span>
 							)}
-						</span>
-					</p>
-				)}
+						</ErrorLine>
+					)}
+				</div>
+
+				{state?.message && !locked && !emailWrong && !passwordWrong && <ErrorLine text={state.message} />}
 				<Turnstile siteKey={turnstileSiteKey} action="login" resetKey={state?.message} />
 
 				<SubmitButton locked={locked} />
@@ -99,5 +108,18 @@ function SubmitButton({ locked }: { locked: boolean }) {
 		<Button type="submit" size="student" disabled={locked} loading={pending}>
 			{pending ? "Signing in…" : "Sign in"}
 		</Button>
+	);
+}
+
+/** One error, said in words, under the box it is about. */
+function ErrorLine({ text, children }: { text: string; children?: ReactNode }) {
+	return (
+		<p id="login-error" className="m-0 flex items-start gap-2 font-semibold text-danger" role="alert">
+			<span aria-hidden="true">✕</span>
+			<span>
+				{text}
+				{children}
+			</span>
+		</p>
 	);
 }

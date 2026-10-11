@@ -44,6 +44,7 @@ returning student
 | `device-label.ts` | **Pure.** "Chrome on Android" from a user-agent, for Profile's device list. |
 | `lockout.ts` | Five wrong passwords → a fifteen-minute lock, by account **and** IP. |
 | `sign-in-code.ts` | Signing in with an emailed 6-digit code (M10-10): request (rate-limited, never says whether the account exists) and redeem, then the same `finishSignIn` as a password. |
+| `sign-in-messages.ts` | What every sign-in screen says when something is wrong — no account, switched off, wrong password or code — and why it says it plainly (M10-11). Pure, unit-tested. |
 | `sign-in-code-rules.ts` | The code's limits, minting, normalising and hashing — pure, unit-tested. |
 | `lockout-rules.ts` | The lockout's numbers, `rate_limits` keys and windows, and who may unlock (`canUnlockSignIn`) — pure, unit-tested. Staff lift a lock with `unlockStudentSignIn` in `lib/student-account.ts`; `lockedAccounts()` in `lockout.ts` tells a roster who is locked. |
 | `password-reset.ts` | `/forgot` and `/reset/[token]`. Same answer whether or not the account exists. |
@@ -71,9 +72,9 @@ returning student
 **One hour**, not the invitation's seven days: a reset is asked for by someone at
 the screen right now, so a long life is exposure bought for nothing.
 
-**The reply never varies.** Real address, unknown address, suspended account —
-all get the same sentence. The login screen refuses to say which addresses are
-real; a reset form that said would hand back the list it protects.
+**The reply says what happened** (M10-11): sent, no account with that email,
+switched off, or too many emails already. Every sign-in screen now says what is
+wrong — the wording and the reasoning are in `sign-in-messages.ts`.
 
 **It revokes every session.** If an intruder is signed in, a reset that left them
 there has fixed nothing.

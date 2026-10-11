@@ -16,8 +16,8 @@ import type { SignInCodeState } from "@/lib/actions/types";
  * email, then the six numbers. One obvious action at each step.
  *
  * The code is read on the student's own phone and typed here, so they never
- * sign into email on a lab PC. Whether the account exists is never revealed —
- * the server says the same thing either way.
+ * sign into email on a lab PC. Errors say what is wrong (M10-11) — no account
+ * with that email, a wrong code, or one that has run out.
  */
 export function SignInCodeForm({ next }: { next?: string }) {
 	const [requested, requestAction] = useActionState<SignInCodeState, FormData>(requestSignInCodeAction, null);
@@ -66,7 +66,7 @@ export function SignInCodeForm({ next }: { next?: string }) {
 
 	return (
 		<>
-			<Banner tone="success">{requested?.message}</Banner>
+			<Banner tone={requested?.error ? "danger" : "success"}>{requested?.message}</Banner>
 
 			<form action={checkAction} className="flex flex-col gap-5 rounded-card border border-line bg-surface p-6">
 				<input type="hidden" name="email" value={email} />

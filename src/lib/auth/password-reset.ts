@@ -9,6 +9,7 @@ import { recordAudit } from "@/lib/audit";
 import { appBaseUrl } from "@/lib/env";
 import { getMailer } from "@/lib/mail/mailer";
 import { passwordResetEmail } from "@/lib/mail/templates";
+import { canSignIn, type EmailRequestOutcome } from "@/lib/auth/sign-in-messages";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -20,11 +21,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * has nobody above them to re-invite them. The user chose (2026-09-17) to open
  * it to every role rather than special-case one; §9 is corrected.
  *
- * The rule that shapes every function here: **never reveal whether an address
- * has an account.** Requesting a reset returns the same sentence whether the
- * email is a real student, a former student, or nonsense — because the login
- * screen already refuses to say, and a reset form that did would hand back the
- * list that screen protects (`MVP-1.md` §8).
+ * Requesting a reset says what happened (M10-11, the user's choice): sent, no
+ * account with that email, account switched off, or too many emails already.
  */
 
 /**
@@ -41,9 +39,9 @@ export const RESET_TTL_MINUTES = 60;
 const MAX_REQUESTS_PER_WINDOW = 3;
 const REQUEST_WINDOW_SECONDS = 15 * 60;
 
-/** The sentence every reset request gets, whatever actually happened. */
-export const RESET_REQUESTED_MESSAGE =
-	"If there's an account with that email, a link is on its way. It works once, and for the next hour.";
+/** What the screen says once a reset link is on its way. */
+export const resetSentMessage = (email: string) =>
+	`We've sent a link to ${email}. It works once, for the next hour.`;
 
 /** The client's IP, for rate limiting and for the record. */
 async function clientIp(): Promise<string | null> {
@@ -57,12 +55,11 @@ async function clientIp(): Promise<string | null> {
 /**
  * Sends a reset link, if that address has an active account.
  *
- * Always resolves the same way. The work it does — or quietly declines to do —
- * is invisible to the caller by design.
+ * Says what happened, so the screen can tell the person.
  */
-export async function requestPasswordReset(email: string): Promise<void> {
+export async function requestPasswordReset(email: string): Promise<EmailRequestOutcome> {
 	const normalised = email.trim().toLowerCase();
-	if (!normalised || !normalised.includes("@")) return;
+	if (!normalised || !normalised.includes("@")) return "no_account";
 
 	const db = createAdminClient();
 	const ip = await clientIp();
@@ -75,7 +72,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
 		p_window_seconds: REQUEST_WINDOW_SECONDS,
 		p_limit: MAX_REQUESTS_PER_WINDOW,
 	});
-	if ((byEmail as { locked: boolean }[] | null)?.[0]?.locked) return;
+	if ((byEmail as { locked: boolean }[] | null)?.[0]?.locked) return "too_many";
 
 	if (ip) {
 		const { data: byIp } = await db.rpc("bump_rate_limit", {
@@ -83,7 +80,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
 			p_window_seconds: REQUEST_WINDOW_SECONDS,
 			p_limit: 20,
 		});
-		if ((byIp as { locked: boolean }[] | null)?.[0]?.locked) return;
+		if ((byIp as { locked: boolean }[] | null)?.[0]?.locked) return "too_many";
 	}
 
 	const { data: user } = await db
@@ -102,7 +99,8 @@ export async function requestPasswordReset(email: string): Promise<void> {
 	// the reset flow serve accounts with no place in the app at all. The
 	// recovery for that short window is the Supabase dashboard, and it closes
 	// the moment setup is finished.
-	if (!user || user.status !== "active") return;
+	if (!user) return "no_account";
+	if (!canSignIn(user.status)) return "switched_off";
 
 	const { token, tokenHash } = await mintInvitationToken();
 	const expiresAt = new Date(Date.now() + RESET_TTL_MINUTES * 60_000);
@@ -116,7 +114,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
 
 	if (error) {
 		console.error("password reset insert failed:", error.message);
-		return;
+		return "failed";
 	}
 
 	await recordAudit({
@@ -141,7 +139,9 @@ export async function requestPasswordReset(email: string): Promise<void> {
 		// Logged, never surfaced: the caller gets the same sentence regardless,
 		// and telling them delivery failed would confirm the account exists.
 		console.error(`password reset email to ${normalised} failed:`, mailError);
+		return "failed";
 	}
+	return "sent";
 }
 
 /** What `/reset/[token]` renders. */

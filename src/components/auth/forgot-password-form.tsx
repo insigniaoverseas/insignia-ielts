@@ -14,10 +14,8 @@ import type { ResetRequestState } from "@/lib/actions/types";
 /**
  * Ask for a reset link (M1-15).
  *
- * **The confirmation is the same whether or not the account exists.** That is
- * not vagueness for its own sake: the login screen already refuses to say which
- * addresses are real, and a reset form that said would hand back exactly the
- * list it protects (`MVP-1.md` §8).
+ * Says what went wrong, if anything (M10-11): no account with that email, an
+ * account that's switched off, or too many emails already.
  *
  * The screen replaces itself with that confirmation rather than leaving the
  * form up, so nobody sits there pressing the button wondering whether it worked.
@@ -31,8 +29,7 @@ export function ForgotPasswordForm() {
 				<Banner tone="success">{state.message}</Banner>
 				<p className="m-0 text-center text-ink-2">
 					Check your spam folder if it isn&rsquo;t there in a minute. Still nothing?{" "}
-					<strong className="font-semibold text-ink">Ask your teacher</strong> — they can send you a new
-					invitation.
+					<strong className="font-semibold text-ink">Ask your teacher</strong>.
 				</p>
 				<Button size="student" variant="secondary" asChild>
 					<Link href="/login">Back to sign in</Link>

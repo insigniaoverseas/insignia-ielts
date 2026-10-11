@@ -13,6 +13,7 @@ import {
 	normaliseSignInCode,
 } from "@/lib/auth/sign-in-code-rules";
 import { clientIp, finishSignIn, type SignInResult } from "@/lib/auth/sign-in";
+import { SIGN_IN_MESSAGES, canSignIn, type EmailRequestOutcome } from "@/lib/auth/sign-in-messages";
 import { recordAudit } from "@/lib/audit";
 import { getMailer } from "@/lib/mail/mailer";
 import { signInCodeEmail } from "@/lib/mail/templates";
@@ -27,23 +28,17 @@ import { createClient } from "@/lib/supabase/server";
  * sign into their email on a shared machine. Staff can send one from a
  * student's page; it is the same code the student could ask for themselves.
  *
- * The same rule as the reset form: **never reveal whether an address has an
- * account.** Asking for a code gets one sentence whatever happened, and a
- * wrong code gets one sentence whether or not a code was ever sent.
+ * Like the login screen, it says what is wrong (M10-11): no account with that
+ * email, account switched off, wrong code, or a code that has run out.
  *
  * A code gets past the password lockout — that is what it is for — and a
  * successful one lifts it. It cannot be guessed instead: five guesses per
  * code, three codes per address per fifteen minutes, and a per-IP cap.
  */
 
-/** The sentence every code request gets, whatever actually happened. */
-export const CODE_REQUESTED_MESSAGE = `If there's an account with that email, a code is on its way. It works once, for ${CODE_TTL_MINUTES} minutes.`;
-
-/** The sentence every refused code gets. */
-const CODE_REFUSED = "That code isn't right, or it has run out. Check the newest email, or ask for a new code.";
-
-/** What happened to a request — for staff, who may be told. Students are only ever shown {@link CODE_REQUESTED_MESSAGE}. */
-export type CodeRequestOutcome = "sent" | "too_many" | "no_account" | "failed";
+/** What the screen says once a code is on its way. */
+export const codeSentMessage = (email: string) =>
+	`We've sent a code to ${email}. It works once, for ${CODE_TTL_MINUTES} minutes.`;
 
 async function bump(key: string, limit: number): Promise<boolean> {
 	const { data } = await createAdminClient().rpc("bump_rate_limit", {
@@ -63,7 +58,7 @@ async function bump(key: string, limit: number): Promise<boolean> {
  * @param sentBy The staff member sending it, or `null` when the person asked
  *   for it themselves. Recorded with the code and in the audit log.
  */
-export async function requestSignInCode(email: string, sentBy: string | null = null): Promise<CodeRequestOutcome> {
+export async function requestSignInCode(email: string, sentBy: string | null = null): Promise<EmailRequestOutcome> {
 	const normalised = email.trim().toLowerCase();
 	if (!normalised.includes("@")) return "no_account";
 
@@ -78,9 +73,9 @@ export async function requestSignInCode(email: string, sentBy: string | null = n
 		.eq("email", normalised)
 		.maybeSingle();
 
-	// No account, or a suspended one: nothing is sent. A code must never be a
-	// way back into an account an admin closed.
-	if (!user || user.status !== "active") return "no_account";
+	// A code must never be a way back into an account an admin closed.
+	if (!user) return "no_account";
+	if (!canSignIn(user.status)) return "switched_off";
 
 	const code = mintSignInCode();
 	const { error } = await db.rpc("issue_sign_in_code", {
@@ -130,14 +125,20 @@ export async function requestSignInCode(email: string, sentBy: string | null = n
  * the only secret the person ever sees is the six digits.
  */
 export async function signInWithCode(email: string, input: string, nextPath?: string | null): Promise<SignInResult> {
-	const refused: SignInResult = { ok: false, message: CODE_REFUSED, triesLeft: null, lockedUntil: null };
+	const refused = (message: string, field?: "email" | "code"): SignInResult => ({
+		ok: false,
+		message,
+		field,
+		triesLeft: null,
+		lockedUntil: null,
+	});
 	const normalised = email.trim().toLowerCase();
 	const code = normaliseSignInCode(input);
-	if (!code) return { ...refused, message: "The code is 6 numbers. Please check it and try again." };
+	if (!code) return refused(SIGN_IN_MESSAGES.codeFormat, "code");
 
 	const ip = await clientIp();
 	if (ip && (await bump(`code-guess:ip:${ip}`, MAX_CODE_GUESSES_PER_IP))) {
-		return { ...refused, message: "Too many tries from this network. Please wait a few minutes." };
+		return refused(SIGN_IN_MESSAGES.tooManyFromNetwork);
 	}
 
 	const admin = createAdminClient();
@@ -146,7 +147,8 @@ export async function signInWithCode(email: string, input: string, nextPath?: st
 		.select("id, email, status, branch_id, roles ( key )")
 		.eq("email", normalised)
 		.maybeSingle();
-	if (!user || user.status !== "active") return refused;
+	if (!user) return refused(SIGN_IN_MESSAGES.noAccount, "email");
+	if (!canSignIn(user.status)) return refused(SIGN_IN_MESSAGES.switchedOff, "email");
 
 	const { data: verdict, error } = await admin.rpc("redeem_sign_in_code", {
 		p_user: user.id,
@@ -155,15 +157,16 @@ export async function signInWithCode(email: string, input: string, nextPath?: st
 	});
 	if (error) {
 		console.error("redeem_sign_in_code failed:", error.message);
-		return { ...refused, message: "Something went wrong. Please try again." };
+		return refused("Something went wrong. Please try again.");
 	}
-	if (verdict !== "ok") return refused;
+	if (verdict === "wrong") return refused(SIGN_IN_MESSAGES.codeWrong, "code");
+	if (verdict !== "ok") return refused(SIGN_IN_MESSAGES.codeGone, "code");
 
 	const { data: link, error: linkError } = await admin.auth.admin.generateLink({ type: "magiclink", email: user.email });
 	const tokenHash = link?.properties?.hashed_token;
 	if (linkError || !tokenHash) {
 		console.error("sign-in code: generateLink failed:", linkError?.message);
-		return { ...refused, message: "We couldn't sign you in. Please ask for a new code." };
+		return refused("We couldn't sign you in. Please ask for a new code.");
 	}
 
 	const supabase = await createClient();
@@ -171,7 +174,7 @@ export async function signInWithCode(email: string, input: string, nextPath?: st
 	if (verifyError || verified.user?.id !== user.id) {
 		console.error("sign-in code: verifyOtp failed:", verifyError?.message);
 		await supabase.auth.signOut();
-		return { ...refused, message: "We couldn't sign you in. Please ask for a new code." };
+		return refused("We couldn't sign you in. Please ask for a new code.");
 	}
 
 	return finishSignIn(supabase, { userId: user.id, email: normalised, ip, method: "code" }, user, nextPath);

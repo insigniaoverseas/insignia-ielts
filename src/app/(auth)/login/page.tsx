@@ -20,15 +20,16 @@ export const metadata: Metadata = { title: "Sign in" };
  * **Email and password only** — the PIN fast path was ruled out on 2026-09-16
  * (`PROJECT-MEMORY.md` §4), so the rendered phone+PIN design does not apply.
  *
- * Three things this screen deliberately does not have:
+ * Two things this screen deliberately does not have:
  *
  * - **No signup link.** Every account starts as an admin invitation
  *   (`CLAUDE.md` rule 7), so a "create account" link would be a dead end that
  *   makes people think they did something wrong.
- * - **No "which field was wrong".** One message for both, because naming the
- *   email tells an attacker which addresses are real (`MVP-1.md` §8).
  * - **No signed-in state.** A live session is redirected to its role home;
  *   the form is only rendered for somebody who actually needs to sign in.
+ *
+ * Errors say which box is wrong (M10-11) — that used to be a third absence;
+ * the user chose clarity over hiding which emails have accounts.
  */
 export default async function LoginPage({
 	searchParams,
