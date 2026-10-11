@@ -3,8 +3,9 @@ import "server-only";
 import { headers } from "next/headers";
 
 import { safeRelativePath } from "@/lib/auth/access";
-import { checkSignInAllowed, clearSignInFailures, recordFailedSignIn, type SignInVerdict } from "@/lib/auth/lockout";
+import { checkSignInAllowed, clearSignInFailures, recordFailedSignIn, recordUnknownAccount, type SignInVerdict } from "@/lib/auth/lockout";
 import { startSession } from "@/lib/auth/sessions";
+import { SIGN_IN_MESSAGES, canSignIn } from "@/lib/auth/sign-in-messages";
 import { recordAudit } from "@/lib/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -12,26 +13,24 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * Signing in (M1-08).
  *
- * **One message for every failure.** A wrong password, an address with no
- * account, a suspended account and a deactivated one all return the same
- * sentence. Saying "no account with that email" hands an attacker a list of
- * which addresses are real (`MVP-1.md` §8) — and in a product where the email
- * *is* the identifier, that list is most of the way to a targeted attack on a
- * teenager's account.
- *
- * The one exception is a **lock**, which says how long it lasts. That is not a
- * leak worth worrying about — you can only see it by already having failed five
- * times against that address — and hiding it would send a student to the front
- * desk over something that resolves itself in fifteen minutes.
+ * **Every failure says what is wrong** (M10-11, the user's choice on
+ * 2026-10-11): no account with that email, the account is switched off, or the
+ * password isn't right — with tries left. This replaced one message for all
+ * three; why the trade was accepted is in `sign-in-messages.ts`. A lock says
+ * how long it lasts, as before.
  */
-
-/** The sentence every failure gets, whatever actually went wrong. */
-const GENERIC_FAILURE = "That email and password don't match.";
 
 /** What the login screen renders next. */
 export type SignInResult =
 	| { ok: true; redirectTo: string }
-	| { ok: false; message: string; triesLeft: number | null; lockedUntil: Date | null };
+	| {
+			ok: false;
+			message: string;
+			/** Which box the message is about, so it can sit under it. */
+			field?: "email" | "password" | "code";
+			triesLeft: number | null;
+			lockedUntil: Date | null;
+	  };
 
 /** Where each role belongs after signing in. */
 export function landingPathFor(roleKey: string): string {
@@ -68,12 +67,25 @@ function refusal(verdict: Extract<SignInVerdict, { allowed: false }>): SignInRes
 	return {
 		ok: false,
 		message:
-			verdict.scope === "ip"
-				? "Too many sign-in attempts from this network. Please wait a few minutes."
-				: GENERIC_FAILURE,
+			verdict.scope === "ip" ? SIGN_IN_MESSAGES.tooManyFromNetwork : SIGN_IN_MESSAGES.wrongPassword,
 		triesLeft: null,
 		lockedUntil: verdict.lockedUntil,
 	};
+}
+
+/**
+ * Whether `email` has an account that may sign in.
+ *
+ * One carve-out: the **bootstrap Owner before first-run setup** has an auth
+ * account and no profile, and only exists while `public.users` is empty. Then
+ * nobody has a profile, so "no account" is not said and the password decides.
+ */
+export async function accountFor(email: string): Promise<"active" | "switched_off" | "none"> {
+	const db = createAdminClient();
+	const { data } = await db.from("users").select("status").eq("email", email).maybeSingle();
+	if (data) return canSignIn(data.status) ? "active" : "switched_off";
+	const { count } = await db.from("users").select("id", { count: "exact", head: true });
+	return count === 0 ? "active" : "none";
 }
 
 /**
@@ -92,13 +104,25 @@ export async function signIn(email: string, password: string, nextPath?: string 
 	const gate = await checkSignInAllowed(normalised, ip);
 	if (!gate.allowed) return refusal(gate);
 
+	// ── Is there an account, and is it on? Said plainly (M10-11) ────────────
+	const account = await accountFor(normalised);
+	if (account === "none") {
+		if (!(await recordUnknownAccount(ip))) {
+			return { ok: false, message: SIGN_IN_MESSAGES.tooManyFromNetwork, triesLeft: null, lockedUntil: null };
+		}
+		return { ok: false, message: SIGN_IN_MESSAGES.noAccount, field: "email", triesLeft: null, lockedUntil: null };
+	}
+	if (account === "switched_off") {
+		return { ok: false, message: SIGN_IN_MESSAGES.switchedOff, field: "email", triesLeft: null, lockedUntil: null };
+	}
+
 	const supabase = await createClient();
 	const { data, error } = await supabase.auth.signInWithPassword({ email: normalised, password });
 
 	if (error || !data.user) {
 		const after = await recordFailedSignIn(normalised, ip);
 		if (!after.allowed) return refusal(after);
-		return { ok: false, message: GENERIC_FAILURE, triesLeft: after.triesLeft, lockedUntil: null };
+		return { ok: false, message: SIGN_IN_MESSAGES.wrongPassword, field: "password", triesLeft: after.triesLeft, lockedUntil: null };
 	}
 
 	// ── The account must still be usable ─────────────────────────────────────
@@ -128,18 +152,34 @@ export async function signIn(email: string, password: string, nextPath?: string 
 		}
 	}
 
-	if (!profile || profile.status !== "active") {
+	if (!profile || !canSignIn(profile.status)) {
 		await supabase.auth.signOut();
 		// Not counted as a failed attempt: the password was right, and locking
 		// the account would punish someone for an administrative state.
-		return { ok: false, message: GENERIC_FAILURE, triesLeft: null, lockedUntil: null };
+		return { ok: false, message: SIGN_IN_MESSAGES.switchedOff, field: "email", triesLeft: null, lockedUntil: null };
 	}
 
-	await clearSignInFailures(normalised);
+	return finishSignIn(supabase, { userId: data.user.id, email: normalised, ip, method: "password" }, profile, nextPath);
+}
+
+/**
+ * The last steps of every way in — password or emailed code — once Supabase
+ * Auth holds a session for an **active** user: lift any lockout, open the
+ * revocable application session, audit, and say where to go.
+ *
+ * Shared so the two doors can never drift apart on what "signed in" means.
+ */
+export async function finishSignIn(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	who: { userId: string; email: string; ip: string | null; method: "password" | "code" },
+	profile: { branch_id: string | null; roles: { key: string } | null },
+	nextPath?: string | null,
+): Promise<SignInResult> {
+	await clearSignInFailures(who.email);
 
 	const roleKey = profile.roles?.key ?? "student";
 	const userAgent = (await headers()).get("user-agent");
-	const sessionId = await startSession(data.user.id, roleKey, { ip, userAgent });
+	const sessionId = await startSession(who.userId, roleKey, { ip: who.ip, userAgent });
 	if (!sessionId) {
 		// A JWT without its revocable application session is only half a login.
 		// Remove it instead of sending the user into an inconsistent state.
@@ -153,12 +193,12 @@ export async function signIn(email: string, password: string, nextPath?: string 
 	}
 
 	await recordAudit({
-		actorId: data.user.id,
+		actorId: who.userId,
 		branchId: profile.branch_id,
 		action: "auth.sign_in",
 		entity: "user",
-		entityId: data.user.id,
-		meta: { role: roleKey },
+		entityId: who.userId,
+		meta: { role: roleKey, method: who.method },
 	});
 
 	const safeNext = safeRelativePath(nextPath);

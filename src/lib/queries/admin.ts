@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
+import { lockedAccounts } from "@/lib/auth/lockout";
 import { PERMISSIONS, parsePermissions } from "@/lib/permissions";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
@@ -20,7 +21,7 @@ import type {
 	TestLibraryRow,
 	UsersAndRoles,
 } from "@/lib/view-models/admin";
-import { daysUntil, displayPhone, formatShortDate, instituteToday, queryFailed, relativeActivity } from "./shared";
+import { daysUntil, displayPhone, formatShortDate, instituteToday, lockedUntilLabel, queryFailed, relativeActivity } from "./shared";
 
 type Tables = Database["public"]["Tables"];
 type User = Tables["users"]["Row"];
@@ -47,6 +48,8 @@ const ACTION_LABEL: Record<string, string> = {
 	"user.reactivate": "Staff member reactivated",
 	"test.key_edit": "Answer key changed",
 	"auth.reset_sent": "Password reset link sent",
+	"auth.unlock": "Sign-in unlocked",
+	"auth.code_sent": "Sign-in code emailed",
 	"user.phone_change": "Phone number changed",
 	"attempt.extra_time": "Gave a student extra time",
 	"attempt.force_submit": "Handed in a student's test",
@@ -280,6 +283,7 @@ export async function getStudentDetail(id: string): Promise<StudentDetail | null
 	]);
 	const student = rows.find((row) => row.id === id);
 	if (!student) return null;
+	const locked = await lockedAccounts([student.email]);
 	if (historyResult.error) queryFailed("plan history", historyResult.error);
 	if (attemptsResult.error) queryFailed("student attempts", attemptsResult.error);
 	const actors = new Map([...users].map(([userId, user]) => [userId, user.name]));
@@ -290,6 +294,7 @@ export async function getStudentDetail(id: string): Promise<StudentDetail | null
 
 	return {
 		student,
+		lockedUntilLabel: lockedUntilLabel(locked, student.email),
 		planHistory: (historyResult.data ?? []).map((item) => ({
 			id: item.id,
 			whenLabel: formatShortDate(item.at),

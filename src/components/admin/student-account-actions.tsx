@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 
+import { SendSignInCode } from "@/components/staff/send-sign-in-code";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -9,8 +10,8 @@ import { Label } from "@/components/ui/label";
 import { changeStudentPhoneAction, sendStudentResetAction } from "@/lib/actions/students";
 
 /**
- * Screen 23's account buttons (M5-05): send a password reset link, and
- * change the phone number. Each dialog says what will happen before it does,
+ * Screen 23's account buttons (M5-05): send a password reset link, change
+ * the phone number, and email a sign-in code (M10-10). Each dialog says what will happen before it does,
  * and the result is shown on the page afterwards.
  */
 export function StudentAccountActions({ studentId, email }: { studentId: string; email: string }) {
@@ -37,6 +38,7 @@ export function StudentAccountActions({ studentId, email }: { studentId: string;
 				<Button variant="secondary" onClick={() => setOpen("phone")}>
 					Change phone number
 				</Button>
+				<SendSignInCode studentId={studentId} />
 			</div>
 			{message && (
 				<p className={`m-0 text-small font-semibold ${message.ok ? "text-success" : "text-danger"}`} role="status">

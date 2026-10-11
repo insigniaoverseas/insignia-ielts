@@ -6,9 +6,11 @@ import { redirect } from "next/navigation";
 
 import { acceptInvitation } from "@/lib/auth/acceptance";
 import { changePassword } from "@/lib/auth/change-password";
-import { completePasswordReset, requestPasswordReset, RESET_REQUESTED_MESSAGE } from "@/lib/auth/password-reset";
+import { completePasswordReset, requestPasswordReset, resetSentMessage } from "@/lib/auth/password-reset";
 import { requireUser } from "@/lib/auth/guard";
 import { signIn } from "@/lib/auth/sign-in";
+import { codeSentMessage, requestSignInCode, signInWithCode } from "@/lib/auth/sign-in-code";
+import { emailRequestProblem } from "@/lib/auth/sign-in-messages";
 import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
 import { endSession, revokeSession, startSession } from "@/lib/auth/sessions";
 import { recordAudit } from "@/lib/audit";
@@ -21,6 +23,7 @@ import type {
 	LoginFormState,
 	ResetFormState,
 	ResetRequestState,
+	SignInCodeState,
 	SignOutDeviceResult,
 } from "@/lib/actions/types";
 
@@ -40,12 +43,12 @@ export async function signInAction(_previous: LoginFormState, formData: FormData
 	const next = formData.get("next");
 
 	if (!email || !password) {
-		return { message: "Please fill in both boxes.", triesLeft: null, lockedUntil: null };
+		return { message: "Please fill in both boxes.", email, triesLeft: null, lockedUntil: null };
 	}
 	const requestHeaders = await headers();
 	const remoteIp = requestHeaders.get("cf-connecting-ip") ?? requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 	if (!(await verifyTurnstile(String(formData.get("cf-turnstile-response") ?? ""), "login", remoteIp))) {
-		return { message: "We couldn't verify that check. Please try again.", triesLeft: null, lockedUntil: null };
+		return { message: "We couldn't verify that check. Please try again.", email, triesLeft: null, lockedUntil: null };
 	}
 
 	const result = await signIn(email, password, next ? String(next) : null);
@@ -53,6 +56,8 @@ export async function signInAction(_previous: LoginFormState, formData: FormData
 	if (!result.ok) {
 		return {
 			message: result.message,
+			field: result.field,
+			email,
 			triesLeft: result.triesLeft,
 			lockedUntil: result.lockedUntil?.toISOString() ?? null,
 		};
@@ -166,8 +171,32 @@ export async function requestPasswordResetAction(
 		return { message: "Please enter your email address.", sent: false };
 	}
 
-	await requestPasswordReset(email);
-	return { message: RESET_REQUESTED_MESSAGE, sent: true };
+	const problem = emailRequestProblem(await requestPasswordReset(email));
+	if (problem) return { message: problem, sent: false };
+	return { message: resetSentMessage(email.trim()), sent: true };
+}
+
+/** "Email me a code" (M10-10). Says plainly if there's no such account (M10-11). */
+export async function requestSignInCodeAction(previous: SignInCodeState, formData: FormData): Promise<SignInCodeState> {
+	const email = String(formData.get("email") ?? "").trim();
+	if (!email.includes("@")) {
+		return { email, sent: false, message: "Please enter your email address.", error: true };
+	}
+	const problem = emailRequestProblem(await requestSignInCode(email));
+	// A refused "Send a new code" keeps them on the code step, with the reason.
+	if (problem) return { email, sent: Boolean(previous?.sent && previous.email === email), message: problem, error: true };
+	return { email, sent: true, message: codeSentMessage(email), error: false };
+}
+
+/** Checks the code and, if it is right, signs in on this browser and redirects. */
+export async function signInWithCodeAction(_previous: SignInCodeState, formData: FormData): Promise<SignInCodeState> {
+	const email = String(formData.get("email") ?? "");
+	const next = formData.get("next");
+	const result = await signInWithCode(email, String(formData.get("code") ?? ""), next ? String(next) : null);
+	if (!result.ok) return { email, sent: true, message: result.message, error: true };
+
+	// `redirect` throws to unwind — it must sit outside any try/catch.
+	redirect(result.redirectTo);
 }
 
 /** Sets the new password, then sends them to sign in with it. */

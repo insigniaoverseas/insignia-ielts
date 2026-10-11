@@ -18,6 +18,10 @@ export type FormState = {
 /** The login form's state — richer, because it drives the lockout UI. */
 export type LoginFormState = {
 	message: string;
+	/** Which box the message is about — shown under it. `undefined` for the form as a whole. */
+	field?: "email" | "password" | "code";
+	/** What they typed, so a wrong password doesn't make them type the email again. */
+	email?: string;
 	/** Counts down as attempts are used. `null` when not applicable. */
 	triesLeft: number | null;
 	/** ISO timestamp the lock lifts at, or `null`. Rendered in `Asia/Kolkata`. */
@@ -35,6 +39,12 @@ export type AcceptFormState = {
  * state on purpose — the form must not reveal which it was.
  */
 export type ResetRequestState = { message: string; sent: boolean } | null;
+
+/**
+ * The sign-in-with-a-code screen's state (M10-10). `sent` moves it from "your
+ * email" to "type the code", keeping the email so it isn't asked for twice.
+ */
+export type SignInCodeState = { email: string; sent: boolean; message: string | null; error: boolean } | null;
 
 /**
  * The change-password form's state. `field` says which box the message is

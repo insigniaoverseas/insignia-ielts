@@ -1,5 +1,14 @@
 import "server-only";
 
+import {
+	ACCOUNT_LIMIT,
+	IP_LIMIT,
+	WINDOW_SECONDS,
+	accountKey,
+	ipKey,
+	windowEndOf,
+	windowStartAt,
+} from "@/lib/auth/lockout-rules";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -30,15 +39,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * review rather than riding along with auth.
  */
 
-/** Wrong passwords for one account before it locks. */
-const ACCOUNT_LIMIT = 5;
-
-/** Failed attempts from one IP before it is throttled, across all accounts. */
-const IP_LIMIT = 30;
-
-/** The lock window, in seconds. Fifteen minutes (BUILD-STEPS step 39). */
-const WINDOW_SECONDS = 15 * 60;
-
 /** What the login screen is allowed to do next. */
 export type SignInVerdict =
 	| { allowed: true; triesLeft: number }
@@ -46,13 +46,7 @@ export type SignInVerdict =
 
 type LimitRow = { attempts: number; window_start: string; locked: boolean };
 
-const accountKey = (email: string) => `signin:account:${email.trim().toLowerCase()}`;
-const ipKey = (ip: string) => `signin:ip:${ip}`;
-
-/** Fixed windows end at `window_start + WINDOW_SECONDS`; that is when the lock lifts. */
-function windowEnd(row: LimitRow): Date {
-	return new Date(new Date(row.window_start).getTime() + WINDOW_SECONDS * 1000);
-}
+const windowEnd = (row: LimitRow) => windowEndOf(row.window_start);
 
 /**
  * Whether this attempt may proceed — **without** spending one.
@@ -128,4 +122,52 @@ export async function recordFailedSignIn(email: string, ip: string | null): Prom
  */
 export async function clearSignInFailures(email: string): Promise<void> {
 	await createAdminClient().rpc("clear_rate_limit", { p_key: accountKey(email) });
+}
+
+/**
+ * Which of these accounts are locked out right now, and until when — for the
+ * staff screens that offer "Unlock sign-in".
+ *
+ * One query for a whole roster rather than a peek per student. Keyed by the
+ * lower-cased email; an account that isn't locked is simply absent.
+ */
+export async function lockedAccounts(emails: readonly string[]): Promise<Map<string, Date>> {
+	const locked = new Map<string, Date>();
+	if (emails.length === 0) return locked;
+
+	const byKey = new Map(emails.map((email) => [accountKey(email), email.trim().toLowerCase()]));
+	const { data, error } = await createAdminClient()
+		.from("rate_limits")
+		.select("key, window_start, count")
+		.in("key", [...byKey.keys()])
+		.eq("window_start", windowStartAt(new Date()).toISOString())
+		.gte("count", ACCOUNT_LIMIT);
+	if (error) {
+		// Not knowing who is locked must not break the roster around it.
+		console.error("lockedAccounts failed:", error.message);
+		return locked;
+	}
+
+	for (const row of data ?? []) {
+		const email = byKey.get(row.key);
+		if (email) locked.set(email, windowEndOf(row.window_start));
+	}
+	return locked;
+}
+
+/**
+ * Records a sign-in attempt for an email with no account — against the **IP
+ * only**, so the screen can't be used to check a list of addresses, and a
+ * made-up address never shows as "locked".
+ *
+ * @returns `false` once this IP has used up its allowance.
+ */
+export async function recordUnknownAccount(ip: string | null): Promise<boolean> {
+	if (!ip) return true;
+	const { data } = await createAdminClient().rpc("bump_rate_limit", {
+		p_key: ipKey(ip),
+		p_window_seconds: WINDOW_SECONDS,
+		p_limit: IP_LIMIT,
+	});
+	return !(data as LimitRow[] | null)?.[0]?.locked;
 }

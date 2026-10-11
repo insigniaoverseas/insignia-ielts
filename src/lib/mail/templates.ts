@@ -143,3 +143,60 @@ export function passwordResetEmail(reset: PasswordResetEmail): { subject: string
 
 	return { subject, html, text };
 }
+
+/** What the sign-in code email needs to know (M10-10). */
+export type SignInCodeEmail = {
+	name: string;
+	branchName: string;
+	/** Six digits, already spaced for reading: "482 913". */
+	code: string;
+	/** "10 minutes". */
+	validFor: string;
+};
+
+/**
+ * The emailed sign-in code. The code is **in the subject**, so it shows in the
+ * phone's notification and the student never has to open the email — the
+ * whole point is reading it on a phone and typing it on a lab PC.
+ *
+ * No link. A link would open on the phone, not on the PC that needs signing in.
+ */
+export function signInCodeEmail(email: SignInCodeEmail): { subject: string; html: string; text: string } {
+	const firstName = email.name.trim().split(/\s+/)[0] || "there";
+	const subject = `${email.code} is your ${email.branchName} sign-in code`;
+
+	const text = [
+		`Hello ${firstName},`,
+		"",
+		"Your sign-in code is:",
+		"",
+		`    ${email.code}`,
+		"",
+		`Type it on the sign-in screen. It works once, and only for the next ${email.validFor}.`,
+		"",
+		"If you didn't ask for this, you can ignore it — nobody can sign in without the code.",
+		"",
+		email.branchName,
+	].join("\n");
+
+	const html = `<!doctype html>
+<html lang="en">
+<body style="margin:0;padding:24px;background:#f5f5f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.6;color:#1c1917;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background:#ffffff;border-radius:12px;padding:32px;">
+<tr><td>
+<h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;">Hello ${escapeHtml(firstName)},</h1>
+<p style="margin:0 0 16px;">Your sign-in code is:</p>
+<p style="margin:0 0 24px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:36px;font-weight:700;letter-spacing:4px;">${escapeHtml(email.code)}</p>
+<p style="margin:0 0 16px;">Type it on the sign-in screen. It works once, and only for the next ${escapeHtml(email.validFor)}.</p>
+<p style="margin:0;color:#78716c;font-size:13px;border-top:1px solid #e7e5e4;padding-top:16px;">If you didn&rsquo;t ask for this, you can ignore it &mdash; nobody can sign in without the code.<br>${escapeHtml(email.branchName)}</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+	return { subject, html, text };
+}

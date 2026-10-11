@@ -20,15 +20,16 @@ export const metadata: Metadata = { title: "Sign in" };
  * **Email and password only** — the PIN fast path was ruled out on 2026-09-16
  * (`PROJECT-MEMORY.md` §4), so the rendered phone+PIN design does not apply.
  *
- * Three things this screen deliberately does not have:
+ * Two things this screen deliberately does not have:
  *
  * - **No signup link.** Every account starts as an admin invitation
  *   (`CLAUDE.md` rule 7), so a "create account" link would be a dead end that
  *   makes people think they did something wrong.
- * - **No "which field was wrong".** One message for both, because naming the
- *   email tells an attacker which addresses are real (`MVP-1.md` §8).
  * - **No signed-in state.** A live session is redirected to its role home;
  *   the form is only rendered for somebody who actually needs to sign in.
+ *
+ * Errors say which box is wrong (M10-11) — that used to be a third absence;
+ * the user chose clarity over hiding which emails have accounts.
  */
 export default async function LoginPage({
 	searchParams,
@@ -91,10 +92,17 @@ export default async function LoginPage({
 
 			{/* No signup link — accounts are created by invitation only. The
 			    reset link is new (M1-15): §9 originally sent everyone to their
-			    teacher, which left the Owner with no way back at all. */}
+			    teacher, which left the Owner with no way back at all. The code
+			    link (M10-10) is for lab PCs: the code is read on their phone. */}
 			<p className="m-0 text-center text-ink-2">
 				<Link href="/forgot" className="font-semibold text-ink underline">
 					Forgotten your password?
+				</Link>
+				<Link
+					href={next ? `/login/code?next=${encodeURIComponent(next)}` : "/login/code"}
+					className="mt-2 block font-semibold text-ink underline"
+				>
+					Sign in without a password
 				</Link>
 				<span className="mt-1 block">
 					Still stuck? Ask your teacher — they can send you a new invitation.

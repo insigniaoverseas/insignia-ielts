@@ -408,7 +408,7 @@ Append-only integrity log (UPDATE trigger). Written by server code; read only by
 
 | Threat | Control | Where | Milestone |
 |---|---|---|---|
-| **Account takeover** | Password strength check at invite acceptance; Supabase-managed hashing; lockout after 5 failures on **both** password and PIN; rate limit by IP **and** account; Turnstile. Auth is a Route Handler — the browser never talks to Supabase Auth directly. | `app/api/auth/*`, `lib/security/` | M1 |
+| **Account takeover** | Password strength check at invite acceptance; Supabase-managed hashing; lockout after 5 failures on **both** password and PIN; rate limit by IP **and** account; Turnstile. **Accepted risk (M10-11, user's choice 2026-10-11):** sign-in, code and reset screens say "no account with this email" — they confirm which emails have accounts, in exchange for students knowing what they got wrong. Bulk checking is held off by Turnstile and the per-IP limits (unknown emails count against the IP). Auth is a Route Handler — the browser never talks to Supabase Auth directly. | `app/api/auth/*`, `lib/security/` | M1 |
 | **Invite abuse** | Single-use hashed tokens, short TTL, revocable, rate-limited sends. **Accepting an invite can never grant a role above the inviter's.** No public signup route exists to attack. | `lib/invitations.ts` | M1 |
 | **PIN is only 4–6 digits** | A PIN authenticates nothing on its own — valid only alongside a device secret bound at PIN setup. PIN lockout falls back to full password login, never to a bypass. | [§9](#9-accounts-invites-and-login-d9) | M1 |
 | **One student reading another's data** | RLS as the floor (`student_id = auth.uid()`); `lib/rbac.ts` as an independent second gate; explicit ownership re-check on every attempt/result/profile route so an IDOR can't slip past a missing policy; UUID keys, no enumerable integers. **A student-role session has no route, query or policy that can return another user's name, email, attempt, answer, band or plan.** | everywhere | M0, M1 |
@@ -504,10 +504,9 @@ loud.
 > The user hit exactly that and chose to open the reset to every role rather
 > than special-case one.
 >
-> `/forgot` asks for an email and always answers the same way, whether or not
-> an account exists — the login screen already refuses to say which addresses
-> are real, and a reset form that said would hand back the list it protects
-> (§8). `/reset/[token]` takes a hashed, single-use token with a **one-hour**
+> `/forgot` asks for an email and says what happened — sent, no account with
+> that email, or the account is switched off (M10-11: the user chose clear
+> messages over hiding which emails have accounts; see §8). `/reset/[token]` takes a hashed, single-use token with a **one-hour**
 > TTL — against an invitation's seven days, because a reset is asked for by
 > someone sitting at the screen, while an invitation has to survive a weekend.
 > Completing one **revokes every session that account holds**: if someone else
@@ -524,6 +523,13 @@ on Profile (M1-14 / M4-06). "Is someone else in my account?" is a question worth
 answering however people sign in.
 
 Rate limiting and lockout still apply — to the password (M1-09, M1-10).
+
+**Sign in with an emailed code** (M10-10, added 2026-10-11). Class tests run on
+lab PCs, and a student who has forgotten or locked their password should not
+have to open their email there. "Sign in without a password" emails six digits;
+they read them on their own phone and type them on the PC. Ten minutes, single
+use, five guesses, three codes per address per 15 minutes. Teachers and admins can send one from the roster or
+student page. A QR-code option was considered and dropped by the user.
 
 ### Screens this changes
 

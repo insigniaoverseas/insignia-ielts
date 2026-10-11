@@ -67,6 +67,26 @@ export const getActor = cache(async function getActor(): Promise<Actor | null> {
  * // scope is "batch" for a teacher: confirm they teach the assignment's batch.
  */
 export async function requirePermission(permission: Permission): Promise<{ actor: Actor; scope: Scope }> {
+	const actor = await liveActor();
+	const scope = scopeOf(actor, permission);
+	if (!scope) throw new ForbiddenError("missing_permission", permission);
+	return { actor, scope };
+}
+
+/**
+ * Like {@link requirePermission}, for an action more than one role reaches by
+ * a different permission. Passes if the actor holds **any** of `permissions`;
+ * the caller still checks the target is in scope.
+ */
+export async function requireAnyPermission(permissions: readonly Permission[]): Promise<Actor> {
+	const actor = await liveActor();
+	if (!permissions.some((permission) => scopeOf(actor, permission))) {
+		throw new ForbiddenError("missing_permission", permissions[0]);
+	}
+	return actor;
+}
+
+async function liveActor(): Promise<Actor> {
 	const actor = await getActor();
 	if (!actor) throw new ForbiddenError("signed_out");
 	// A revoked device still holds a valid JWT until it expires. Proxy turns it
@@ -75,7 +95,5 @@ export async function requirePermission(permission: Permission): Promise<{ actor
 	// endpoints with no page around them, so they check here. Memoised per
 	// request: a page that already ran `requireUser` pays nothing.
 	if ((await sessionState(actor.id)) !== "live") throw new ForbiddenError("signed_out");
-	const scope = scopeOf(actor, permission);
-	if (!scope) throw new ForbiddenError("missing_permission", permission);
-	return { actor, scope };
+	return actor;
 }

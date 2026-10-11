@@ -31,6 +31,8 @@ export type RosterRow = {
 	planEndsLabel: string;
 	daysRemaining: number;
 	lastActiveLabel: string;
+	/** "4:35 pm" while too many wrong passwords have locked them out, else `null`. */
+	lockedUntilLabel: string | null;
 };
 
 /** Screen 14 — Teacher dashboard. */

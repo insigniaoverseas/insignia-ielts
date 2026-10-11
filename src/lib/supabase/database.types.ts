@@ -883,6 +883,57 @@ export type Database = {
         }
         Relationships: []
       }
+      sign_in_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          requested_ip: unknown
+          sent_by: string | null
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          requested_ip?: unknown
+          sent_by?: string | null
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          requested_ip?: unknown
+          sent_by?: string | null
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sign_in_codes_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sign_in_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_plan_notes: {
         Row: {
           body: string
@@ -1283,6 +1334,16 @@ export type Database = {
         }[]
       }
       first_run_pending: { Args: never; Returns: boolean }
+      issue_sign_in_code: {
+        Args: {
+          p_code_hash: string
+          p_requested_ip: unknown
+          p_sent_by: string
+          p_ttl_seconds: number
+          p_user: string
+        }
+        Returns: undefined
+      }
       peek_rate_limit: {
         Args: { p_key: string; p_limit: number; p_window_seconds: number }
         Returns: {
@@ -1293,6 +1354,11 @@ export type Database = {
       }
       purge_old_password_resets: { Args: never; Returns: number }
       purge_old_rate_limits: { Args: never; Returns: number }
+      purge_old_sign_in_codes: { Args: never; Returns: number }
+      redeem_sign_in_code: {
+        Args: { p_code_hash: string; p_max_attempts: number; p_user: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
