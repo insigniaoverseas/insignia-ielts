@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PRIVACY_NOTICE_VERSION, privacyContactEmail, privacyNotice } from "@/lib/privacy";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Privacy" };
 
@@ -27,7 +28,8 @@ export default function PrivacyPage() {
 			))}
 			<p className="m-0 text-small text-ink-2">Version {PRIVACY_NOTICE_VERSION}</p>
 			<Link href="/login" className="font-semibold">
-				← Go to sign in
+				<Icon name="arrow-left" className="mr-1.5" />
+				Go to sign in
 			</Link>
 		</main>
 	);

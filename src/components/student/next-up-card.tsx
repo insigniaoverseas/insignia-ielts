@@ -2,6 +2,7 @@ import Link from "next/link";
 import { DIFFICULTY_LABEL } from "@/components/ui/difficulty-badge";
 import { MODE_EXPLAINED, SKILL_LABEL } from "@/components/student/labels";
 import type { AssignedTest } from "@/lib/view-models/student";
+import { Icon } from "@/components/ui/icon";
 
 /*
  * The "Next up" hero from screen 03 — the single biggest thing on Student Home,
@@ -62,7 +63,7 @@ export function NextUpCard({ test }: { test: AssignedTest | null }) {
 						href="/practice"
 						className="flex h-primary items-center justify-center gap-2.5 rounded-control bg-white text-h3 font-semibold text-night no-underline hover:bg-brand-soft hover:no-underline"
 					>
-						Practice at Home<span aria-hidden="true">→</span>
+						Practice at Home<Icon name="arrow-right" />
 					</Link>
 				</div>
 			</section>
@@ -94,7 +95,7 @@ export function NextUpCard({ test }: { test: AssignedTest | null }) {
 				</div>
 				{/* The reason is the point of this branch: never a dead button with no explanation. */}
 				<p className="m-0 flex items-start gap-2 text-danger">
-					<span aria-hidden="true">✕</span>
+					<Icon name="alert" />
 					{locked.message}
 				</p>
 			</section>
@@ -135,7 +136,7 @@ export function NextUpCard({ test }: { test: AssignedTest | null }) {
 						className="flex h-primary items-center justify-center gap-2.5 rounded-control bg-white text-h3 font-semibold text-night no-underline shadow-soft hover:bg-brand-soft hover:no-underline"
 					>
 						{test.resumeAttemptId ? "Carry on with your test" : "Start Test"}
-						<span aria-hidden="true">→</span>
+						<Icon name="arrow-right" />
 					</Link>
 				</div>
 			</div>

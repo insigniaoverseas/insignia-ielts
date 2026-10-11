@@ -1,7 +1,9 @@
 import Link from "next/link";
 
+import { Icon, type IconName } from "@/components/ui/icon";
+
 /** One row in the quick-links list: icon, label, one line of context, chevron. */
-export type QuickLink = { href: string; icon: string; label: string; detail: string };
+export type QuickLink = { href: string; icon: IconName; label: string; detail: string };
 
 /**
  * The three quiet destinations under the "Next up" card on Home (screen 03):
@@ -25,15 +27,13 @@ export function QuickLinks({ links }: { links: QuickLink[] }) {
 						className="grid size-10 flex-none place-items-center rounded-control bg-brand-soft text-h3"
 						aria-hidden="true"
 					>
-						{link.icon}
+						<Icon name={link.icon} className="size-5 text-brand" />
 					</span>
 					<span className="flex flex-1 flex-col gap-0.5">
 						<span className="text-h3">{link.label}</span>
 						<span className="text-small text-ink-2">{link.detail}</span>
 					</span>
-					<span className="text-h3 text-ink-3" aria-hidden="true">
-						→
-					</span>
+					<Icon name="arrow-right" className="size-6 text-ink-3" />
 				</Link>
 			))}
 		</nav>

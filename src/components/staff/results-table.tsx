@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { giveMarkAction } from "@/lib/actions/marks";
 import type { AssignmentResults, OverridableAnswer } from "@/lib/view-models/teacher";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * The expanded row: re-mark one answer by hand (M6-05).
@@ -63,11 +64,11 @@ function OverrideRows({
 					<span className="w-8 flex-none font-mono text-ink-2">{a.questionNumber}</span>
 					<span className="flex min-w-[220px] flex-1 flex-wrap items-center gap-x-4 gap-y-1">
 						<span className={a.overridden ? "text-success" : "text-danger"}>
-							<span aria-hidden="true">{a.overridden ? "✓" : "✕"}</span> They wrote{" "}
+							<Icon name={a.overridden ? "check" : "x"} strokeWidth={2.5} /> They wrote{" "}
 							<strong className="font-semibold">{a.givenAnswer ?? "nothing"}</strong>
 						</span>
 						<span className="text-success">
-							<span aria-hidden="true">✓</span> Key says{" "}
+							<Icon name="check" strokeWidth={2.5} /> Key says{" "}
 							<strong className="font-semibold">{a.correctAnswer}</strong>
 						</span>
 					</span>

@@ -1,14 +1,15 @@
 import Link from "next/link";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 
-export type TabItem = { href: string; label: string; icon: string };
+export type TabItem = { href: string; label: string; icon: IconName };
 
 /** The four student destinations. Max four, always labelled (DESIGN-PROMPT §A5.20). */
 export const STUDENT_TABS: TabItem[] = [
-	{ href: "/home", label: "Home", icon: "🏠" },
-	{ href: "/tests", label: "My Tests", icon: "📄" },
-	{ href: "/progress", label: "Progress", icon: "📈" },
-	{ href: "/profile", label: "Profile", icon: "👤" },
+	{ href: "/home", label: "Home", icon: "home" },
+	{ href: "/tests", label: "My Tests", icon: "test" },
+	{ href: "/progress", label: "Progress", icon: "progress" },
+	{ href: "/profile", label: "Profile", icon: "profile" },
 ];
 
 /**
@@ -46,7 +47,7 @@ export function StudentTabBar({
 									active ? "bg-brand-soft text-brand" : "text-ink-2 hover:bg-bg hover:text-ink",
 								)}
 							>
-								<span aria-hidden="true">{item.icon}</span>
+								<Icon name={item.icon} className="size-6" />
 								<span className="text-small font-semibold">{item.label}</span>
 							</Link>
 						</li>

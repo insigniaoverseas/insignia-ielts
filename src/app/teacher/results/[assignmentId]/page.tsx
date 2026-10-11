@@ -6,6 +6,7 @@ import { ResultsTable } from "@/components/staff/results-table";
 import { SKILL_LABEL } from "@/components/student/labels";
 import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getAssignmentResults } from "@/lib/queries/teacher";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = {
 	title: "Results",
@@ -27,7 +28,8 @@ export default async function ResultsPage({ params }: { params: Promise<{ assign
 	return (
 		<div className="flex flex-col gap-6">
 			<Link href="/teacher/dashboard" className="font-semibold">
-				← Back to dashboard
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to dashboard
 			</Link>
 
 			<div className="flex flex-col gap-1">

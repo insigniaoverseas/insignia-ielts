@@ -4,6 +4,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { formatBand } from "@/components/ui/band-score";
 import { MODE_LABEL, SKILL_LABEL } from "@/components/student/labels";
 import type { AssignedTest, CompletedAttempt } from "@/lib/view-models/student";
+import { Icon } from "@/components/ui/icon";
 
 /*
  * The row cards on My Tests (04) and Practice at home (12).
@@ -98,7 +99,7 @@ export function AssignedTestCard({ item, extraDetail }: { item: AssignedTest; ex
 						className="flex h-primary items-center justify-center gap-2.5 rounded-control bg-brand text-h3 font-semibold text-white no-underline hover:bg-brand-hover hover:no-underline"
 					>
 						{resumeAttemptId ? "Carry on" : "Start Test"}
-						<span aria-hidden="true">→</span>
+						<Icon name="arrow-right" />
 					</Link>
 				)}
 			</Action>

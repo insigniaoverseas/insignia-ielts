@@ -9,6 +9,7 @@ import { finishAttempt } from "@/lib/attempts/finish";
 import { getOwnedAttempt, loadAttemptSession } from "@/lib/attempts/load";
 import { checkInPractice } from "@/lib/attempts/pause";
 import { requireUser } from "@/lib/auth/guard";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = {
 	title: "Your test",
@@ -52,7 +53,8 @@ export default async function AttemptPage({ params }: { params: Promise<{ attemp
 					This test can&rsquo;t be opened right now. Your time and answers are safe — tell your teacher.
 				</Banner>
 				<Link href="/tests" className="font-semibold">
-					← Back to My Tests
+					<Icon name="arrow-left" className="mr-1.5" />
+					Back to My Tests
 				</Link>
 			</main>
 		);

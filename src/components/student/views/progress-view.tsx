@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { formatBand } from "@/components/ui/band-score";
 import { SKILL_LABEL } from "@/components/student/labels";
 import { useStudentData } from "@/components/student/student-data";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Screen 11 — My Progress (M4-03).
@@ -24,7 +25,7 @@ export function ProgressView() {
 			<div className="flex flex-col gap-6">
 				<h1 className="m-0 text-[1.75rem] leading-9 font-bold md:text-h1">My Progress</h1>
 				<EmptyState
-					icon="📈"
+					icon={<Icon name="progress" />}
 					title="Nothing to show yet"
 					action={
 						<Link

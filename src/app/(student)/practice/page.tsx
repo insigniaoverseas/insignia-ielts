@@ -3,6 +3,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AssignedTestCard } from "@/components/student/test-card";
 import { getPracticeLibrary } from "@/lib/queries/student";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Practice at Home" };
 
@@ -75,7 +76,7 @@ export default async function PracticePage({
 					))
 				) : (
 					<EmptyState
-						icon="📄"
+						icon={<Icon name="test" />}
 						title="Nothing here yet"
 						action={
 							<Link

@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PillTabs } from "@/components/student/pill-tabs";
 import { AssignedTestCard, CompletedAttemptCard } from "@/components/student/test-card";
 import { useStudentData } from "@/components/student/student-data";
+import { Icon } from "@/components/ui/icon";
 
 const TAB_NOTE: Record<string, string> = {
 	todo: "Tests your teacher has set for you.",
@@ -49,7 +50,7 @@ export function MyTestsView({ tab }: { tab?: string }) {
 						data.toDo.map((item) => <AssignedTestCard key={item.assignmentId} item={item} />)
 					) : (
 						<EmptyState
-							icon="📄"
+							icon={<Icon name="test" />}
 							title="No tests for you right now"
 							action={
 								<Link
@@ -68,7 +69,7 @@ export function MyTestsView({ tab }: { tab?: string }) {
 					(data.practice.length > 0 ? (
 						data.practice.map((item) => <AssignedTestCard key={item.assignmentId} item={item} />)
 					) : (
-						<EmptyState icon="📄" title="No practice tests yet">
+						<EmptyState icon={<Icon name="test" />} title="No practice tests yet">
 							Your teacher will add some soon.
 						</EmptyState>
 					))}
@@ -78,7 +79,7 @@ export function MyTestsView({ tab }: { tab?: string }) {
 						data.done.map((item) => <CompletedAttemptCard key={item.attemptId} item={item} />)
 					) : (
 						<EmptyState
-							icon="✓"
+							icon={<Icon name="check" />}
 							title="You haven't finished a test yet"
 							action={
 								<Link

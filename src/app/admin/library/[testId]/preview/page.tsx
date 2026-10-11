@@ -6,6 +6,7 @@ import { PlayerShell } from "@/components/player/player-shell";
 import { Banner } from "@/components/ui/banner";
 import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getTestPreview } from "@/lib/queries/test-preview";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = {
 	title: "Preview test",
@@ -38,7 +39,8 @@ export default async function PreviewTestPage({ params }: { params: Promise<{ te
 		return (
 			<div className="flex flex-col gap-6">
 				<Link href="/admin/library" className="font-semibold">
-					← Back to the test library
+					<Icon name="arrow-left" className="mr-1.5" />
+					Back to the test library
 				</Link>
 				<Banner tone="warning">{PROBLEM_TEXT[preview.problem]}</Banner>
 			</div>

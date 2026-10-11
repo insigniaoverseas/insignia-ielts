@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatusPill } from "@/components/ui/status-pill";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { pageData, useTeacherData } from "@/components/staff/staff-data";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * `/teacher/results` — the list behind the nav's "Results" link (M10-01).
@@ -27,7 +28,7 @@ export function ResultsIndexView() {
 
 			{rows.length === 0 ? (
 				<EmptyState
-					icon="✓"
+					icon={<Icon name="results" />}
 					title="No tests set yet"
 					action={
 						<Link href="/teacher/assign" className="font-semibold">

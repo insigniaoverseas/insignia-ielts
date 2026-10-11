@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { LockedReason } from "@/lib/view-models/student";
+import { Icon } from "@/components/ui/icon";
 
 /** The heading for each reason — what happened, in a few plain words. */
 const HEADING: Record<LockedReason["kind"], string> = {
@@ -31,7 +32,7 @@ export function TestNotAvailable({ reason, title }: { reason: LockedReason | nul
 	return (
 		<div className="mx-auto flex w-full max-w-[520px] flex-col items-center gap-5 py-12 text-center">
 			<span className="grid size-14 place-items-center rounded-full bg-brand-soft text-h1" aria-hidden="true">
-				🔒
+				<Icon name="lock" className="size-7 text-brand" />
 			</span>
 			<h1 className="m-0 text-h1">{reason ? HEADING[reason.kind] : "This test isn’t on your list"}</h1>
 			{title && <p className="m-0 text-h3 text-ink-2">{title}</p>}

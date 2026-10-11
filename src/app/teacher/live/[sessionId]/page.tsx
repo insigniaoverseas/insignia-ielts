@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { LiveMonitor } from "@/components/staff/live-monitor";
 import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getLiveSession } from "@/lib/queries/teacher";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Live session" };
 
@@ -22,7 +23,8 @@ export default async function LivePage({ params }: { params: Promise<{ sessionId
 	return (
 		<div className="flex flex-col gap-6">
 			<Link href="/teacher/dashboard" className="font-semibold">
-				← Back to dashboard
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to dashboard
 			</Link>
 
 			<div className="flex flex-col gap-1">

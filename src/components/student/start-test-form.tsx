@@ -6,6 +6,7 @@ import { Banner } from "@/components/ui/banner";
 import { Button } from "@/components/ui/button";
 import { startAttemptAction } from "@/lib/actions/attempts";
 import { downloadAudio } from "@/lib/audio-cache";
+import { Icon } from "@/components/ui/icon";
 
 /** The audio to fetch before Start, for a Listening test. */
 export type StartAudio = { src: string; cacheKey: string; ownerId: string };
@@ -101,7 +102,7 @@ export function StartTestForm({ refId, resume, audio }: { refId: string; resume:
 						: resume
 							? "Carry on with your test"
 							: "I’m ready — Start"}
-				{ready && !pending && <span aria-hidden="true">→</span>}
+				{ready && !pending && <Icon name="arrow-right" />}
 			</Button>
 		</form>
 	);

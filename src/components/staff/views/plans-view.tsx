@@ -4,6 +4,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ExtendPlansPanel } from "@/components/staff/extend-plans-panel";
 import { pageData, useAdminData } from "@/components/staff/staff-data";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Screen 24 — Plans & validity (M5-06). The expiry workqueue.
@@ -34,7 +35,7 @@ export function PlansView() {
 
 			{empty ? (
 				<EmptyState
-					icon="✓"
+					icon={<Icon name="check" />}
 					title="Nothing expiring"
 					action={
 						<Link

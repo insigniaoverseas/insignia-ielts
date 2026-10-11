@@ -6,6 +6,7 @@ import { StartTestForm } from "@/components/student/start-test-form";
 import { TestNotAvailable } from "@/components/student/test-not-available";
 import { MODE_EXPLAINED, SKILL_LABEL } from "@/components/student/labels";
 import { getPreStartAudio, getPreTestBriefing } from "@/lib/queries/student";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Before you start" };
 
@@ -57,7 +58,8 @@ export default async function PreTestPage({
 	return (
 		<div className="mx-auto flex w-full max-w-[760px] flex-col gap-6">
 			<Link href="/home" className="font-semibold">
-				← Back to Home
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to Home
 			</Link>
 
 			<div className="flex flex-col gap-3">

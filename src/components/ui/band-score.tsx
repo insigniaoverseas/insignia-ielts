@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Format a band for display. IELTS reports bands to one decimal — "7.0", not "7".
@@ -69,9 +70,11 @@ export function AnswerLine({
 				className,
 			)}
 		>
-			<span className={cn("font-bold", correct ? "text-success" : "text-danger")} aria-hidden="true">
-				{correct ? "✓" : "✕"}
-			</span>
+			<Icon
+				name={correct ? "check" : "x"}
+				strokeWidth={3}
+				className={cn("mt-1", correct ? "text-success" : "text-danger")}
+			/>
 			<span>
 				<strong className="font-semibold">{label ?? (correct ? "Correct answer" : "Your answer")}</strong> — {value}
 			</span>

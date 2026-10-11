@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { changePasswordAction } from "@/lib/actions/auth";
 import { PASSWORD_RULES } from "@/lib/auth/password";
 import type { ChangePasswordState } from "@/lib/actions/types";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Change my password, from Profile.
@@ -32,7 +33,7 @@ export function ChangePasswordForm() {
 		return (
 			<div className="flex flex-col gap-5 rounded-card border border-line bg-surface p-6">
 				<p className="m-0 flex items-start gap-2 font-semibold text-success" role="status">
-					<span aria-hidden="true">✓</span>
+					<Icon name="check" strokeWidth={2.5} />
 					<span>{state.message}</span>
 				</p>
 				<Button size="student" asChild>
@@ -47,7 +48,7 @@ export function ChangePasswordForm() {
 	const error = (field: "current" | "password") =>
 		state && !state.ok && state.field === field ? (
 			<p id={`${field}-error`} className="m-0 flex items-start gap-2 font-semibold text-danger" role="alert">
-				<span aria-hidden="true">✕</span>
+				<Icon name="alert" />
 				<span>{state.message}</span>
 			</p>
 		) : null;
@@ -98,7 +99,7 @@ export function ChangePasswordForm() {
 			<ul className="m-0 flex list-none flex-col gap-1.5 p-0">
 				{checks.map((c) => (
 					<li key={c.label} className={`flex items-center gap-2 ${c.ok ? "text-success" : "text-ink-2"}`}>
-						<span aria-hidden="true">{c.ok ? "✓" : "○"}</span>
+						<Icon name={c.ok ? "check" : "circle"} strokeWidth={2.5} />
 						{c.label}
 						<span className="sr-only">{c.ok ? " — done" : " — not yet"}</span>
 					</li>
@@ -107,7 +108,7 @@ export function ChangePasswordForm() {
 
 			{state && !state.ok && !state.field && (
 				<p className="m-0 flex items-start gap-2 font-semibold text-danger" role="alert">
-					<span aria-hidden="true">✕</span>
+					<Icon name="alert" />
 					<span>{state.message}</span>
 				</p>
 			)}

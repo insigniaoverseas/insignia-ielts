@@ -18,6 +18,7 @@ import {
 import { inviteCsvChunkAction } from "@/lib/actions/invitations";
 import type { CsvInviteRow } from "@/lib/actions/types";
 import { CSV_INVITE_CHUNK } from "@/lib/csv-invite";
+import { Icon } from "@/components/ui/icon";
 
 /** The fields an invitation needs. `required` drives the per-row checks. */
 const FIELDS = [
@@ -158,7 +159,7 @@ export function CsvImporter() {
 		return (
 			<div className="flex flex-col items-center gap-4 rounded-card border border-dashed border-line bg-surface px-6 py-12 text-center">
 				<span className="grid size-14 place-items-center rounded-full bg-brand-soft text-h1" aria-hidden="true">
-					📄
+					<Icon name="test" className="size-7 text-brand" />
 				</span>
 				<h2 className="m-0 text-h3">Choose a CSV file</h2>
 				<p className="m-0 max-w-[46ch] text-ink-2">
@@ -289,7 +290,7 @@ export function CsvImporter() {
 								<TableCell>
 									{outcome.has(r.line) ? (
 										<span className={`text-small font-semibold ${outcome.get(r.line)!.ok ? "text-success" : "text-danger"}`}>
-											{outcome.get(r.line)!.ok ? "✓ " : "✕ "}
+											<Icon name={outcome.get(r.line)!.ok ? "check" : "x"} strokeWidth={2.5} className="mr-1" />
 											{outcome.get(r.line)!.message}
 										</span>
 									) : r.problems.length === 0 ? (
@@ -298,7 +299,10 @@ export function CsvImporter() {
 										// The reason, in the row, not in a summary at the top.
 										<span className="flex flex-col gap-0.5 text-small font-semibold text-danger">
 											{r.problems.map((p) => (
-												<span key={p}>✕ {p}</span>
+												<span key={p}>
+													<Icon name="x" strokeWidth={2.5} className="mr-1" />
+													{p}
+												</span>
 											))}
 										</span>
 									)}

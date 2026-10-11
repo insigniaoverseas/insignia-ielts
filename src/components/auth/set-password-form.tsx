@@ -10,6 +10,7 @@ import { Turnstile } from "@/components/auth/turnstile";
 import { acceptInvitationAction } from "@/lib/actions/auth";
 import { PASSWORD_RULES } from "@/lib/auth/password";
 import type { AcceptFormState } from "@/lib/actions/types";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * Set a password while accepting an invitation (M1-06).
@@ -81,7 +82,7 @@ export function SetPasswordForm({
 			<ul className="m-0 flex list-none flex-col gap-1.5 p-0">
 				{checks.map((c) => (
 					<li key={c.label} className={`flex items-center gap-2 ${c.ok ? "text-success" : "text-ink-2"}`}>
-						<span aria-hidden="true">{c.ok ? "✓" : "○"}</span>
+						<Icon name={c.ok ? "check" : "circle"} strokeWidth={2.5} />
 						{c.label}
 						<span className="sr-only">{c.ok ? " — done" : " — not yet"}</span>
 					</li>
@@ -115,7 +116,7 @@ export function SetPasswordForm({
 
 			{state?.message && (
 				<p className="m-0 flex items-start gap-2 font-semibold text-danger" role="alert">
-					<span aria-hidden="true">✕</span>
+					<Icon name="alert" />
 					<span>{state.message}</span>
 				</p>
 			)}

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 
 /**
  * The headphone check on screen 05.
@@ -60,7 +61,7 @@ export function SoundCheck({ src }: { src: string }) {
 
 			{heard === true && (
 				<p className="m-0 flex items-center gap-2 font-semibold text-success">
-					<span aria-hidden="true">✓</span> Your sound is working. You&rsquo;re ready.
+					<Icon name="check" strokeWidth={2.5} /> Your sound is working. You&rsquo;re ready.
 				</p>
 			)}
 

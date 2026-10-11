@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { Icon } from "@/components/ui/icon";
 
 /*
  * Table — shadcn/ui, restyled to the tokens (M0-03).
@@ -132,9 +133,7 @@ function TableHead({
 		>
 			{children}
 			{sorted ? (
-				<span aria-hidden="true" className="ml-1">
-					{sorted === "asc" ? "↑" : "↓"}
-				</span>
+				<Icon name={sorted === "asc" ? "arrow-up" : "arrow-down"} className="ml-1" />
 			) : null}
 		</th>
 	);

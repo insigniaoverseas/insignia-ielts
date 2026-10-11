@@ -5,6 +5,7 @@ import { AccuracyBars } from "@/components/ui/accuracy-bars";
 import { formatBand } from "@/components/ui/band-score";
 import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { getClassAnalytics } from "@/lib/queries/teacher";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "What to teach" };
 
@@ -26,7 +27,8 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ batc
 	return (
 		<div className="flex flex-col gap-6">
 			<Link href={`/teacher/batches/${batchId}`} className="font-semibold">
-				← Back to the roster
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to the roster
 			</Link>
 
 			<div className="flex flex-col gap-1">

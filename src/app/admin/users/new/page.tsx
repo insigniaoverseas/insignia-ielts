@@ -5,6 +5,7 @@ import { InviteColleagueForm, type InvitableRole } from "@/components/admin/invi
 import { requirePermissionOrRedirect, withGuard } from "@/lib/auth/guard";
 import { canInviteRole } from "@/lib/permissions";
 import { listBranchOptions } from "@/lib/queries/batches";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = { title: "Invite a colleague" };
 
@@ -56,7 +57,8 @@ export default async function NewColleaguePage() {
 	return (
 		<div className="flex max-w-[640px] flex-col gap-6">
 			<Link href="/admin/users" className="font-semibold">
-				← Back to users &amp; roles
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to users &amp; roles
 			</Link>
 
 			<div className="flex flex-col gap-1">

@@ -1,11 +1,12 @@
 import Link from "next/link";
 
 import { LogOutButton } from "@/components/auth/log-out-button";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 
 export type SidebarGroup = {
 	title: string;
-	items: { href: string; label: string; icon?: string }[];
+	items: { href: string; label: string; icon?: IconName }[];
 };
 
 /**
@@ -61,7 +62,7 @@ export function StaffSidebar({
 												: "text-ink-2 hover:bg-bg hover:text-ink",
 										)}
 									>
-										{item.icon && <span aria-hidden="true">{item.icon}</span>}
+										{item.icon && <Icon name={item.icon} className="size-5" />}
 										{item.label}
 									</Link>
 								</li>

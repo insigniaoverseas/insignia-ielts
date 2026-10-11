@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { requirePermissionOrRedirect } from "@/lib/auth/guard";
 import { can } from "@/lib/rbac";
 import { getAnswerKeyView } from "@/lib/queries/answer-key";
+import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = {
 	title: "Answer key",
@@ -45,7 +46,8 @@ export default async function AnswerKeyPage({ params }: { params: Promise<{ test
 	const header = (
 		<>
 			<Link href="/admin/library" className="font-semibold">
-				← Back to the test library
+				<Icon name="arrow-left" className="mr-1.5" />
+				Back to the test library
 			</Link>
 			<div className="flex flex-wrap items-end justify-between gap-4">
 				<div className="flex flex-col gap-1">

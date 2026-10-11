@@ -18,7 +18,8 @@ Custom files are named so they **can't collide with shadcn's**: it ships `sideba
 
 - **Tokens only.** Use `bg-brand`, `text-ink-2`, `border-line`, `rounded-card`, `text-body`, `h-primary`. The default Tailwind palette and type scale are switched off in `src/app/globals.css`, so `bg-blue-500` or `text-sm` silently generate nothing.
 - **Merge classes with `cn()`** from `@/lib/utils`, never string concatenation. Plain `twMerge` drops `text-body` when combined with `text-ink`; ours is configured not to.
-- **Colour never carries meaning alone.** Pair it with a glyph (✓ ✕ ! ○) and a word.
+- **Colour never carries meaning alone.** Pair it with an icon and a word.
+- **Icons come from `icon.tsx` only** — `<Icon name="check" />`. No emoji or text glyphs as icons; they render differently on every phone. Add a name to `ICONS` when you need a new one.
 - **Student text is never below `text-body` (16px).** `text-small` is for admin/teacher screens and captions.
 - **Student tap targets ≥ 48px** (`min-h-touch`); primary actions are 56px (`h-primary`).
 - **Cards get a 1px border, never a shadow.** `shadow-soft` is for modals, dropdowns and sticky bars only.

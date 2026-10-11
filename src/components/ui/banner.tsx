@@ -1,15 +1,16 @@
+import { Icon, type IconName } from "@/components/ui/icon";
 import { cn } from "@/lib/utils";
 
 type Tone = "info" | "success" | "warning" | "danger";
 
-const TONE: Record<Tone, { box: string; glyph: string; mark: string }> = {
-	info: { box: "bg-brand-soft border-brand-line", glyph: "i", mark: "text-brand" },
+const TONE: Record<Tone, { box: string; glyph: IconName; mark: string }> = {
+	info: { box: "bg-brand-soft border-brand-line", glyph: "info", mark: "text-brand" },
 	// No `--success-line` token exists; `success-muted` is the nearest in-system
 	// border and the palette is switched off, so inventing one would generate
 	// nothing. Added for "invitation sent" (M1-02).
-	success: { box: "bg-success-soft border-success-muted", glyph: "✓", mark: "text-success" },
-	warning: { box: "bg-warning-soft border-warning-line", glyph: "!", mark: "text-warning" },
-	danger: { box: "bg-danger-soft border-danger-line", glyph: "✕", mark: "text-danger" },
+	success: { box: "bg-success-soft border-success-muted", glyph: "check", mark: "text-success" },
+	warning: { box: "bg-warning-soft border-warning-line", glyph: "warning", mark: "text-warning" },
+	danger: { box: "bg-danger-soft border-danger-line", glyph: "alert", mark: "text-danger" },
 };
 
 /**
@@ -41,9 +42,7 @@ export function Banner({
 			role={tone === "danger" ? "alert" : "status"}
 			className={cn("flex items-start gap-3 rounded-card border px-5 py-4 text-body", t.box, className)}
 		>
-			<span className={cn("font-bold", t.mark)} aria-hidden="true">
-				{t.glyph}
-			</span>
+			<Icon name={t.glyph} className={cn("mt-0.5 size-5", t.mark)} />
 			<p className="m-0">
 				{children}
 				{action && <> {action}</>}
