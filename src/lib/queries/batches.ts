@@ -27,7 +27,8 @@ export type BatchOption = {
  */
 export async function listBatchOptions(): Promise<BatchOption[]> {
 	const supabase = await createClient();
-	const { data, error } = await supabase.from("batches").select("id, name").order("name");
+	// A removed batch can't be picked for a new student (M10-14).
+	const { data, error } = await supabase.from("batches").select("id, name").neq("status", "archived").order("name");
 
 	if (error) {
 		console.error("batch list failed:", error.message);
@@ -113,7 +114,8 @@ export async function listStudentOptions(): Promise<StudentOption[]> {
 	const [peopleResult, membershipResult, batchResult] = await Promise.all([
 		supabase.from("users").select("id, name, status, roles ( key )").eq("status", "active").order("name"),
 		supabase.from("batch_students").select("batch_id, student_id").is("left_at", null),
-		supabase.from("batches").select("id, name"),
+		// Removed batches don't count as "already in" (M10-14).
+		supabase.from("batches").select("id, name").neq("status", "archived"),
 	]);
 
 	if (peopleResult.error) {

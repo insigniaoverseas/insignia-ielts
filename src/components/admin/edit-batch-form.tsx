@@ -17,7 +17,7 @@ import type { BatchDetail } from "@/lib/view-models/admin";
 const STATUS_HELP: Record<string, string> = {
 	active: "Running now. Tests can be assigned to it.",
 	completed: "Finished teaching. Results stay readable; no new assignments.",
-	archived: "Put away. Hidden from the everyday lists.",
+	archived: "Removed. Hidden from the everyday lists and teachers' dashboards; results kept.",
 };
 
 /**
@@ -88,7 +88,7 @@ export function EditBatchForm({ batch, teachers }: { batch: BatchDetail; teacher
 					>
 						<option value="active">Active</option>
 						<option value="completed">Finished</option>
-						<option value="archived">Archived</option>
+						<option value="archived">Removed</option>
 					</select>
 					<span className="text-small text-ink-2">{STATUS_HELP[batch.status]}</span>
 				</div>

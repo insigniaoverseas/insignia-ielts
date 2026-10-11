@@ -119,11 +119,11 @@ export function StudentsView({ q, batch, status }: { q?: string; batch?: string;
 					All batches
 				</Link>
 				{data.batches.map((b) => {
-					const on = batch === b.name;
+					const on = batch === b.id;
 					return (
 						<Link
 							key={b.id}
-							href={href({ batch: b.name })}
+							href={href({ batch: b.id })}
 							aria-pressed={on}
 							className={`flex min-h-10 items-center rounded-full border px-4 text-small font-semibold no-underline hover:no-underline ${
 								on ? "border-brand bg-brand-soft text-brand" : "border-line bg-surface text-ink-2 hover:text-ink"

@@ -770,6 +770,35 @@ console.log("\nmigration 1");
 const acl = (await db.query(`select has_function_privilege('anon', 'public.rls_auto_enable()', 'execute') a, has_function_privilege('authenticated', 'public.rls_auto_enable()', 'execute') b`)).rows[0];
 ok("rls_auto_enable not executable by anon/authenticated", !acl.a && !acl.b);
 
+console.log("\nM10-14 delete a batch permanently — assignments and results go, tests stay");
+{
+  // The same statements, in the same order, as lib/batches.ts purgeBatch().
+  // batchZ has one assignment made only to it (aZ) and studentOther's attempt on it.
+  await db.exec(`insert into public.attempt_scores (attempt_id, raw_score, band) values ('${att.other}', 30, 7.0) on conflict do nothing;`);
+  const testsBefore = (await one(`select count(*)::int c from public.tests`)).c;
+
+  let blocked = null;
+  try { await db.query(`delete from public.assignments where id = '${id.aZ}'`); } catch (e) { blocked = e.message; }
+  ok("an assignment with attempts can't be deleted first — attempts must go before it", /foreign key|violates/i.test(blocked ?? ""), blocked ?? "it was deleted");
+
+  await db.exec(`delete from public.attempts where assignment_id = '${id.aZ}'`);
+  await db.exec(`delete from public.assignments where id = '${id.aZ}'`);
+  await db.exec(`delete from public.batches where id = '${id.batchZ}'`);
+
+  ok("the batch is gone", (await one(`select count(*)::int c from public.batches where id = '${id.batchZ}'`)).c === 0);
+  ok("its assignment and targets are gone",
+    (await one(`select count(*)::int c from public.assignments where id = '${id.aZ}'`)).c === 0 &&
+    (await one(`select count(*)::int c from public.assignment_targets where assignment_id = '${id.aZ}'`)).c === 0);
+  ok("the attempt and its score are gone",
+    (await one(`select count(*)::int c from public.attempts where id = '${att.other}'`)).c === 0 &&
+    (await one(`select count(*)::int c from public.attempt_scores where attempt_id = '${att.other}'`)).c === 0);
+  ok("**the Test library is untouched** — same number of tests",
+    (await one(`select count(*)::int c from public.tests`)).c === testsBefore);
+  ok("the test that was assigned still exists, and other assignments of it still work",
+    (await one(`select count(*)::int c from public.tests where id = '${id.tMockFree}'`)).c === 1 &&
+    (await one(`select count(*)::int c from public.assignments where id = '${id.aImm}' and test_id = '${id.tMockFree}'`)).c === 1);
+}
+
 console.log("\nfinal sweep");
 ok("every table in public has RLS enabled", (await rlsFinal()).length === 0, JSON.stringify(await rlsFinal()));
 ok("public has exactly 27 tables", (await one(`select count(*)::int c from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r'`)).c === 27);

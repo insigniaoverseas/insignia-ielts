@@ -22,7 +22,9 @@ export function filterStudents(rows: StudentRow[], filters: StudentFilters): { r
 	let matched = rows;
 	const needle = filters.search?.trim().toLowerCase();
 	if (needle) matched = matched.filter((row) => row.name.toLowerCase().includes(needle) || row.phone.toLowerCase().includes(needle));
-	if (filters.batch && filters.batch !== "all") matched = matched.filter((row) => row.batchId === filters.batch);
+	// By batch **id** — the buttons used to send the name, so nothing matched (M10-15).
+	// A student in two batches is found under either.
+	if (filters.batch && filters.batch !== "all") matched = matched.filter((row) => row.batchIds.includes(filters.batch!));
 	if (filters.status && filters.status !== "all") matched = matched.filter((row) => row.planState === filters.status);
 	return { rows: matched.slice(0, STUDENTS_PAGE_SIZE), total: matched.length };
 }

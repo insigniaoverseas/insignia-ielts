@@ -23,9 +23,12 @@ export type StudentRow = {
 	email: string;
 	/** Display form, e.g. "+91 98765 43210". */
 	phone: string;
-	/** For the batch filter, which now runs in the browser. */
+	/** One of their batches (the first by name), or `null` if in none. */
 	batchId: string | null;
+	/** Every batch they're in, joined — "Morning A, Weekend". */
 	batchName: string | null;
+	/** Every batch they're in — the batch filter matches any of them (M10-15). */
+	batchIds: string[];
 	status: AccountStatus;
 	planState: PlanState;
 	/** Rendered `Asia/Kolkata`, e.g. "21 Sep 2026". */
@@ -114,6 +117,8 @@ export type BatchDetail = {
 	teacherIds: string[];
 	/** The roster, which this screen shows but does not yet edit. */
 	students: { id: string; name: string }[];
+	/** Assignments that ever targeted this batch — decides whether "Remove" deletes or archives (M10-14). */
+	assignedTestCount: number;
 };
 
 /** Screen 26 — Test library. */

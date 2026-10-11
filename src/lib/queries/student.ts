@@ -132,7 +132,7 @@ const loadStudentContext = cache(async function loadStudentContext(userId: strin
 		.select(
 			// `student_plans` reaches `users` twice (student_id and created_by),
 			// so the foreign key is named explicitly or PostgREST refuses.
-			"id, name, phone, country_code, branches ( name ), batch_students ( batches ( name ) ), student_plans!student_plans_student_id_fkey ( * )",
+			"id, name, phone, country_code, branches ( name ), batch_students ( batches ( name, status ) ), student_plans!student_plans_student_id_fkey ( * )",
 		)
 		.eq("id", userId)
 		.is("batch_students.left_at", null)
@@ -148,7 +148,8 @@ const loadStudentContext = cache(async function loadStudentContext(userId: strin
 			firstName: data.name.trim().split(/\s+/)[0] ?? data.name,
 			fullName: data.name,
 			phone: displayPhone(data.country_code, data.phone),
-			batchNames: data.batch_students.flatMap((row) => row.batches?.name ?? []),
+			// A removed batch isn't theirs any more (M10-14).
+			batchNames: data.batch_students.flatMap((row) => (row.batches && row.batches.status !== "archived" ? row.batches.name : [])),
 			// The student RLS policy intentionally hides staff assignments.
 			teacherName: null,
 			branchName: data.branches?.name ?? "Your centre",
