@@ -29,6 +29,10 @@ export const ADMIN_GROUPS: SidebarGroup[] = [
 			{ href: "/admin/audit", label: "Audit log", icon: "▤" },
 		],
 	},
+	{
+		title: "You",
+		items: [{ href: "/admin/account", label: "My account", icon: "◉" }],
+	},
 ];
 
 /**

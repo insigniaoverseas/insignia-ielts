@@ -16,6 +16,7 @@ import type {
 	UsersAndRoles,
 } from "./admin";
 import type { AssignOptions, ResultsIndexRow, TeacherDashboard } from "./teacher";
+import type { DeviceRow } from "@/lib/auth/devices";
 
 /** One page's data inside a layout bundle. */
 export type Slot<T> = { ok: true; data: T } | { ok: false; reason: "forbidden" | "error" };
@@ -39,4 +40,15 @@ export type TeacherBundle = {
 	dashboard: Slot<TeacherDashboard>;
 	assign: Slot<AssignOptions>;
 	results: Slot<ResultsIndexRow[]>;
+};
+
+/** My account (M10-12) — who is signed in, and every device they're signed in on. */
+export type StaffAccount = {
+	name: string;
+	email: string;
+	/** "Owner", "Admin", "Teacher", "Invigilator". */
+	roleLabel: string;
+	branchName: string | null;
+	/** This device first. */
+	devices: DeviceRow[];
 };

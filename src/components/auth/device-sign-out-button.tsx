@@ -7,7 +7,8 @@ import { ConfirmDialog } from "@/components/ui/dialog";
 import { signOutDeviceAction } from "@/lib/actions/auth";
 
 /**
- * "Sign out" beside one of the student's *other* devices on Profile (M1-14).
+ * "Sign out" beside one of your *other* devices — on the student Profile
+ * (M1-14) and on staff My account (M10-12).
  *
  * Asks first, naming the device, because the likeliest one to sign out is the
  * lab computer — and a student who signs that out mid-lesson has to type their
@@ -17,7 +18,16 @@ import { signOutDeviceAction } from "@/lib/actions/auth";
  * The list refreshes from the server once it's done (`revalidatePath`), so the
  * row disappears rather than being hidden here.
  */
-export function DeviceSignOutButton({ sessionId, label }: { sessionId: string; label: string }) {
+export function DeviceSignOutButton({
+	sessionId,
+	label,
+	note = "Whoever is using it will need your email and password to get back in. Your answers and results are saved.",
+}: {
+	sessionId: string;
+	label: string;
+	/** What happens to whoever is using it. Students and staff lose different things. */
+	note?: string;
+}) {
 	const [open, setOpen] = useState(false);
 	const [message, setMessage] = useState<string | null>(null);
 	const [pending, startTransition] = useTransition();
@@ -38,7 +48,7 @@ export function DeviceSignOutButton({ sessionId, label }: { sessionId: string; l
 				destructive
 				loading={pending}
 				title={`Sign out of ${label}?`}
-				description="Whoever is using it will need your email and password to get back in. Your answers and results are saved."
+				description={note}
 				confirmLabel="Yes, sign it out"
 				cancelLabel="Keep it signed in"
 				onConfirm={() =>

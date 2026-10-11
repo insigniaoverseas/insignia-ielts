@@ -14,6 +14,7 @@ export const TEACHER_GROUPS: SidebarGroup[] = [
 			{ href: "/teacher/results", label: "Results", icon: "✓" },
 		],
 	},
+	{ title: "You", items: [{ href: "/teacher/account", label: "My account", icon: "◉" }] },
 ];
 
 function useActive() {

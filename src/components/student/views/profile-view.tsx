@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { StatusPill } from "@/components/ui/status-pill";
 import { LogOutButton } from "@/components/auth/log-out-button";
-import { DeviceSignOutButton } from "@/components/student/device-sign-out-button";
+import { DeviceSignOutButton } from "@/components/auth/device-sign-out-button";
 import { PlanBanner } from "@/components/student/plan-banner";
 import { useStudentData } from "@/components/student/student-data";
 

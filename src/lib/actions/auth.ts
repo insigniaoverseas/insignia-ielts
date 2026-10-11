@@ -12,7 +12,8 @@ import { signIn } from "@/lib/auth/sign-in";
 import { codeSentMessage, requestSignInCode, signInWithCode } from "@/lib/auth/sign-in-code";
 import { emailRequestProblem } from "@/lib/auth/sign-in-messages";
 import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
-import { endSession, revokeSession, startSession } from "@/lib/auth/sessions";
+import { accountPathFor } from "@/lib/auth/devices";
+import { endSession, revokeOtherSessions, revokeSession, startSession } from "@/lib/auth/sessions";
 import { recordAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -252,7 +253,7 @@ export async function changePasswordAction(
  * the cookies.
  */
 export async function signOutDeviceAction(sessionId: string): Promise<SignOutDeviceResult> {
-	const actor = await requireUser("/profile");
+	const actor = await requireUser();
 	if (typeof sessionId !== "string" || !sessionId) {
 		return { ok: false, message: "We couldn't find that device. Please refresh and try again." };
 	}
@@ -261,8 +262,24 @@ export async function signOutDeviceAction(sessionId: string): Promise<SignOutDev
 	}
 
 	const revoked = await revokeSession(actor.id, actor.id, sessionId);
-	revalidatePath("/profile");
+	revalidatePath(accountPathFor(actor.role));
 	// Not revoked usually means it was already signed out — from another tab,
 	// or by signing in somewhere new. Either way it is gone from the list now.
 	return revoked ? { ok: true } : { ok: false, message: "That device was already signed out." };
+}
+
+/**
+ * "Sign out everywhere else" (M10-12): every session but this browser's.
+ * Staff can hold several, so one forgotten lab PC is one tap to close.
+ */
+export async function signOutOtherDevicesAction(): Promise<FormState> {
+	const actor = await requireUser();
+	const current = (await cookies()).get(SESSION_COOKIE)?.value;
+	if (!current) return { ok: false, message: "Please sign in again and try once more." };
+
+	const count = await revokeOtherSessions(actor.id, current);
+	revalidatePath(accountPathFor(actor.role));
+	return count === 0
+		? { ok: true, message: "You weren't signed in anywhere else." }
+		: { ok: true, message: count === 1 ? "Signed out of 1 other device." : `Signed out of ${count} other devices.` };
 }
