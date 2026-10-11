@@ -91,10 +91,17 @@ export default async function LoginPage({
 
 			{/* No signup link — accounts are created by invitation only. The
 			    reset link is new (M1-15): §9 originally sent everyone to their
-			    teacher, which left the Owner with no way back at all. */}
+			    teacher, which left the Owner with no way back at all. The code
+			    link (M10-10) is for lab PCs: the code is read on their phone. */}
 			<p className="m-0 text-center text-ink-2">
 				<Link href="/forgot" className="font-semibold text-ink underline">
 					Forgotten your password?
+				</Link>
+				<Link
+					href={next ? `/login/code?next=${encodeURIComponent(next)}` : "/login/code"}
+					className="mt-2 block font-semibold text-ink underline"
+				>
+					Sign in without a password
 				</Link>
 				<span className="mt-1 block">
 					Still stuck? Ask your teacher — they can send you a new invitation.

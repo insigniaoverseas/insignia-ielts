@@ -3,6 +3,8 @@ import "server-only";
 import { recordAudit } from "@/lib/audit";
 import { clearSignInFailures, lockedAccounts } from "@/lib/auth/lockout";
 import { requestPasswordReset } from "@/lib/auth/password-reset";
+import { CODE_TTL_MINUTES } from "@/lib/auth/sign-in-code-rules";
+import { requestSignInCode } from "@/lib/auth/sign-in-code";
 import type { Actor } from "@/lib/permissions";
 import { normaliseIndianMobile } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -116,4 +118,31 @@ export async function unlockStudentSignIn(actor: Actor, studentId: string): Prom
 				ok: true,
 				message: `${firstName} wasn't locked out. If they've forgotten their password, they can tap "Forgotten your password?" on the sign-in page.`,
 			};
+}
+
+/**
+ * Emails the student a six-digit sign-in code (M10-10) — the same one they
+ * could ask for under "Sign in without a password", with the same limits.
+ * Unlike the student's own screen, staff are told what happened, so they know
+ * whether to tell the student to check their phone.
+ */
+export async function sendStudentSignInCode(actor: Actor, studentId: string): Promise<Outcome> {
+	const student = await studentInScope(studentId);
+	if (!student) return { ok: false, message: "That student couldn't be found." };
+	if (student.status !== "active") return { ok: false, message: "Their account isn't active, so no code was sent." };
+
+	const firstName = student.name.split(" ")[0] || student.name;
+	switch (await requestSignInCode(student.email, actor.id)) {
+		case "sent":
+			return {
+				ok: true,
+				message: `A sign-in code is on its way to ${student.email}. It works for ${CODE_TTL_MINUTES} minutes. ${firstName} taps "Sign in without a password" and types it in.`,
+			};
+		case "too_many":
+			return { ok: false, message: "Three codes were already sent in the last 15 minutes. Ask them to use the newest one, or try again shortly." };
+		case "no_account":
+			return { ok: false, message: "Their account isn't active, so no code was sent." };
+		default:
+			return { ok: false, message: "The email couldn't be sent. Please try again." };
+	}
 }

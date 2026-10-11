@@ -135,11 +135,27 @@ export async function signIn(email: string, password: string, nextPath?: string 
 		return { ok: false, message: GENERIC_FAILURE, triesLeft: null, lockedUntil: null };
 	}
 
-	await clearSignInFailures(normalised);
+	return finishSignIn(supabase, { userId: data.user.id, email: normalised, ip, method: "password" }, profile, nextPath);
+}
+
+/**
+ * The last steps of every way in — password or emailed code — once Supabase
+ * Auth holds a session for an **active** user: lift any lockout, open the
+ * revocable application session, audit, and say where to go.
+ *
+ * Shared so the two doors can never drift apart on what "signed in" means.
+ */
+export async function finishSignIn(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	who: { userId: string; email: string; ip: string | null; method: "password" | "code" },
+	profile: { branch_id: string | null; roles: { key: string } | null },
+	nextPath?: string | null,
+): Promise<SignInResult> {
+	await clearSignInFailures(who.email);
 
 	const roleKey = profile.roles?.key ?? "student";
 	const userAgent = (await headers()).get("user-agent");
-	const sessionId = await startSession(data.user.id, roleKey, { ip, userAgent });
+	const sessionId = await startSession(who.userId, roleKey, { ip: who.ip, userAgent });
 	if (!sessionId) {
 		// A JWT without its revocable application session is only half a login.
 		// Remove it instead of sending the user into an inconsistent state.
@@ -153,12 +169,12 @@ export async function signIn(email: string, password: string, nextPath?: string 
 	}
 
 	await recordAudit({
-		actorId: data.user.id,
+		actorId: who.userId,
 		branchId: profile.branch_id,
 		action: "auth.sign_in",
 		entity: "user",
-		entityId: data.user.id,
-		meta: { role: roleKey },
+		entityId: who.userId,
+		meta: { role: roleKey, method: who.method },
 	});
 
 	const safeNext = safeRelativePath(nextPath);

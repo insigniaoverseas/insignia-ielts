@@ -36,7 +36,8 @@ export function windowEndOf(windowStart: Date | string): Date {
 }
 
 /**
- * Who may lift a student's sign-in lock: teachers (who hold
+ * Who may lift a student's sign-in lock, or email them a sign-in code
+ * (M10-10): teachers (who hold
  * `assignment:manage` for their batches), and admins and the Owner
  * (`student:manage`). The login screen tells a locked-out student to ask their
  * teacher, so the teacher has to be able to answer. *Which* students is decided

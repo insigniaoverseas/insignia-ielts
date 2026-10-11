@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { SendSignInCode } from "@/components/staff/send-sign-in-code";
 import { UnlockSignIn } from "@/components/staff/unlock-sign-in";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -30,7 +31,8 @@ export const metadata: Metadata = { title: "Batch" };
  *
  * Likewise a student who typed the wrong password too often: the login screen
  * tells them to ask their teacher, so their row says "Locked out" and offers
- * "Unlock sign-in" here.
+ * "Unlock sign-in" here. Every row can also email a sign-in code (M10-10) for
+ * a student who has forgotten their password altogether.
  */
 export default async function BatchPage({ params }: { params: Promise<{ batchId: string }> }) {
 	const { batchId } = await params;
@@ -97,15 +99,16 @@ export default async function BatchPage({ params }: { params: Promise<{ batchId:
 								<TableCell>
 									<span className="font-semibold">{r.name}</span>
 									<div className="font-mono text-small text-ink-2">{r.phone}</div>
-									{r.lockedUntilLabel && (
-										<div className="mt-2">
+									<div className="mt-2 flex flex-col items-start gap-2">
+										{r.lockedUntilLabel && (
 											<UnlockSignIn
 												studentId={r.studentId}
 												lockedUntilLabel={r.lockedUntilLabel}
 												revalidate={`/teacher/batches/${batchId}`}
 											/>
-										</div>
-									)}
+										)}
+										<SendSignInCode studentId={r.studentId} size="compact" />
+									</div>
 								</TableCell>
 								<TableCell className="text-right font-mono">
 									{r.lastBand === null ? <span className="text-ink-3">—</span> : formatBand(r.lastBand)}

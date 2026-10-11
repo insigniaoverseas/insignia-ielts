@@ -525,6 +525,14 @@ answering however people sign in.
 
 Rate limiting and lockout still apply — to the password (M1-09, M1-10).
 
+**Sign in with an emailed code** (M10-10, added 2026-10-11). Class tests run on
+lab PCs, and a student who has forgotten or locked their password should not
+have to open their email there. "Sign in without a password" emails six digits;
+they read them on their own phone and type them on the PC. Ten minutes, single
+use, five guesses, three codes per address per 15 minutes, never revealing
+whether an account exists. Teachers and admins can send one from the roster or
+student page. A QR-code option was considered and dropped by the user.
+
 ### Screens this changes
 
 | Screen | Change | Status |

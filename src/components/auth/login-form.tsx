@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -31,8 +32,11 @@ export function LoginForm({ next, turnstileSiteKey }: { next?: string; turnstile
 			{locked && (
 				<Banner tone="danger">
 					Too many tries. You can sign in again after{" "}
-					<strong className="font-semibold">{formatTime(state!.lockedUntil!)}</strong>. If you need to get in
-					now, ask your teacher.
+					<strong className="font-semibold">{formatTime(state!.lockedUntil!)}</strong>. To get in now,{" "}
+					<Link href={next ? `/login/code?next=${encodeURIComponent(next)}` : "/login/code"} className="font-semibold underline">
+						sign in with a code from your email
+					</Link>
+					, or ask your teacher.
 				</Banner>
 			)}
 

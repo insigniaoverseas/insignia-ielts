@@ -49,6 +49,7 @@ const ACTION_LABEL: Record<string, string> = {
 	"test.key_edit": "Answer key changed",
 	"auth.reset_sent": "Password reset link sent",
 	"auth.unlock": "Sign-in unlocked",
+	"auth.code_sent": "Sign-in code emailed",
 	"user.phone_change": "Phone number changed",
 	"attempt.extra_time": "Gave a student extra time",
 	"attempt.force_submit": "Handed in a student's test",

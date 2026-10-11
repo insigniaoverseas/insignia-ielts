@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { UNLOCK_PERMISSIONS } from "@/lib/auth/lockout-rules";
 import { ForbiddenError, requireAnyPermission, requirePermission } from "@/lib/rbac";
-import { changeStudentPhone, sendStudentPasswordReset, unlockStudentSignIn } from "@/lib/student-account";
+import { changeStudentPhone, sendStudentPasswordReset, sendStudentSignInCode, unlockStudentSignIn } from "@/lib/student-account";
 import type { FormState } from "@/lib/actions/types";
 
 /**
@@ -49,6 +49,17 @@ export async function unlockStudentSignInAction(studentId: string, revalidate: s
 		const path = String(revalidate ?? "");
 		if (result.ok && /^\/(admin\/students|teacher\/batches)\/[0-9a-f-]{36}$/i.test(path)) revalidatePath(path);
 		return result;
+	} catch (error) {
+		if (error instanceof ForbiddenError) return { ok: false, message: "You don't have permission to do that." };
+		throw error;
+	}
+}
+
+/** "Send a sign-in code" — same people and same scope as unlocking (M10-10). */
+export async function sendStudentSignInCodeAction(studentId: string): Promise<FormState> {
+	try {
+		const actor = await requireAnyPermission(UNLOCK_PERMISSIONS);
+		return await sendStudentSignInCode(actor, String(studentId));
 	} catch (error) {
 		if (error instanceof ForbiddenError) return { ok: false, message: "You don't have permission to do that." };
 		throw error;

@@ -37,6 +37,12 @@ export type AcceptFormState = {
 export type ResetRequestState = { message: string; sent: boolean } | null;
 
 /**
+ * The sign-in-with-a-code screen's state (M10-10). `sent` moves it from "your
+ * email" to "type the code", keeping the email so it isn't asked for twice.
+ */
+export type SignInCodeState = { email: string; sent: boolean; message: string | null; error: boolean } | null;
+
+/**
  * The change-password form's state. `field` says which box the message is
  * about, so it can be shown under the right one.
  */

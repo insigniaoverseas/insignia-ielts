@@ -9,6 +9,7 @@ import { changePassword } from "@/lib/auth/change-password";
 import { completePasswordReset, requestPasswordReset, RESET_REQUESTED_MESSAGE } from "@/lib/auth/password-reset";
 import { requireUser } from "@/lib/auth/guard";
 import { signIn } from "@/lib/auth/sign-in";
+import { CODE_REQUESTED_MESSAGE, requestSignInCode, signInWithCode } from "@/lib/auth/sign-in-code";
 import { SESSION_COOKIE } from "@/lib/auth/session-cookie";
 import { endSession, revokeSession, startSession } from "@/lib/auth/sessions";
 import { recordAudit } from "@/lib/audit";
@@ -21,6 +22,7 @@ import type {
 	LoginFormState,
 	ResetFormState,
 	ResetRequestState,
+	SignInCodeState,
 	SignOutDeviceResult,
 } from "@/lib/actions/types";
 
@@ -168,6 +170,30 @@ export async function requestPasswordResetAction(
 
 	await requestPasswordReset(email);
 	return { message: RESET_REQUESTED_MESSAGE, sent: true };
+}
+
+/**
+ * "Email me a code" (M10-10). Always the same answer, as with the reset form —
+ * whether there is an account, and whether it was rate-limited, stays private.
+ */
+export async function requestSignInCodeAction(_previous: SignInCodeState, formData: FormData): Promise<SignInCodeState> {
+	const email = String(formData.get("email") ?? "").trim();
+	if (!email.includes("@")) {
+		return { email, sent: false, message: "Please enter your email address.", error: true };
+	}
+	await requestSignInCode(email);
+	return { email, sent: true, message: CODE_REQUESTED_MESSAGE, error: false };
+}
+
+/** Checks the code and, if it is right, signs in on this browser and redirects. */
+export async function signInWithCodeAction(_previous: SignInCodeState, formData: FormData): Promise<SignInCodeState> {
+	const email = String(formData.get("email") ?? "");
+	const next = formData.get("next");
+	const result = await signInWithCode(email, String(formData.get("code") ?? ""), next ? String(next) : null);
+	if (!result.ok) return { email, sent: true, message: result.message, error: true };
+
+	// `redirect` throws to unwind — it must sit outside any try/catch.
+	redirect(result.redirectTo);
 }
 
 /** Sets the new password, then sends them to sign in with it. */

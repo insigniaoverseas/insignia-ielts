@@ -706,6 +706,55 @@ console.log("\nM1-15 password reset");
   }
 }
 
+console.log("\nM10-10 sign in without a password — emailed codes");
+{
+  const uid = id.studentA;
+  const live = () => one(`select count(*)::int c from public.sign_in_codes where user_id = '${uid}' and used_at is null`);
+  const redeem = async (hash) => (await one(`select public.redeem_sign_in_code('${uid}', '${hash}', 5) r`)).r;
+
+  ok("no code sent → 'none'", (await redeem("sc-any")) === "none");
+
+  await db.exec(`select public.issue_sign_in_code('${uid}', 'sc-first', 600, null, null)`);
+  await db.exec(`select public.issue_sign_in_code('${uid}', 'sc-second', 600, '${id.teacher}', '10.0.0.1')`);
+  ok("issuing a code retires the earlier one — only the newest email works", (await live()).c === 1);
+  ok("the retired code no longer works", (await redeem("sc-first")) === "wrong");
+  ok("the newest code works once", (await redeem("sc-second")) === "ok");
+  ok("…and never again", (await redeem("sc-second")) === "none");
+
+  await db.exec(`select public.issue_sign_in_code('${uid}', 'sc-guess', 600, null, null)`);
+  const results = [];
+  for (let i = 0; i < 5; i++) results.push(await redeem(`sc-wrong-${i}`));
+  ok("five wrong guesses are each counted", results.every((r) => r === "wrong"), JSON.stringify(results));
+  ok("after five wrong guesses even the right code is refused", (await redeem("sc-guess")) === "none");
+
+  await db.exec(`insert into public.sign_in_codes (user_id, code_hash, created_at, expires_at)
+    values ('${uid}', 'sc-stale', now() - interval '1 hour', now() - interval '1 minute')`);
+  ok("an expired code is refused", (await redeem("sc-stale")) === "none");
+
+  ok("a code is only good for its own account",
+    (await one(`select public.redeem_sign_in_code('${id.studentB}', 'sc-second', 5) r`)).r === "none");
+
+  for (const who of ["studentA", "admin1", "superAdmin"]) {
+    ok(`${who} cannot read sign_in_codes through the API`,
+      !!(await as("authenticated", who, `select code_hash from public.sign_in_codes limit 1`)).error);
+  }
+}
+
+{
+  for (const t of ["sign_in_codes"]) {
+    ok(`${t} has RLS enabled and no policies`,
+      (await one(`select relrowsecurity r from pg_class where relnamespace = 'public'::regnamespace and relname = '${t}'`)).r === true &&
+      (await db.query(`select 1 from pg_policies where schemaname = 'public' and tablename = '${t}'`)).rows.length === 0);
+  }
+  for (const [fn, sig] of [
+    ["issue_sign_in_code", "uuid, text, integer, uuid, inet"], ["redeem_sign_in_code", "uuid, text, integer"],
+    ["purge_old_sign_in_codes", ""],
+  ]) {
+    const g = await one(`select has_function_privilege('anon', 'public.${fn}(${sig})', 'execute') a, has_function_privilege('authenticated', 'public.${fn}(${sig})', 'execute') b`);
+    ok(`${fn} is not executable by anon or authenticated`, !g.a && !g.b, JSON.stringify(g));
+  }
+}
+
 console.log("\npolicy hygiene");
 const multi = (await db.query(`select tablename, cmd, count(*)::int n from pg_policies where schemaname = 'public' group by 1, 2 having count(*) > 1`)).rows;
 ok("exactly one policy per table per command (advisor: multiple_permissive_policies)", multi.length === 0, JSON.stringify(multi));
@@ -723,6 +772,6 @@ ok("rls_auto_enable not executable by anon/authenticated", !acl.a && !acl.b);
 
 console.log("\nfinal sweep");
 ok("every table in public has RLS enabled", (await rlsFinal()).length === 0, JSON.stringify(await rlsFinal()));
-ok("public has exactly 26 tables", (await one(`select count(*)::int c from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r'`)).c === 26);
+ok("public has exactly 27 tables", (await one(`select count(*)::int c from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r'`)).c === 27);
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
