@@ -324,7 +324,7 @@ The audit trail required by `PLAN-V2.md` §1.2 A4. **Append-only**: a trigger re
 
 ### Content catalogue
 
-**`tests`** — `id` · `title` · `skill` (`listening`|`reading`|`writing`|`speaking`) · `variant` (`academic`|`general`|`n_a`) · **`difficulty`** (`easy`|`medium`|`hard` — D5) · `duration_seconds` · `transfer_seconds` · `total_questions` · `section_count` · `status` (`draft`|`published`|`archived`) · `tags text[]` · **`content_version int`** · **`r2_content_key`** · **`r2_key_key`** · **`r2_transcript_key`** · **`r2_audio_key`** *(one file — D8)* · **`r2_assets_prefix`** *(labelling images — §10)* · `audio_duration_seconds` · **`kind`** (`mock`|`class`|`practice`) · **`practice_question_type`** *(practice only — the one official type it drills, from §10; `NULL` otherwise, enforced by a `CHECK`)* · `created_by` · `published_at` · `created_at` · `updated_at`
+**`tests`** — `id` · `title` · `skill` (`listening`|`reading`|`writing`|`speaking`) · `variant` (`academic`|`general`|`n_a`) · **`difficulty`** (`easy`|`medium`|`hard` — D5) · `duration_seconds` · `transfer_seconds` · `total_questions` · `section_count` · `status` (`draft`|`published`|`archived`) · `tags text[]` · **`content_version int`** · **`r2_content_key`** · **`r2_key_key`** · **`r2_transcript_key`** · **`r2_audio_key`** *(one file — D8)* · **`r2_assets_prefix`** *(labelling images — §10)* · `audio_duration_seconds` · **`kind`** (`mock`|`class`|`practice`) · **`practice_question_type`** *(practice only, optional — the one official type a practice set drills, from §10; `NULL` on a full-paper practice test (M10-17) and always on mock/class, enforced by a `CHECK`)* · `created_by` · `published_at` · `created_at` · `updated_at`
 
 **No child `questions` table** — see the D4 consequence note in [§3](#3-decision-log).
 
@@ -657,7 +657,7 @@ One versioned, zod-backed schema: `lib/import/test-upload.schema.ts`. Full field
   "duration_seconds": 1800,
   "transfer_seconds": 120,
   "kind": "mock",                          // mock | class | practice — one pool per test
-  // "practice_question_type": "matching_headings",   // required when kind = practice (§10 type)
+  // "practice_question_type": "matching_headings",   // optional, practice only: the one §10 type a drill set practises; omit for a full paper (M10-17)
   "tags": ["cambridge-18", "urban"],
 
   // ONE audio file for the whole test (D8)
@@ -1370,7 +1370,7 @@ Every rule in [§7](#7-server-authority-d6) has a test here. These are the check
 | **Supabase Free has no backups** | Results lost on a disk failure | Nightly `db dump` to R2 + restore drill (M9-06), before the first real student |
 | **Free project paused after a quiet week** | Logins fail after a holiday | Daily use; a daily scheduled request over long breaks; Resume in the dashboard — steps in `docs/runbook.md` |
 | **500 MB database cap** | Writes restricted once exceeded | Lean `answers`; archive old per-question detail to R2 before 400 MB |
-| Student reuses a mock paper at home | Burns the paper | `tests.kind` — mock, class and practice are separate pools; the practice library only lists `practice` |
+| Student reuses a mock paper at home | Burns the paper | `tests.kind` — mock, class and practice are separate pools; the practice library only lists `practice`. Staff may move a paper into practice (M10-17, the user's choice 2026-10-12): the confirm warns when a published, already-set paper would become visible at home, and question-type drills never leave practice |
 | PIN or password sharing | Cheating | One active session; device binding; concurrent-login flag |
 | Region chosen wrong | Full migration | ⚠️ M0-04 — `ap-south-1`, **cannot be changed after creation** |
 

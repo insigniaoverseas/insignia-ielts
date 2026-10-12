@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { TestDetailsControl } from "@/components/admin/test-details-control";
 import { TestStatusControl } from "@/components/admin/test-status-control";
 import { SKILL_LABEL } from "@/components/student/labels";
 import { AnswerKeyEditor } from "@/components/staff/answer-key-editor";
@@ -10,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { requirePermissionOrRedirect } from "@/lib/auth/guard";
 import { can } from "@/lib/rbac";
 import { getAnswerKeyView } from "@/lib/queries/answer-key";
+import { getPreviewRow } from "@/lib/queries/test-preview";
+import { createClient } from "@/lib/supabase/server";
+import { QUESTION_TYPES, isQuestionType } from "@/lib/question-types";
+import { isDifficulty, isTestKind } from "@/lib/test-details";
 import { Icon } from "@/components/ui/icon";
 
 export const metadata: Metadata = {
@@ -40,8 +45,26 @@ export default async function AnswerKeyPage({ params }: { params: Promise<{ test
 	const { testId } = await params;
 	const actor = await requirePermissionOrRedirect("test:author", `/admin/library/${testId}/answer-key`);
 	if (!UUID.test(testId)) notFound();
-	const view = await getAnswerKeyView(testId);
+	const [view, row, assignments] = await Promise.all([
+		getAnswerKeyView(testId),
+		getPreviewRow(testId),
+		(await createClient()).from("assignments").select("id", { count: "exact", head: true }).eq("test_id", testId),
+	]);
 	if (!view) notFound();
+	// Type and difficulty (M10-17): the publisher's call, like publishing.
+	const details =
+		row && can(actor, "test:publish") && isTestKind(row.kind) && isDifficulty(row.difficulty)
+			? {
+					id: row.id,
+					title: row.title,
+					kind: row.kind,
+					difficulty: row.difficulty,
+					status: row.status,
+					assigned: (assignments.count ?? 0) > 0,
+					drill: row.kind === "practice" ? row.practice_question_type : null,
+				}
+			: null;
+	const drillName = details?.drill && isQuestionType(details.drill) ? QUESTION_TYPES[details.drill].officialName : null;
 
 	const header = (
 		<>
@@ -89,6 +112,15 @@ export default async function AnswerKeyPage({ params }: { params: Promise<{ test
 					<TestStatusControl testId={view.test.id} status={view.test.status} />
 				)}
 			</div>
+			{details && (
+				<section className="flex flex-col gap-4 rounded-card border border-line bg-surface p-6">
+					<div className="flex flex-col gap-1">
+						<h2 className="m-0 text-h3">Type and difficulty</h2>
+						<p className="m-0 text-ink-2">Where this paper sits in the library, and the level teachers see when they assign it.</p>
+					</div>
+					<TestDetailsControl test={details} drillName={drillName} />
+				</section>
+			)}
 			<Banner tone={complete ? "info" : "warning"}>
 				{view.entered} of {view.total} answers entered. Version {view.test.contentVersion}. To change questions, marks or audio, import the test again.
 			</Banner>

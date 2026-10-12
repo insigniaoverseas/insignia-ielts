@@ -134,6 +134,10 @@ export type TestLibraryRow = {
 	status: "draft" | "published" | "archived";
 	tags: string[];
 	updatedLabel: string;
+	/** Set as a test at least once, at this centre or (for the Owner) any (M10-17). */
+	assigned: boolean;
+	/** The one question type a practice set drills (a `lib/question-types.ts` key); `null` for a full paper or a mock/class test. */
+	drill: string | null;
 };
 
 /** Screen 28 — Users & roles (M9-03). */

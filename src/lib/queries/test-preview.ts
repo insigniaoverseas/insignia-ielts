@@ -7,6 +7,7 @@ import { audioObjectKey, contentObjectKey, parseR2ObjectKey } from "@/lib/r2-key
 import { sanitizeAttemptSession } from "@/lib/security/sanitize-attempt";
 import { createClient } from "@/lib/supabase/server";
 import { testContentSchema, toAttemptSections } from "@/lib/test-content";
+import { attemptMode } from "@/lib/test-details";
 import type { AttemptSession } from "@/lib/view-models/attempt";
 import { queryFailed, testSummary } from "./shared";
 
@@ -21,6 +22,8 @@ type PreviewRow = {
 	skill: string;
 	variant: string;
 	difficulty: string;
+	kind: string;
+	practice_question_type: string | null;
 	total_questions: number;
 	duration_seconds: number;
 	content_version: number;
@@ -37,7 +40,7 @@ export async function getPreviewRow(testId: string): Promise<PreviewRow | null> 
 	const { data, error } = await supabase
 		.from("tests")
 		.select(
-			"id, title, skill, variant, difficulty, total_questions, duration_seconds, content_version, status, audio_duration_seconds",
+			"id, title, skill, variant, difficulty, kind, practice_question_type, total_questions, duration_seconds, content_version, status, audio_duration_seconds",
 		)
 		.eq("id", testId)
 		.maybeSingle();
@@ -84,7 +87,8 @@ export async function getTestPreview(
 	const session: AttemptSession = {
 		attemptId: `preview:${row.id}`,
 		test,
-		mode: content.kind,
+		// The library's kind, which staff can change (M10-17) — not content.json's.
+		mode: attemptMode(row.kind, content.kind),
 		secondsRemaining: row.duration_seconds + content.transfer_seconds,
 		// Display-only: nothing reads it, because a preview never submits.
 		expiresAt: new Date(0).toISOString(),

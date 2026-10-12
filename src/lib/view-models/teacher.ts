@@ -75,6 +75,8 @@ export type AssignableTest = {
 	skill: Skill;
 	variant: Variant;
 	difficulty: Difficulty;
+	/** Mock, class or practice — the mode the assignment runs in (M10-17 shows and filters it). */
+	kind: "mock" | "class" | "practice";
 	questionCount: number;
 	durationMinutes: number;
 };
