@@ -2,7 +2,10 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  addCounts,
   attemptMode,
+  countsMessage,
+  inBatches,
   detailsResultMessage,
   detailsWarning,
   drillsKept,
@@ -71,6 +74,18 @@ describe("changing a test's type and difficulty (M10-17)", () => {
       detailsResultMessage(planDetailsChange([drill, fullPaper], { kind: "mock" }), { kind: "mock" }, 2, 1),
       "Changed 1 test to Mock. 1 question-type practice set stays Practice.",
     );
+  });
+
+  test("a long change is sent in batches and its counts add up into one sentence", () => {
+    assert.deepEqual(inBatches([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
+    assert.deepEqual(inBatches([], 10), []);
+    const total = addCounts({ changed: 8, already: 2, kept: 0, conflicts: 0 }, { changed: 4, already: 0, kept: 1, conflicts: 1 });
+    assert.deepEqual(total, { changed: 12, already: 2, kept: 1, conflicts: 1 });
+    assert.equal(
+      countsMessage(total, { kind: "mock" }),
+      "Changed 12 tests to Mock. 2 already were. 1 question-type practice set stays Practice. 1 test was changed by someone else while you were looking — reload the page and check.",
+    );
+    assert.equal(countsMessage({ changed: 0, already: 3, kept: 0, conflicts: 0 }, { difficulty: "easy" }), "Nothing to change — they already are that.");
   });
 
   test("the player runs by the attempt's own type, not the paper's file", () => {

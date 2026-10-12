@@ -92,3 +92,18 @@ export type SaveAnswerInput = {
 export type AttemptSaveResult =
 	| { ok: true; secondsRemaining: number }
 	| { ok: false; reason: "time_up" | "closed" | "session_ended" | "invalid" | "error" };
+
+/** What one bulk type/difficulty change did (M10-17): counts the screen adds up across batches. */
+export type DetailsOutcome = {
+	/** Tests whose type or difficulty changed. */
+	changed: number;
+	/** Tests that already had the new values. */
+	already: number;
+	/** Question-type practice sets that kept their type. */
+	kept: number;
+	/** Tests someone else changed first, so this change skipped them. */
+	conflicts: number;
+};
+
+/** A bulk change's result: the usual message, plus its counts when it ran. */
+export type DetailsActionState = { ok: boolean; message: string; outcome?: DetailsOutcome };

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import { SKILL_LABEL } from "@/components/student/labels";
@@ -33,8 +34,12 @@ import {
 	KIND_HINT,
 	KIND_LABEL,
 	TEST_KINDS,
+	addCounts,
+	countsMessage,
 	detailsWarning,
 	drillsKept,
+	inBatches,
+	type ChangeCounts,
 	type DetailsChange,
 } from "@/lib/test-details";
 import { QUESTION_TYPES, isQuestionType } from "@/lib/question-types";
@@ -47,6 +52,8 @@ function drillName(drill: string | null): string | null {
 	return drill && isQuestionType(drill) ? QUESTION_TYPES[drill].officialName : null;
 }
 const GROUPS: ListFilter[] = ["skill", "difficulty", "kind", "status", "variant"];
+/** Tests per server call during a bulk change — small enough for the progress bar to move. */
+const BATCH = 10;
 
 /**
  * Screen 26's list: chip filters (M10-02, several values at once since
@@ -67,6 +74,8 @@ export function LibraryBrowser({ rows, initial }: { rows: TestLibraryRow[]; init
 	const [asking, setAsking] = useState<DetailsChange | null>(null);
 	const [result, setResult] = useState<FormState>(null);
 	const [pending, startTransition] = useTransition();
+	const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+	const router = useRouter();
 
 	const shown = useMemo(() => filterTests(rows, filters), [rows, filters]);
 	const counts = useMemo(() => countByValue(rows, GROUPS), [rows]);
@@ -95,13 +104,40 @@ export function LibraryBrowser({ rows, initial }: { rows: TestLibraryRow[]; init
 		setSelected(next);
 	}
 
+	/**
+	 * Sends the change in batches of {@link BATCH}, so the box can show how far
+	 * it has got; the counts from each batch are added up into one sentence.
+	 * Only the last batch refreshes the page. A failed batch stops the rest and
+	 * says how many were done first.
+	 */
 	function apply() {
 		if (!asking) return;
+		const change = asking;
+		const batches = inBatches([...selected], BATCH);
+		const total = selected.size;
 		startTransition(async () => {
-			const outcome = await changeTestDetailsAction([...selected], asking);
-			setResult(outcome);
+			let counts: ChangeCounts = { changed: 0, already: 0, kept: 0, conflicts: 0 };
+			let done = 0;
+			setProgress({ done, total });
+			for (const [index, batch] of batches.entries()) {
+				const last = index === batches.length - 1;
+				const outcome = await changeTestDetailsAction(batch, change, { refresh: last });
+				if (!outcome.outcome) {
+					const before = done > 0 ? `${countsMessage(counts, change)} Then: ` : "";
+					setResult({ ok: false, message: `${before}${outcome.message}` });
+					setProgress(null);
+					setAsking(null);
+					if (!last) router.refresh();
+					return;
+				}
+				counts = addCounts(counts, outcome.outcome);
+				done += batch.length;
+				setProgress({ done, total });
+			}
+			setResult({ ok: counts.conflicts === 0, message: countsMessage(counts, change) });
+			setProgress(null);
 			setAsking(null);
-			if (outcome?.ok) setSelected(new Set());
+			setSelected(new Set());
 		});
 	}
 
@@ -240,9 +276,32 @@ export function LibraryBrowser({ rows, initial }: { rows: TestLibraryRow[]; init
 							</span>
 						)}
 						<span>Results students already have keep the type they were taken under.</span>
+						{progress && (
+							<span className="flex flex-col gap-1.5 pt-2" role="status" aria-live="polite">
+								<span className="font-semibold text-ink">
+									Saving {progress.done} of {progress.total}…
+								</span>
+								<span
+									className="h-2 overflow-hidden rounded-full bg-line"
+									role="progressbar"
+									aria-label="Saving the change"
+									aria-valuemin={0}
+									aria-valuemax={progress.total}
+									aria-valuenow={progress.done}
+								>
+									<span
+										className="block h-full rounded-full bg-brand transition-[width] duration-300"
+										style={{ width: `${Math.max(4, Math.round((progress.done / Math.max(1, progress.total)) * 100))}%` }}
+									/>
+								</span>
+								<span className="text-small">Keep this page open until it finishes.</span>
+							</span>
+						)}
 					</span>
 				}
-				confirmLabel={pending ? "Saving…" : `Yes, make ${picked.length === 1 ? "it" : "them"} ${target}`}
+				confirmLabel={
+					progress ? `Saving… ${progress.done} of ${progress.total}` : pending ? "Saving…" : `Yes, make ${picked.length === 1 ? "it" : "them"} ${target}`
+				}
 				cancelLabel="Not now"
 				loading={pending}
 				onConfirm={apply}

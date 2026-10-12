@@ -2,18 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 
-import { recordAudit } from "@/lib/audit";
+import { recordAudits } from "@/lib/audit";
 import { ForbiddenError, requirePermission } from "@/lib/rbac";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
 	MAX_DETAILS_CHANGE,
-	detailsResultMessage,
+	countsMessage,
 	drillsKept,
 	parseDetailsChange,
 	planDetailsChange,
 	type DetailsRow,
+	type DetailsUpdate,
 } from "@/lib/test-details";
-import type { FormState } from "./types";
+import type { DetailsActionState } from "./types";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -30,11 +31,16 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
  *
  * @param testIds - The tests to change (at most {@link MAX_DETAILS_CHANGE}).
  * @param input - `kind` and/or `difficulty`; an empty value means "leave as is".
+ * @param options.refresh - Re-render the pages that show tests. The library
+ *   sends a long change in batches for its progress bar and refreshes only on
+ *   the last one; every page re-render rides back on the response, so doing it
+ *   per batch would make each one slower.
  */
 export async function changeTestDetailsAction(
 	testIds: string[],
 	input: { kind?: string; difficulty?: string },
-): Promise<FormState> {
+	options: { refresh?: boolean } = {},
+): Promise<DetailsActionState> {
 	try {
 		const { actor } = await requirePermission("test:publish");
 
@@ -64,42 +70,63 @@ export async function changeTestDetailsAction(
 		// Question-type practice sets keep their type; only their difficulty can change.
 		const kept = drillsKept(rows, change);
 
-		let changed = 0;
+		// Tests starting from the same values get the same update, so each such
+		// group is one statement, not one per test. Each statement still only
+		// touches rows that hold the values the plan was made from: if someone
+		// else changed a test first, theirs stands and it is counted as a conflict.
+		const groups = new Map<string, DetailsUpdate[]>();
 		for (const update of updates) {
-			const { data, error } = await admin
-				.from("tests")
-				.update(update.set)
-				.eq("id", update.id)
-				.eq("kind", update.from.kind)
-				.eq("difficulty", update.from.difficulty)
-				.select("id");
-			if (error) throw error;
-			if (!data?.length) continue; // Someone else changed it first; theirs stands.
-			changed += 1;
-			await recordAudit({
-				actorId: actor.id,
-				branchId: actor.branchId,
-				action: "test.details",
-				entity: "test",
-				entityId: update.id,
-				meta: {
-					title: update.title,
-					from: update.from,
-					to: { kind: update.set.kind ?? update.from.kind, difficulty: update.set.difficulty ?? update.from.difficulty },
-					assigned: assigned.has(update.id),
-				},
-			});
+			const key = JSON.stringify([update.from, update.set]);
+			groups.set(key, [...(groups.get(key) ?? []), update]);
+		}
+		const applied = new Set<string>();
+		await Promise.all(
+			[...groups.values()].map(async (group) => {
+				const { from, set } = group[0]!;
+				const { data, error } = await admin
+					.from("tests")
+					.update(set)
+					.in("id", group.map((update) => update.id))
+					.eq("kind", from.kind)
+					.eq("difficulty", from.difficulty)
+					.select("id");
+				if (error) throw error;
+				for (const row of data ?? []) applied.add(row.id);
+			}),
+		);
+
+		await recordAudits(
+			updates
+				.filter((update) => applied.has(update.id))
+				.map((update) => ({
+					actorId: actor.id,
+					branchId: actor.branchId,
+					action: "test.details",
+					entity: "test",
+					entityId: update.id,
+					meta: {
+						title: update.title,
+						from: update.from,
+						to: { kind: update.set.kind ?? update.from.kind, difficulty: update.set.difficulty ?? update.from.difficulty },
+						assigned: assigned.has(update.id),
+					},
+				})),
+		);
+
+		if (options?.refresh !== false) {
+			revalidatePath("/admin/library");
+			for (const id of ids) revalidatePath(`/admin/library/${id}/answer-key`);
+			revalidatePath("/teacher/assign");
+			revalidatePath("/practice");
 		}
 
-		revalidatePath("/admin/library");
-		for (const id of ids) revalidatePath(`/admin/library/${id}/answer-key`);
-		revalidatePath("/teacher/assign");
-		revalidatePath("/practice");
-
-		if (changed < updates.length) {
-			return { ok: false, message: `${detailsResultMessage(updates.slice(0, changed), change, ids.length, kept)} Some tests changed while you were looking — reload the page and check them.` };
-		}
-		return { ok: true, message: detailsResultMessage(updates, change, ids.length, kept) };
+		const outcome = {
+			changed: applied.size,
+			already: Math.max(0, ids.length - updates.length - kept),
+			kept,
+			conflicts: updates.length - applied.size,
+		};
+		return { ok: outcome.conflicts === 0, message: countsMessage(outcome, change), outcome };
 	} catch (error) {
 		if (error instanceof ForbiddenError) return { ok: false, message: "You don't have permission to change tests." };
 		console.error("change test details failed:", error);

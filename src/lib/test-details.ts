@@ -127,21 +127,46 @@ export function detailsWarning(rows: readonly DetailsRow[], change: DetailsChang
 	return `${what} will appear in every student's Practice at Home straight away.${usedLine}`;
 }
 
+/** Counts that describe what a change did — added up across the screen's batches. */
+export type ChangeCounts = { changed: number; already: number; kept: number; conflicts: number };
+
+/** Two sets of counts added together. */
+export function addCounts(a: ChangeCounts, b: ChangeCounts): ChangeCounts {
+	return { changed: a.changed + b.changed, already: a.already + b.already, kept: a.kept + b.kept, conflicts: a.conflicts + b.conflicts };
+}
+
 /**
- * The sentence after a change, e.g. "Changed 3 tests to Practice, Easy."
- *
- * @param kept - Question-type drills that kept their type ({@link drillsKept}).
+ * The sentence after a change, e.g. "Changed 3 tests to Practice, Easy. 2
+ * already were."
  */
-export function detailsResultMessage(updates: readonly DetailsUpdate[], change: DetailsChange, asked: number, kept = 0): string {
-	const keptLine =
-		kept === 0 ? "" : ` ${kept === 1 ? "1 question-type practice set stays" : `${kept} question-type practice sets stay`} Practice.`;
-	if (updates.length === 0) {
-		if (kept > 0) return `Nothing changed.${keptLine}`;
-		return asked === 1 ? "Nothing to change — it already is that." : "Nothing to change — they already are that.";
+export function countsMessage(counts: ChangeCounts, change: DetailsChange): string {
+	const { changed, already, kept, conflicts } = counts;
+	const keptLine = kept === 0 ? "" : ` ${kept === 1 ? "1 question-type practice set stays" : `${kept} question-type practice sets stay`} Practice.`;
+	const conflictLine =
+		conflicts === 0 ? "" : ` ${conflicts === 1 ? "1 test was" : `${conflicts} tests were`} changed by someone else while you were looking — reload the page and check.`;
+	if (changed === 0) {
+		if (kept > 0 || conflicts > 0) return `Nothing changed.${keptLine}${conflictLine}`;
+		return already === 1 ? "Nothing to change — it already is that." : "Nothing to change — they already are that.";
 	}
 	const to = [change.kind ? KIND_LABEL[change.kind] : null, change.difficulty ? DIFFICULTY_LABEL[change.difficulty] : null]
 		.filter(Boolean)
 		.join(", ");
-	const skipped = asked - updates.length - kept;
-	return `Changed ${updates.length === 1 ? "1 test" : `${updates.length} tests`} to ${to}.${skipped > 0 ? ` ${skipped} already ${skipped === 1 ? "was" : "were"}.` : ""}${keptLine}`;
+	return `Changed ${changed === 1 ? "1 test" : `${changed} tests`} to ${to}.${already > 0 ? ` ${already} already ${already === 1 ? "was" : "were"}.` : ""}${keptLine}${conflictLine}`;
+}
+
+/**
+ * The sentence after a change, from the planned updates.
+ *
+ * @param asked - How many tests were picked.
+ * @param kept - Question-type drills that kept their type ({@link drillsKept}).
+ */
+export function detailsResultMessage(updates: readonly DetailsUpdate[], change: DetailsChange, asked: number, kept = 0): string {
+	return countsMessage({ changed: updates.length, already: Math.max(0, asked - updates.length - kept), kept, conflicts: 0 }, change);
+}
+
+/** Splits a list into batches of at most `size`, in order — for showing progress on a long change. */
+export function inBatches<T>(items: readonly T[], size: number): T[][] {
+	const batches: T[][] = [];
+	for (let i = 0; i < items.length; i += size) batches.push(items.slice(i, i + size));
+	return batches;
 }
