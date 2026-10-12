@@ -79,10 +79,13 @@ export function LibraryBrowser({ rows, initial }: { rows: TestLibraryRow[]; init
 	}
 
 	function toggle(id: string) {
-		const next = new Set(selected);
-		if (next.has(id)) next.delete(id);
-		else next.add(id);
-		setSelected(next);
+		// From the latest set, so quick clicks in a row all count.
+		setSelected((current) => {
+			const next = new Set(current);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
 	}
 
 	function toggleShown() {
@@ -121,7 +124,34 @@ export function LibraryBrowser({ rows, initial }: { rows: TestLibraryRow[]; init
 					/>
 				</TableToolbar>
 
-				<Table>
+				{/* Directly under the filters, so it is on screen however long the list is. */}
+				{picked.length > 0 && (
+					<TableBulkActions className="static shadow-none">
+						<span className="font-semibold">
+							{picked.length} {noun} selected
+							{picked.length > shownPicked && <span className="font-normal opacity-80"> ({picked.length - shownPicked} hidden by the filters)</span>}
+						</span>
+						<div className="flex flex-wrap items-center gap-2">
+							<span className="text-small opacity-80">Make them</span>
+							{TEST_KINDS.map((kind) => (
+								<Button key={kind} variant="inverse-secondary" onClick={() => setAsking({ kind })}>
+									{KIND_LABEL[kind]}
+								</Button>
+							))}
+							<span className="ml-2 text-small opacity-80">Difficulty</span>
+							{DIFFICULTIES.map((difficulty) => (
+								<Button key={difficulty} variant="inverse-secondary" onClick={() => setAsking({ difficulty })}>
+									{DIFFICULTY_LABEL[difficulty]}
+								</Button>
+							))}
+							<Button variant="ghost" className="text-white" onClick={() => setSelected(new Set())}>
+								Clear selection
+							</Button>
+						</div>
+					</TableBulkActions>
+				)}
+				{/* The rows scroll inside the card, so the header stays on screen. */}
+				<Table containerClassName="max-h-[calc(100dvh-26rem)] min-h-[16rem] overflow-y-auto">
 					<TableHeader sticky>
 						<TableRow>
 							<TableHead className="w-10">
@@ -193,31 +223,6 @@ export function LibraryBrowser({ rows, initial }: { rows: TestLibraryRow[]; init
 					</TableBody>
 				</Table>
 
-				{picked.length > 0 && (
-					<TableBulkActions>
-						<span className="font-semibold">
-							{picked.length} {noun} selected
-							{picked.length > shownPicked && <span className="font-normal opacity-80"> ({picked.length - shownPicked} hidden by the filters)</span>}
-						</span>
-						<div className="flex flex-wrap items-center gap-2">
-							<span className="text-small opacity-80">Make them</span>
-							{TEST_KINDS.map((kind) => (
-								<Button key={kind} variant="inverse-secondary" onClick={() => setAsking({ kind })}>
-									{KIND_LABEL[kind]}
-								</Button>
-							))}
-							<span className="ml-2 text-small opacity-80">Difficulty</span>
-							{DIFFICULTIES.map((difficulty) => (
-								<Button key={difficulty} variant="inverse-secondary" onClick={() => setAsking({ difficulty })}>
-									{DIFFICULTY_LABEL[difficulty]}
-								</Button>
-							))}
-							<Button variant="ghost" className="text-white" onClick={() => setSelected(new Set())}>
-								Clear selection
-							</Button>
-						</div>
-					</TableBulkActions>
-				)}
 			</TableCard>
 
 			<ConfirmDialog

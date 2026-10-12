@@ -135,11 +135,14 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 		return fromBatches + extra;
 	}, [options, batchIds, studentIds]);
 
-	function toggle(set: Set<string>, id: string, apply: (s: Set<string>) => void) {
-		const next = new Set(set);
-		if (next.has(id)) next.delete(id);
-		else next.add(id);
-		apply(next);
+	/** Switches one id in a set — from the latest set, so quick clicks in a row all count. */
+	function toggle(id: string, apply: React.Dispatch<React.SetStateAction<Set<string>>>) {
+		apply((current) => {
+			const next = new Set(current);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
 	}
 
 	const ready = picked.length > 0 && reached > 0 && (release !== "scheduled" || releaseAt !== "");
@@ -205,7 +208,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 							<li key={t.id}>
 								<button
 									type="button"
-									onClick={() => toggle(testIds, t.id, setTestIds)}
+									onClick={() => toggle(t.id, setTestIds)}
 									aria-pressed={on}
 									className={`flex w-full cursor-pointer flex-wrap items-center gap-3 rounded-control border px-4 py-3 text-left ${
 										on ? "border-brand bg-brand-soft" : "border-line bg-surface hover:border-ink-3"
@@ -244,7 +247,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 							<button
 								key={b.id}
 								type="button"
-								onClick={() => toggle(batchIds, b.id, setBatchIds)}
+								onClick={() => toggle(b.id, setBatchIds)}
 								aria-pressed={on}
 								className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-full border px-4 font-semibold ${
 									on ? "border-brand bg-brand-soft text-brand" : "border-line bg-surface text-ink-2 hover:text-ink"
@@ -265,7 +268,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 								<label className="flex min-h-10 cursor-pointer items-center gap-3">
 									<Checkbox
 										checked={studentIds.has(s.id)}
-										onCheckedChange={() => toggle(studentIds, s.id, setStudentIds)}
+										onCheckedChange={() => toggle(s.id, setStudentIds)}
 									/>
 									<span>{s.name}</span>
 									<span className="text-small text-ink-2">{s.batchName ?? "No batch"}</span>
