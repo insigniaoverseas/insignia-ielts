@@ -2,14 +2,21 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { assignTestAction } from "@/lib/actions/assignments";
+import { TestFilterBar, countByValue } from "@/components/staff/test-filter-bar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DifficultyBadge } from "@/components/ui/difficulty-badge";
 import { Input } from "@/components/ui/input";
+import { KindBadge } from "@/components/ui/kind-badge";
 import { Label } from "@/components/ui/label";
 import { SKILL_LABEL } from "@/components/student/labels";
+import { MAX_TESTS_PER_ASSIGN } from "@/lib/assignment-input";
+import { NO_FILTERS, filterTests, hasFilters, type LibraryFilters, type ListFilter } from "@/lib/library-filters";
 import type { AssignOptions } from "@/lib/view-models/teacher";
 import { Icon } from "@/components/ui/icon";
+
+/** The filters the Assign page offers over its (published) tests (M10-17). */
+const ASSIGN_GROUPS: ListFilter[] = ["skill", "difficulty", "kind"];
 
 /** One numbered step, so the page reads as a sequence rather than a wall of form. */
 function Step({
@@ -56,7 +63,7 @@ function Step({
  */
 export function AssignFlow({ options, initialBatch }: { options: AssignOptions; initialBatch?: string }) {
 	const [testIds, setTestIds] = useState<Set<string>>(new Set());
-	const [search, setSearch] = useState("");
+	const [filters, setFilters] = useState<LibraryFilters>(NO_FILTERS);
 	const [batchIds, setBatchIds] = useState<Set<string>>(new Set(initialBatch ? [initialBatch] : []));
 	const [studentIds, setStudentIds] = useState<Set<string>>(new Set());
 	const [opensAt, setOpensAt] = useState("");
@@ -70,7 +77,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 	/** Back to an empty form after a successful assign, so the next one starts clean. */
 	function reset() {
 		setTestIds(new Set());
-		setSearch("");
+		setFilters(NO_FILTERS);
 		setBatchIds(new Set());
 		setStudentIds(new Set());
 		setOpensAt("");
@@ -98,10 +105,20 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 			? (picked[0]?.title ?? "")
 			: `these ${picked.length} tests: ${picked.slice(0, -1).map((t) => t.title).join(", ")} and ${picked.at(-1)!.title}`;
 
-	const visibleTests = useMemo(() => {
-		const q = search.trim().toLowerCase();
-		return q === "" ? options.tests : options.tests.filter((t) => t.title.toLowerCase().includes(q));
-	}, [options.tests, search]);
+	const visibleTests = useMemo(() => filterTests(options.tests, filters), [options.tests, filters]);
+	const counts = useMemo(() => countByValue(options.tests, ASSIGN_GROUPS), [options.tests]);
+	const shownPicked = visibleTests.filter((t) => testIds.has(t.id)).length;
+	const allShownPicked = visibleTests.length > 0 && shownPicked === visibleTests.length;
+	/** Room left under the per-assign limit, for "Tick all shown". */
+	const room = MAX_TESTS_PER_ASSIGN - testIds.size;
+
+	/** Ticks every test the filters show, up to the limit; or unticks them all if they already are. */
+	function tickShown() {
+		const next = new Set(testIds);
+		if (allShownPicked) for (const t of visibleTests) next.delete(t.id);
+		else for (const t of visibleTests) if (next.size < MAX_TESTS_PER_ASSIGN) next.add(t.id);
+		setTestIds(next);
+	}
 
 	/**
 	 * Students reached. Batch members and individually-picked students can
@@ -118,11 +135,14 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 		return fromBatches + extra;
 	}, [options, batchIds, studentIds]);
 
-	function toggle(set: Set<string>, id: string, apply: (s: Set<string>) => void) {
-		const next = new Set(set);
-		if (next.has(id)) next.delete(id);
-		else next.add(id);
-		apply(next);
+	/** Switches one id in a set — from the latest set, so quick clicks in a row all count. */
+	function toggle(id: string, apply: React.Dispatch<React.SetStateAction<Set<string>>>) {
+		apply((current) => {
+			const next = new Set(current);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
 	}
 
 	const ready = picked.length > 0 && reached > 0 && (release !== "scheduled" || releaseAt !== "");
@@ -146,22 +166,49 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 			{[...testIds].map((id) => <input key={id} type="hidden" name="tests" value={id} />)}
 			{[...batchIds].map((id) => <input key={id} type="hidden" name="batches" value={id} />)}
 			{[...studentIds].map((id) => <input key={id} type="hidden" name="students" value={id} />)}
-			<Step n={1} title="Pick tests" hint="Tick one or more — each becomes its own assignment with the same students and rules.">
-				<Input
-					size="admin"
-					value={search}
-					onChange={(e) => setSearch(e.target.value)}
-					placeholder="Search tests"
-					aria-label="Search tests"
+			<Step n={1} title="Pick tests" hint="Narrow the list with the filters, then tick one or more — each becomes its own assignment with the same students and rules.">
+				<TestFilterBar
+					filters={filters}
+					onChange={setFilters}
+					groups={ASSIGN_GROUPS}
+					counts={counts}
+					searchLabel="Search tests"
+					summary={
+						hasFilters(filters)
+							? `${visibleTests.length} of ${options.tests.length} tests shown`
+							: `${options.tests.length} published ${options.tests.length === 1 ? "test" : "tests"}`
+					}
 				/>
-				<ul className="m-0 flex max-h-[320px] list-none flex-col gap-2 overflow-y-auto p-0">
+				{visibleTests.length > 0 && (
+					<div className="flex flex-wrap items-center gap-3">
+						<Button variant="secondary" onClick={tickShown} disabled={!allShownPicked && room <= 0}>
+							{allShownPicked
+								? `Untick these ${visibleTests.length}`
+								: visibleTests.length - shownPicked > room
+									? `Tick the first ${room} shown`
+									: `Tick all ${visibleTests.length} shown`}
+						</Button>
+						{testIds.size > 0 && (
+							<Button variant="ghost" onClick={() => setTestIds(new Set())}>
+								Untick everything
+							</Button>
+						)}
+						<span className="text-small text-ink-2">Up to {MAX_TESTS_PER_ASSIGN} tests at a time.</span>
+					</div>
+				)}
+				<ul className="m-0 flex max-h-[420px] list-none flex-col gap-2 overflow-y-auto p-0">
+					{visibleTests.length === 0 && (
+						<li className="rounded-control border border-dashed border-line px-4 py-6 text-center text-ink-2">
+							No published test matches these filters.
+						</li>
+					)}
 					{visibleTests.map((t) => {
 						const on = testIds.has(t.id);
 						return (
 							<li key={t.id}>
 								<button
 									type="button"
-									onClick={() => toggle(testIds, t.id, setTestIds)}
+									onClick={() => toggle(t.id, setTestIds)}
 									aria-pressed={on}
 									className={`flex w-full cursor-pointer flex-wrap items-center gap-3 rounded-control border px-4 py-3 text-left ${
 										on ? "border-brand bg-brand-soft" : "border-line bg-surface hover:border-ink-3"
@@ -177,6 +224,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 									</span>
 									<span className="min-w-[200px] flex-1 font-semibold">{t.title}</span>
 									<span className="text-small text-ink-2">{SKILL_LABEL[t.skill]}</span>
+									<KindBadge kind={t.kind} />
 									<DifficultyBadge level={t.difficulty} />
 									<span className="font-mono text-small text-ink-2">
 										{t.questionCount}q · {t.durationMinutes}m
@@ -199,7 +247,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 							<button
 								key={b.id}
 								type="button"
-								onClick={() => toggle(batchIds, b.id, setBatchIds)}
+								onClick={() => toggle(b.id, setBatchIds)}
 								aria-pressed={on}
 								className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-full border px-4 font-semibold ${
 									on ? "border-brand bg-brand-soft text-brand" : "border-line bg-surface text-ink-2 hover:text-ink"
@@ -220,7 +268,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 								<label className="flex min-h-10 cursor-pointer items-center gap-3">
 									<Checkbox
 										checked={studentIds.has(s.id)}
-										onCheckedChange={() => toggle(studentIds, s.id, setStudentIds)}
+										onCheckedChange={() => toggle(s.id, setStudentIds)}
 									/>
 									<span>{s.name}</span>
 									<span className="text-small text-ink-2">{s.batchName ?? "No batch"}</span>
@@ -235,7 +283,7 @@ export function AssignFlow({ options, initialBatch }: { options: AssignOptions; 
 				</p>
 			</Step>
 
-			<Step n={3} title="Set the rules" hint="The test type is set when the paper is created.">
+			<Step n={3} title="Set the rules" hint="Each test runs as its type — Mock, Class or Practice — which is set in the Test library.">
 
 				<div className="flex flex-wrap gap-4">
 					<div className="flex min-w-[180px] flex-1 flex-col gap-1.5">

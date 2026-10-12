@@ -21,7 +21,7 @@ listed in `src/lib/security/README.md`.
 | `duration_seconds` | yes | Main test time. |
 | `transfer_seconds` | yes | Listening check/transfer time; Reading must use `0`. |
 | `kind` | yes | `mock`, `class` or `practice`. |
-| `practice_question_type` | practice only | One canonical key from `lib/question-types.ts`. Every group in a practice set must use it. |
+| `practice_question_type` | practice only, optional | One canonical key from `lib/question-types.ts` for a question-type drill; every group in the set must use it. Leave it out for a full-paper practice test (M10-17). |
 | `tags` | yes | Unique lowercase identifiers such as `cambridge-18`; use hyphens, not spaces. |
 | `audio` | Listening only | One MP3 for the entire test: `{ "file", "duration_seconds" }`. |
 | `assets` | yes | Images used by `image_label` groups. PNG, JPEG and WebP only. May be empty. |

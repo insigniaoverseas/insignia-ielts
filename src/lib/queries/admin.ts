@@ -42,6 +42,7 @@ const ACTION_LABEL: Record<string, string> = {
 	"mark.override": "Mark changed",
 	"test.publish": "Test published",
 	"test.unpublish": "Test moved back to draft",
+	"test.details": "Test type or difficulty changed",
 	"role.change": "Role changed",
 	"session.revoke": "Session revoked",
 	"user.suspend": "Staff member suspended",
@@ -379,12 +380,18 @@ export async function getBatches(): Promise<BatchRow[]> {
 /** Screen 26 — Supabase catalogue metadata; key contents remain private in R2. */
 export async function getTestLibrary(): Promise<TestLibraryRow[]> {
 	const supabase = await createClient();
-	const { data, error } = await supabase
-		.from("tests")
-		.select("id, title, skill, variant, difficulty, kind, total_questions, status, tags, updated_at")
-		.in("skill", ["listening", "reading"])
-		.order("updated_at", { ascending: false });
+	const [{ data, error }, assignments] = await Promise.all([
+		supabase
+			.from("tests")
+			.select("id, title, skill, variant, difficulty, kind, practice_question_type, total_questions, status, tags, updated_at")
+			.in("skill", ["listening", "reading"])
+			.order("updated_at", { ascending: false }),
+		// Which tests have been set, for the warning before one becomes Practice (M10-17).
+		supabase.from("assignments").select("test_id"),
+	]);
 	if (error) queryFailed("test library", error);
+	if (assignments.error) queryFailed("test library assignments", assignments.error);
+	const assigned = new Set((assignments.data ?? []).map((row) => row.test_id));
 	return (data ?? []).flatMap((test) => {
 		if (!(["listening", "reading"] as string[]).includes(test.skill)) return [];
 		if (!(["academic", "general", "n_a"] as string[]).includes(test.variant)) return [];
@@ -401,6 +408,8 @@ export async function getTestLibrary(): Promise<TestLibraryRow[]> {
 			status: test.status as TestLibraryRow["status"],
 			tags: test.tags,
 			updatedLabel: formatShortDate(test.updated_at),
+			assigned: assigned.has(test.id),
+			drill: test.kind === "practice" ? test.practice_question_type : null,
 		}];
 	});
 }

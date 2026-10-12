@@ -35,9 +35,16 @@ function TableToolbar({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+/**
+ * The table, in a container that scrolls sideways on narrow screens.
+ *
+ * @param containerClassName - Classes for that container. Give it a bounded
+ *   height and `overflow-y-auto` to scroll a long list inside the card, so a
+ *   sticky header and the bulk-action bar below stay on screen.
+ */
+function Table({ className, containerClassName, ...props }: React.ComponentProps<"table"> & { containerClassName?: string }) {
 	return (
-		<div data-slot="table-container" className="relative w-full overflow-x-auto">
+		<div data-slot="table-container" className={cn("relative w-full overflow-x-auto", containerClassName)}>
 			<table
 				data-slot="table"
 				className={cn("w-full caption-bottom border-collapse text-body", className)}

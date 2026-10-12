@@ -351,13 +351,8 @@ export const testUploadSchema = z
 			}
 		}
 
-		if (test.kind === "practice" && test.practice_question_type === undefined) {
-			ctx.addIssue({
-				code: "custom",
-				path: ["practice_question_type"],
-				message: "A practice set requires practice_question_type",
-			});
-		} else if (test.kind !== "practice" && test.practice_question_type !== undefined) {
+		// A practice test may drill one question type, or be a full paper (M10-17).
+		if (test.kind !== "practice" && test.practice_question_type !== undefined) {
 			ctx.addIssue({
 				code: "custom",
 				path: ["practice_question_type"],

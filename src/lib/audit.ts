@@ -57,3 +57,25 @@ export async function recordAudit(entry: AuditEntry): Promise<void> {
 
 	if (error) console.error(`audit_log write failed for ${entry.action}:`, error.message);
 }
+
+/**
+ * Writes several audit lines in one insert — for a bulk change, where one
+ * round trip per line would make the person wait (M10-17). Same rule as
+ * {@link recordAudit}: failure is logged, never thrown.
+ */
+export async function recordAudits(entries: readonly AuditEntry[]): Promise<void> {
+	if (entries.length === 0) return;
+	const { error } = await createAdminClient()
+		.from("audit_log")
+		.insert(
+			entries.map((entry) => ({
+				actor_id: entry.actorId,
+				branch_id: entry.branchId,
+				action: entry.action,
+				entity: entry.entity,
+				entity_id: entry.entityId ?? null,
+				meta: entry.meta ?? {},
+			})),
+		);
+	if (error) console.error(`audit_log bulk write failed for ${entries[0]!.action} (${entries.length} lines):`, error.message);
+}

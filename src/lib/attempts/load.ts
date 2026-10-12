@@ -10,6 +10,7 @@ import { queryFailed, testSummary } from "@/lib/queries/shared";
 import { sanitizeAttemptSession } from "@/lib/security/sanitize-attempt";
 import { createClient } from "@/lib/supabase/server";
 import { testContentSchema, toAttemptSections } from "@/lib/test-content";
+import { attemptMode } from "@/lib/test-details";
 import type { AttemptSession } from "@/lib/view-models/attempt";
 import { playerStateFromRows } from "./answers";
 import { secondsLeft } from "./clock";
@@ -131,10 +132,14 @@ export async function loadAttemptSession(
 	const sections = toAttemptSections(content, (asset) => assetUrls.get(asset.ordinal) ?? "");
 	const state = playerStateFromRows(sections, answersResult.data ?? []);
 
+	// The attempt's own kind, copied from `tests.kind` when it started — not
+	// content.json's, which keeps whatever the paper was imported as. Staff can
+	// move a test between mock, class and practice later (M10-17).
+	const mode = attemptMode(attempt.kind, content.kind);
 	const session: AttemptSession = {
 		attemptId: attempt.id,
 		test,
-		mode: content.kind,
+		mode,
 		secondsRemaining: secondsLeft(attempt),
 		expiresAt: attempt.expires_at,
 		audio:
@@ -146,7 +151,7 @@ export async function loadAttemptSession(
 							key: audioCacheKey(attempt.student_id, attempt.test_id, attempt.content_version),
 							ownerId: attempt.student_id,
 							// Mock and class audio must not stay replayable after submit (§12).
-							dropAfterSubmit: content.kind !== "practice",
+							dropAfterSubmit: mode !== "practice",
 						},
 					}
 				: null,

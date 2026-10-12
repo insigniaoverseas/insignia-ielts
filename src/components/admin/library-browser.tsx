@@ -1,147 +1,311 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
 
 import { SKILL_LABEL } from "@/components/student/labels";
+import { TestFilterBar, countByValue } from "@/components/staff/test-filter-bar";
+import { Banner } from "@/components/ui/banner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmDialog } from "@/components/ui/dialog";
 import { DifficultyBadge } from "@/components/ui/difficulty-badge";
-import { Input } from "@/components/ui/input";
-import { StatusPill } from "@/components/ui/status-pill";
-import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow, TableToolbar } from "@/components/ui/table";
-import { NO_FILTERS, filterTests, filtersToQuery, type LibraryFilters } from "@/lib/library-filters";
-import type { TestLibraryRow } from "@/lib/view-models/admin";
 import { Icon } from "@/components/ui/icon";
+import { KindBadge } from "@/components/ui/kind-badge";
+import { StatusPill } from "@/components/ui/status-pill";
+import {
+	Table,
+	TableBody,
+	TableBulkActions,
+	TableCard,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+	TableToolbar,
+} from "@/components/ui/table";
+import { changeTestDetailsAction } from "@/lib/actions/test-details";
+import type { FormState } from "@/lib/actions/types";
+import { filterTests, filtersToQuery, hasFilters, type LibraryFilters, type ListFilter } from "@/lib/library-filters";
+import {
+	DIFFICULTIES,
+	DIFFICULTY_LABEL,
+	KIND_HINT,
+	KIND_LABEL,
+	TEST_KINDS,
+	addCounts,
+	countsMessage,
+	detailsWarning,
+	drillsKept,
+	inBatches,
+	type ChangeCounts,
+	type DetailsChange,
+} from "@/lib/test-details";
+import { QUESTION_TYPES, isQuestionType } from "@/lib/question-types";
+import type { TestLibraryRow } from "@/lib/view-models/admin";
 
 const VARIANT_LABEL = { academic: "Academic", general: "General Training", n_a: "—" } as const;
-const KIND_LABEL = { mock: "Mock", class: "Class", practice: "Practice" } as const;
 
-/** The dropdowns, in reading order. "Any" is always first. */
-const SELECTS: { key: Exclude<keyof LibraryFilters, "q">; label: string; options: [string, string][] }[] = [
-	{ key: "skill", label: "Skill", options: [["listening", "Listening"], ["reading", "Reading"]] },
-	{ key: "variant", label: "Variant", options: [["academic", "Academic"], ["general", "General Training"], ["n_a", "Listening (no variant)"]] },
-	{ key: "difficulty", label: "Difficulty", options: [["easy", "Easy"], ["medium", "Medium"], ["hard", "Hard"]] },
-	{ key: "kind", label: "Type", options: [["mock", "Mock"], ["class", "Class"], ["practice", "Practice"]] },
-	{ key: "status", label: "Status", options: [["published", "Published"], ["draft", "Draft"], ["archived", "Archived"]] },
-];
+/** "Matching headings" for a question-type practice set, or null. */
+function drillName(drill: string | null): string | null {
+	return drill && isQuestionType(drill) ? QUESTION_TYPES[drill].officialName : null;
+}
+const GROUPS: ListFilter[] = ["skill", "difficulty", "kind", "status", "variant"];
+/** Tests per server call during a bulk change — small enough for the progress bar to move. */
+const BATCH = 10;
 
 /**
- * Screen 26's list with its filters (M10-02).
+ * Screen 26's list: chip filters (M10-02, several values at once since
+ * M10-17), and ticking tests to change their **type** or **difficulty**
+ * together (M10-17).
  *
  * Every test arrives **once**, from the server; the filters narrow it here, in
  * memory — no request per click. Their state is mirrored into the URL with
- * `replaceState`, so a filtered view survives a reload and can be shared,
- * without a navigation.
+ * `replaceState`, so a filtered view survives a reload and can be shared.
+ *
+ * A change always goes through a confirm box that names how many tests it
+ * touches, and warns when a used paper would become Practice. The server
+ * re-checks the permission and every value.
  */
 export function LibraryBrowser({ rows, initial }: { rows: TestLibraryRow[]; initial: LibraryFilters }) {
 	const [filters, setFilters] = useState(initial);
-	const shown = useMemo(() => filterTests(rows, filters), [rows, filters]);
-	const active = Object.values(filters).some(Boolean);
+	const [selected, setSelected] = useState<Set<string>>(new Set());
+	const [asking, setAsking] = useState<DetailsChange | null>(null);
+	const [result, setResult] = useState<FormState>(null);
+	const [pending, startTransition] = useTransition();
+	const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+	const router = useRouter();
 
-	function set(next: LibraryFilters) {
+	const shown = useMemo(() => filterTests(rows, filters), [rows, filters]);
+	const counts = useMemo(() => countByValue(rows, GROUPS), [rows]);
+	const picked = rows.filter((r) => selected.has(r.id));
+	const shownPicked = shown.filter((r) => selected.has(r.id)).length;
+
+	function setFilter(next: LibraryFilters) {
 		setFilters(next);
 		window.history.replaceState(null, "", `${window.location.pathname}${filtersToQuery(next)}`);
 	}
 
-	return (
-		<TableCard>
-			<TableToolbar>
-				<div className="flex w-full flex-col gap-3">
-					<div className="flex flex-wrap items-end gap-3">
-						<label className="flex min-w-[220px] flex-1 flex-col gap-1">
-							<span className="text-small font-semibold">Search</span>
-							<Input
-								size="admin"
-								value={filters.q}
-								onChange={(e) => set({ ...filters, q: e.target.value })}
-								placeholder="Title or tag"
-								aria-label="Search tests by title or tag"
-							/>
-						</label>
-						{SELECTS.map((s) => (
-							<label key={s.key} className="flex flex-col gap-1">
-								<span className="text-small font-semibold">{s.label}</span>
-								<select
-									value={filters[s.key]}
-									onChange={(e) => set({ ...filters, [s.key]: e.target.value } as LibraryFilters)}
-									className="h-10 rounded-control border border-line bg-surface px-3 text-body"
-								>
-									<option value="">Any</option>
-									{s.options.map(([value, label]) => (
-										<option key={value} value={value}>
-											{label}
-										</option>
-									))}
-								</select>
-							</label>
-						))}
-						{active && (
-							<Button variant="secondary" onClick={() => set(NO_FILTERS)}>
-								Clear filters
-							</Button>
-						)}
-					</div>
-					<span className="text-small text-ink-2" aria-live="polite">
-						{active ? `${shown.length} of ${rows.length} tests` : `${rows.length} ${rows.length === 1 ? "test" : "tests"}`}
-					</span>
-				</div>
-			</TableToolbar>
+	function toggle(id: string) {
+		// From the latest set, so quick clicks in a row all count.
+		setSelected((current) => {
+			const next = new Set(current);
+			if (next.has(id)) next.delete(id);
+			else next.add(id);
+			return next;
+		});
+	}
 
-			<Table>
-				<TableHeader sticky>
-					<TableRow>
-						<TableHead>Test</TableHead>
-						<TableHead>Skill</TableHead>
-						<TableHead>Variant</TableHead>
-						<TableHead>Difficulty</TableHead>
-						<TableHead>Type</TableHead>
-						<TableHead className="text-right">Questions</TableHead>
-						<TableHead>Status</TableHead>
-						<TableHead className="text-right">Updated</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{shown.length === 0 ? (
+	function toggleShown() {
+		const next = new Set(selected);
+		if (shownPicked === shown.length) for (const r of shown) next.delete(r.id);
+		else for (const r of shown) next.add(r.id);
+		setSelected(next);
+	}
+
+	/**
+	 * Sends the change in batches of {@link BATCH}, so the box can show how far
+	 * it has got; the counts from each batch are added up into one sentence.
+	 * Only the last batch refreshes the page. A failed batch stops the rest and
+	 * says how many were done first.
+	 */
+	function apply() {
+		if (!asking) return;
+		const change = asking;
+		const batches = inBatches([...selected], BATCH);
+		const total = selected.size;
+		startTransition(async () => {
+			let counts: ChangeCounts = { changed: 0, already: 0, kept: 0, conflicts: 0 };
+			let done = 0;
+			setProgress({ done, total });
+			for (const [index, batch] of batches.entries()) {
+				const last = index === batches.length - 1;
+				const outcome = await changeTestDetailsAction(batch, change, { refresh: last });
+				if (!outcome.outcome) {
+					const before = done > 0 ? `${countsMessage(counts, change)} Then: ` : "";
+					setResult({ ok: false, message: `${before}${outcome.message}` });
+					setProgress(null);
+					setAsking(null);
+					if (!last) router.refresh();
+					return;
+				}
+				counts = addCounts(counts, outcome.outcome);
+				done += batch.length;
+				setProgress({ done, total });
+			}
+			setResult({ ok: counts.conflicts === 0, message: countsMessage(counts, change) });
+			setProgress(null);
+			setAsking(null);
+			setSelected(new Set());
+		});
+	}
+
+	const noun = picked.length === 1 ? "test" : "tests";
+	const target = asking?.kind ? KIND_LABEL[asking.kind] : asking?.difficulty ? DIFFICULTY_LABEL[asking.difficulty] : "";
+	const warning = asking ? detailsWarning(picked, asking) : null;
+	const kept = asking ? drillsKept(picked, asking) : 0;
+
+	return (
+		<div className="flex flex-col gap-4">
+			{result && <Banner tone={result.ok ? "info" : "warning"}>{result.message}</Banner>}
+			<TableCard>
+				<TableToolbar>
+					<TestFilterBar
+						filters={filters}
+						onChange={setFilter}
+						groups={GROUPS}
+						counts={counts}
+						summary={hasFilters(filters) ? `${shown.length} of ${rows.length} tests` : `${rows.length} ${rows.length === 1 ? "test" : "tests"}`}
+					/>
+				</TableToolbar>
+
+				{/* Directly under the filters, so it is on screen however long the list is. */}
+				{picked.length > 0 && (
+					<TableBulkActions className="static shadow-none">
+						<span className="font-semibold">
+							{picked.length} {noun} selected
+							{picked.length > shownPicked && <span className="font-normal opacity-80"> ({picked.length - shownPicked} hidden by the filters)</span>}
+						</span>
+						<div className="flex flex-wrap items-center gap-2">
+							<span className="text-small opacity-80">Make them</span>
+							{TEST_KINDS.map((kind) => (
+								<Button key={kind} variant="inverse-secondary" onClick={() => setAsking({ kind })}>
+									{KIND_LABEL[kind]}
+								</Button>
+							))}
+							<span className="ml-2 text-small opacity-80">Difficulty</span>
+							{DIFFICULTIES.map((difficulty) => (
+								<Button key={difficulty} variant="inverse-secondary" onClick={() => setAsking({ difficulty })}>
+									{DIFFICULTY_LABEL[difficulty]}
+								</Button>
+							))}
+							<Button variant="ghost" className="text-white" onClick={() => setSelected(new Set())}>
+								Clear selection
+							</Button>
+						</div>
+					</TableBulkActions>
+				)}
+				{/* The rows scroll inside the card, so the header stays on screen. */}
+				<Table containerClassName="max-h-[calc(100dvh-26rem)] min-h-[16rem] overflow-y-auto">
+					<TableHeader sticky>
 						<TableRow>
-							<TableCell colSpan={8} className="py-8 text-center text-ink-2">
-								No tests match these filters.
-							</TableCell>
+							<TableHead className="w-10">
+								<Checkbox
+									checked={shown.length > 0 && shownPicked === shown.length ? true : shownPicked > 0 ? "indeterminate" : false}
+									onCheckedChange={toggleShown}
+									disabled={shown.length === 0}
+									aria-label={`Select all ${shown.length} tests shown`}
+								/>
+							</TableHead>
+							<TableHead>Test</TableHead>
+							<TableHead>Skill</TableHead>
+							<TableHead>Difficulty</TableHead>
+							<TableHead>Type</TableHead>
+							<TableHead>Variant</TableHead>
+							<TableHead className="text-right">Questions</TableHead>
+							<TableHead>Status</TableHead>
+							<TableHead className="text-right">Updated</TableHead>
 						</TableRow>
-					) : (
-						shown.map((t) => (
-							<TableRow key={t.id}>
-								<TableCell>
-									<Link href={`/admin/library/${t.id}/answer-key`} className="font-semibold">
-										{t.title}
-									</Link>
-									{t.tags.length > 0 && <div className="text-small text-ink-2">{t.tags.join(" · ")}</div>}
-									<Link href={`/admin/library/${t.id}/preview`} className="block text-small font-semibold">
-										Preview as a student <Icon name="arrow-right" />
-									</Link>
-									<Link href={`/admin/library/${t.id}/answer-key`} className="block text-small font-semibold">
-										{t.status === "draft" ? "Review and publish" : "Answer key"} <Icon name="arrow-right" />
-									</Link>
+					</TableHeader>
+					<TableBody>
+						{shown.length === 0 ? (
+							<TableRow>
+								<TableCell colSpan={9} className="py-8 text-center text-ink-2">
+									No tests match these filters.
 								</TableCell>
-								<TableCell className="text-ink-2">{SKILL_LABEL[t.skill]}</TableCell>
-								<TableCell className="text-ink-2">{VARIANT_LABEL[t.variant]}</TableCell>
-								<TableCell>
-									<DifficultyBadge level={t.difficulty} />
-								</TableCell>
-								<TableCell className="text-ink-2">{KIND_LABEL[t.kind]}</TableCell>
-								<TableCell className="text-right font-mono">{t.questionCount}</TableCell>
-								<TableCell>
-									<StatusPill
-										status={t.status === "published" ? "active" : t.status === "draft" ? "not_started" : "locked"}
-										size="sm"
-										label={t.status === "published" ? "Published" : t.status === "draft" ? "Draft" : "Archived"}
-									/>
-								</TableCell>
-								<TableCell className="text-right text-small text-ink-2">{t.updatedLabel}</TableCell>
 							</TableRow>
-						))
-					)}
-				</TableBody>
-			</Table>
-		</TableCard>
+						) : (
+							shown.map((t) => (
+								<TableRow key={t.id} selected={selected.has(t.id)}>
+									<TableCell>
+										<Checkbox checked={selected.has(t.id)} onCheckedChange={() => toggle(t.id)} aria-label={`Select ${t.title}`} />
+									</TableCell>
+									<TableCell>
+										<Link href={`/admin/library/${t.id}/answer-key`} className="font-semibold">
+											{t.title}
+										</Link>
+										{t.tags.length > 0 && <div className="text-small text-ink-2">{t.tags.join(" · ")}</div>}
+										<div className="flex flex-wrap gap-x-4">
+											<Link href={`/admin/library/${t.id}/preview`} className="text-small font-semibold">
+												Preview as a student <Icon name="arrow-right" />
+											</Link>
+											<Link href={`/admin/library/${t.id}/answer-key`} className="text-small font-semibold">
+												{t.status === "draft" ? "Review and publish" : "Answer key"} <Icon name="arrow-right" />
+											</Link>
+										</div>
+									</TableCell>
+									<TableCell className="text-ink-2">{SKILL_LABEL[t.skill]}</TableCell>
+									<TableCell>
+										<DifficultyBadge level={t.difficulty} />
+									</TableCell>
+									<TableCell>
+										<KindBadge kind={t.kind} />
+										{drillName(t.drill) && <div className="mt-1 text-small text-ink-2">{drillName(t.drill)} only</div>}
+									</TableCell>
+									<TableCell className="text-ink-2">{VARIANT_LABEL[t.variant]}</TableCell>
+									<TableCell className="text-right font-mono">{t.questionCount}</TableCell>
+									<TableCell>
+										<StatusPill
+											status={t.status === "published" ? "active" : t.status === "draft" ? "not_started" : "locked"}
+											size="sm"
+											label={t.status === "published" ? "Published" : t.status === "draft" ? "Draft" : "Archived"}
+										/>
+									</TableCell>
+									<TableCell className="text-right text-small text-ink-2">{t.updatedLabel}</TableCell>
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+
+			</TableCard>
+
+			<ConfirmDialog
+				open={asking !== null}
+				onOpenChange={(open) => !open && !pending && setAsking(null)}
+				title={`Make ${picked.length === 1 ? "this test" : `these ${picked.length} tests`} ${target}?`}
+				description={
+					<span className="flex flex-col gap-2">
+						{asking?.kind && <span>{KIND_HINT[asking.kind]}</span>}
+						{warning && <span className="font-semibold text-warning">{warning}</span>}
+						{kept > 0 && (
+							<span>
+								{kept === 1 ? "1 of them is a question-type practice set" : `${kept} of them are question-type practice sets`}, so{" "}
+								{kept === 1 ? "it stays" : "they stay"} Practice.
+							</span>
+						)}
+						<span>Results students already have keep the type they were taken under.</span>
+						{progress && (
+							<span className="flex flex-col gap-1.5 pt-2" role="status" aria-live="polite">
+								<span className="font-semibold text-ink">
+									Saving {progress.done} of {progress.total}…
+								</span>
+								<span
+									className="h-2 overflow-hidden rounded-full bg-line"
+									role="progressbar"
+									aria-label="Saving the change"
+									aria-valuemin={0}
+									aria-valuemax={progress.total}
+									aria-valuenow={progress.done}
+								>
+									<span
+										className="block h-full rounded-full bg-brand transition-[width] duration-300"
+										style={{ width: `${Math.max(4, Math.round((progress.done / Math.max(1, progress.total)) * 100))}%` }}
+									/>
+								</span>
+								<span className="text-small">Keep this page open until it finishes.</span>
+							</span>
+						)}
+					</span>
+				}
+				confirmLabel={
+					progress ? `Saving… ${progress.done} of ${progress.total}` : pending ? "Saving…" : `Yes, make ${picked.length === 1 ? "it" : "them"} ${target}`
+				}
+				cancelLabel="Not now"
+				loading={pending}
+				onConfirm={apply}
+			/>
+		</div>
 	);
 }

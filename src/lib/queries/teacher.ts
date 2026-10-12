@@ -11,6 +11,7 @@ import { answerKeySchema, type AnswerKey } from "@/lib/scoring";
 import { QUESTION_TYPES, isQuestionType } from "@/lib/question-types";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
+import { isTestKind } from "@/lib/test-details";
 import { formatDateTime, formatTime } from "@/lib/time";
 import type {
 	AssignOptions,
@@ -226,7 +227,7 @@ export async function getBatchView(batchId: string): Promise<BatchView | null> {
 export async function getAssignOptions(): Promise<AssignOptions> {
 	const supabase = await createClient();
 	const [testsResult, batchesResult, membershipsResult, usersResult] = await Promise.all([
-		supabase.from("tests").select("id, title, skill, variant, difficulty, total_questions, duration_seconds").eq("status", "published").in("skill", ["listening", "reading"]).order("title"),
+		supabase.from("tests").select("id, title, skill, variant, difficulty, kind, total_questions, duration_seconds").eq("status", "published").in("skill", ["listening", "reading"]).order("title"),
 		supabase.from("batches").select("id, name").eq("status", "active").order("name"),
 		supabase.from("batch_students").select("batch_id, student_id").is("left_at", null),
 		supabase.from("users").select("id, name, status, roles ( key )").eq("status", "active").order("name"),
@@ -241,7 +242,7 @@ export async function getAssignOptions(): Promise<AssignOptions> {
 	return {
 		tests: (testsResult.data ?? []).flatMap((test) => {
 			const summary = testSummary(test);
-			return summary ? [summary] : [];
+			return summary && isTestKind(test.kind) ? [{ ...summary, kind: test.kind }] : [];
 		}),
 		batches: batches.map((batch) => ({ id: batch.id, name: batch.name, studentCount: memberships.filter((row) => row.batch_id === batch.id).length })),
 		students: (usersResult.data ?? [])
