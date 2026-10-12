@@ -5,6 +5,9 @@ import { FilterChip } from "@/components/ui/filter-chip";
 import { Input } from "@/components/ui/input";
 import { FILTER_VALUES, NO_FILTERS, hasFilters, toggleFilter, type LibraryFilters, type ListFilter } from "@/lib/library-filters";
 
+/** Tighter than a toolbar chip, so more groups fit on a line. */
+const CHIP = "gap-1.5 px-2.5 py-1";
+
 const GROUP_LABEL: Record<ListFilter, string> = {
 	skill: "Skill",
 	variant: "Variant",
@@ -34,8 +37,9 @@ const VALUE_LABEL: Record<string, string> = {
  * The search box and chip filters over a list of tests — the Test library and
  * the Assign page share it (M10-17).
  *
- * Each row of chips is one filter. Chips in a row can be ticked together
- * ("Easy" and "Medium"); **Any** clears that row. Every chip is a pressed /
+ * Each boxed group of chips is one filter; the groups sit side by side and
+ * wrap onto the next line. Chips in a group can be ticked together ("Easy"
+ * and "Medium"); **Any** clears that group. Every chip is a pressed /
  * not-pressed button, so the state is announced, not only tinted.
  *
  * @param groups - Which filters to offer, in order.
@@ -74,16 +78,23 @@ export function TestFilterBar({
 					</Button>
 				)}
 			</div>
-			<div className="flex flex-col gap-2">
+			{/* Groups sit side by side and wrap as a whole; each keeps its chips together. */}
+			<div className="flex flex-wrap items-center gap-x-3 gap-y-2">
 				{groups.map((key) => (
-					<div key={key} role="group" aria-label={GROUP_LABEL[key]} className="flex flex-wrap items-center gap-2">
-						<span className="w-[84px] flex-none text-small font-semibold text-ink-2">{GROUP_LABEL[key]}</span>
-						<FilterChip pressed={filters[key].length === 0} onClick={() => onChange({ ...filters, [key]: [] })}>
+					<div
+						key={key}
+						role="group"
+						aria-label={GROUP_LABEL[key]}
+						className="inline-flex flex-wrap items-center gap-1 rounded-control border border-line bg-bg py-1 pr-1 pl-2.5"
+					>
+						<span className="mr-1 text-small font-semibold text-ink-2">{GROUP_LABEL[key]}</span>
+						<FilterChip className={CHIP} pressed={filters[key].length === 0} onClick={() => onChange({ ...filters, [key]: [] })}>
 							Any
 						</FilterChip>
 						{(FILTER_VALUES[key] as readonly string[]).map((value) => (
 							<FilterChip
 								key={value}
+								className={CHIP}
 								pressed={(filters[key] as string[]).includes(value)}
 								onClick={() => onChange(toggleFilter(filters, key, value as never))}
 							>
